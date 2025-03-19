@@ -1,0 +1,52 @@
+# Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+
+#####################hydra-fuzz###################
+import("//build/config/features.gni")
+import("//build/test.gni")
+import("//build/config/components/idl_tool/idl.gni")
+import("../../../frameworks/fontmgr/fontmgr.gni")
+##############################fuzztest##########################################
+
+idl_gen_interface("font_service_interface") {
+  src_idl = rebase_path("../../../service/IFontService.idl")
+}
+
+ohos_fuzztest("ServiceUnInstallFontFuzzTest") {
+  module_out_path = "font_manager/font_manager_fuzz"
+  fuzz_config_file = "//base/global/font_manager/test/fuzztest/serviceuninstallfont_fuzzer"
+  cflags = [
+    "-g",
+    "-O0",
+    "-Wno-unused-variable",
+    "-fno-omit-frame-pointer",
+  ]
+  include_dirs = [
+    "${target_gen_dir}",
+    "../utils",
+    "../../../service/include",
+    "../../../frameworks/fontmgr/include",
+  ]
+  sources = [
+    "fuzzer.cpp",
+    "../utils/fuzz_data.cpp",
+    "../../../service/src/font_sa_load_callback.cpp",
+    "../../../service/src/font_service_load_manager.cpp"
+  ]
+  idl_path = get_target_outputs(":font_service_interface")
+  sources += filter_include(idl_path, [ "*_stub.cpp" ])
+
+  deps = [
+    ":font_service_interface",
+    "../../../service:font_service_ability",
+  ]
+    
+  external_deps = [
+    "ability_runtime:ability_manager",
+    "c_utils:utils",
+    "hilog:libhilog",
+    "ipc:ipc_core",
+    "samgr:samgr_proxy",
+  ]
+
+  external_deps += fontmgr_external_deps
+}

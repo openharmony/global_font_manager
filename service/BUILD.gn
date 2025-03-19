@@ -1,0 +1,130 @@
+# Copyright (c) 2023 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/ohos.gni")
+import("../frameworks/fontmgr/fontmgr.gni")
+import("//build/config/components/idl_tool/idl.gni")
+
+idl_gen_interface("font_service_interface") {
+  sources = [ "IFontService.idl" ]
+  log_domainid = "0xD001E00"
+  log_tag = "FONT_MSG"
+}
+
+config("font_client_config") {
+  include_dirs = [
+    "include",
+    "${target_gen_dir}",
+  ]
+}
+
+group("font_service_ability") {
+  deps = [
+    ":font_manager_server",
+    ":font_manager_client",
+    "./etc:font_sa_etc",
+  ]
+}
+
+ohos_shared_library("font_manager_client") {
+  output_values = get_target_outputs(":font_service_interface")
+  sources = [
+    "src/font_manager_client.cpp",
+    "src/font_service_load_manager.cpp",
+    "src/font_sa_load_callback.cpp",
+  ]
+
+  sources += filter_include(output_values, [ "*_proxy.cpp" ])
+  public_configs = [ ":font_client_config" ]
+
+  include_dirs = fontmgr_include
+
+  deps = [ ":font_service_interface" ]
+
+  external_deps = [
+    "c_utils:utils",
+    "hilog:libhilog",
+    "hitrace:hitrace_meter",
+    "ipc:ipc_core",
+    "samgr:samgr_proxy",
+  ]
+  version_script = "font_manager_client.map"
+
+  branch_protector_ret = "pac_ret"
+
+  cflags_cc = [
+    "-fdata-sections",
+    "-ffunction-sections",
+    "-fno-asynchronous-unwind-tables",
+    "-fno-unwind-tables",
+    "-Os",
+  ]
+
+  part_name = "font_manager"
+  subsystem_name = "global"
+}
+
+ohos_shared_library("font_manager_server") {
+  shlib_type = "sa"
+  output_values = get_target_outputs(":font_service_interface")
+  sources = [ "src/font_manager_server.cpp" ]
+  sources += filter_include(output_values, [ "*_stub.cpp" ])
+  sources += fontmgr_src
+
+  include_dirs = [
+    "include",
+    "${target_gen_dir}",
+  ]
+
+  include_dirs += fontmgr_include
+
+  deps = [
+    ":font_manager_client",
+    ":font_service_interface",
+  ]
+
+  external_deps = [
+    "ability_runtime:ability_manager",
+    "access_token:libaccesstoken_sdk",
+    "access_token:libtokenid_sdk",
+    "c_utils:utils",
+    "eventhandler:libeventhandler",
+    "hilog:libhilog",
+    "ipc:ipc_core",
+    "safwk:system_ability_fwk",
+    "samgr:samgr_proxy",
+  ]
+
+  external_deps += fontmgr_external_deps
+
+  branch_protector_ret = "pac_ret"
+  sanitize = {
+    boundary_sanitize = true
+    cfi = true
+    cfi_cross_dso = true
+    debug = false
+    integer_overflow = true
+    ubsan = true
+  }
+
+  cflags_cc = [
+    "-fdata-sections",
+    "-ffunction-sections",
+    "-fno-asynchronous-unwind-tables",
+    "-fno-unwind-tables",
+    "-Os",
+  ]
+
+  part_name = "font_manager"
+  subsystem_name = "global"
+}
