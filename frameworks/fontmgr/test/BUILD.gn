@@ -1,0 +1,74 @@
+# Copyright (c) 2024 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/test.gni")
+import("../fontmgr.gni")
+
+ohos_unittest("font_config_test") {
+  module_out_path = "font_manager/font_manager"
+
+  sources = [ 
+    "unittest/src/font_config_test.cpp",
+  ]
+
+  sources += fontmgr_src
+  include_dirs = [
+    "./unittest/include",
+  ]
+
+  include_dirs += fontmgr_include
+
+  external_deps = [
+    "googletest:gtest",
+  ]
+
+  external_deps += fontmgr_external_deps
+
+  deps = [
+    "../../../service:font_service_ability",
+    "//third_party/googletest:gtest_main"
+  ]
+
+  defines = [ "SUPPORT_GRAPHICS" ]
+}
+
+ohos_unittest("font_manager_module_test") {
+  module_out_path = "font_manager/font_manager"
+
+  resource_config_file = "ohos_test.xml"
+
+  sources = [ 
+    "unittest/src/font_manager_test.cpp",
+  ]
+
+  sources += fontmgr_src
+  include_dirs = [
+    "./unittest/include",
+  ]
+
+  include_dirs += fontmgr_include
+
+  external_deps = [
+    "googletest:gtest",
+  ]
+
+  external_deps += fontmgr_external_deps
+
+  deps = [
+    "../../../service:font_service_ability",
+    "//third_party/googletest:gtest_main"
+  ]
+
+  defines = [ "SUPPORT_GRAPHICS" ]
+}
+

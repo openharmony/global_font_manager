@@ -1,0 +1,78 @@
+{
+  "name": "@ohos/font_manager",
+  "version": "5.0",
+  "description": "对字体安装卸载进行管理",
+  "homePage": "https://gitee.com/openharmony",
+  "license": "Apache License 2.0",
+  "repository": "",
+  "domain": "os",
+  "language": "",
+  "publishAs": "code-segment",
+  "private": false,
+  "scripts": {},
+  "tags": [
+      "base"
+  ],
+  "keywords": [
+      "global",
+      "font_manager",
+      "standard"
+  ],
+  "envs": [],
+  "dirs": [],
+  "author": {
+      "name": "",
+      "email": "",
+      "url": ""
+  },
+  "contributors": [
+      {
+          "name": "",
+          "email": "",
+          "url": ""
+      }
+  ],
+  "segment": {
+      "destPath": "base/global/font_manager"
+  },
+  "component": {
+      "name": "font_manager",
+      "subsystem": "global",
+      "syscap": [ "SystemCapability.Global.FontManager" ],
+      "adapted_system_type": [
+          "standard"
+      ],
+      "rom": "",
+      "ram": "",
+      "deps": {
+        "components": [
+          "ability_base",
+          "ability_runtime",
+          "access_token",
+          "common_event_service",
+          "c_utils",
+          "cJSON",
+          "eventhandler",
+          "hilog",
+          "hitrace",
+          "ipc",
+          "napi",
+          "safwk",
+          "samgr",
+          "skia"
+        ]
+    },
+      "build": {
+          "sub_component": [
+            "//base/global/font_manager/interfaces/js/kits:fontmanager",
+            "//base/global/font_manager/sa_profile:font_server_profile",
+            "//base/global/font_manager/service:font_service_ability"
+          ],
+          "test": [
+            "//base/global/font_manager/frameworks/fontmgr/test:font_config_test",
+            "//base/global/font_manager/frameworks/fontmgr/test:font_manager_module_test",
+            "//base/global/font_manager/test/fuzztest:fuzztest"
+          ]
+      }
+  }
+}
