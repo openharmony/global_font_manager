@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+-->
+<fuzz_config>
+    <fuzztest>
+        <!-- maximum length of a test input -->
+        <max_len>1000</max_len>
+        <!-- maximum total time in seconds to run the fuzzer -->
+        <max_total_time>120</max_total_time>
+        <!-- memory usage limit in Mb -->
+        <rss_limit_mb>4096</rss_limit_mb>
+    </fuzztest>
+</fuzz_config>
