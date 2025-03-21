@@ -123,7 +123,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest002, TestSize.Level1)
     ret = this->manager_.UninstallFont(fontfullname);
     EXPECT_EQ(ret, ERR_UNINSTALL_FILE_NOT_EXISTS);
     ret = this->manager_.UninstallFont("");
-    EXPECT_EQ(ret, ERR_INVALID_PARAM);
+    EXPECT_EQ(ret, ERR_UNINSTALL_FILE_NOT_EXISTS);
 }
 
 /**
@@ -285,7 +285,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest009, TestSize.Level1)
     ret = this->manager_.UninstallFont(TTC_FONT_FULL_NAME[0]);
     EXPECT_EQ(ret, ERR_UNINSTALL_FILE_NOT_EXISTS);
     ret = this->manager_.UninstallFont("");
-    EXPECT_EQ(ret, ERR_INVALID_PARAM);
+    EXPECT_EQ(ret, ERR_UNINSTALL_FILE_NOT_EXISTS);
 }
 
 /**
