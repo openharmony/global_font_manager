@@ -27,14 +27,12 @@ namespace FontManager {
 struct FontNapiCallback {
     napi_async_work work_;
     napi_deferred deferred_;
-    napi_ref callbackRef_;
     std::string value_;
     std::string errMsg_;
     bool success_;
     int errCode_;
 
-    FontNapiCallback() : work_(nullptr), deferred_(nullptr), callbackRef_(nullptr), success_(true),
-        errCode_(SUCCESS) {}
+    FontNapiCallback() : work_(nullptr), deferred_(nullptr), success_(true), errCode_(SUCCESS) {}
 
     void SetErrorMsg(const std::string &msg, int32_t errCode)
     {
