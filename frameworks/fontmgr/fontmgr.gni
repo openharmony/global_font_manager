@@ -16,8 +16,7 @@ import("//build/ohos.gni")
 root_path = "//base/global/font_manager/frameworks/fontmgr"
 
 fontmgr_include = [
-        "$root_path/include",
-        "//third_party/skia/include/core"
+        "$root_path/include"
     ]
 
 fontmgr_src = [
