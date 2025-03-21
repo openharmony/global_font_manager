@@ -30,13 +30,13 @@ ohos_unittest("font_config_test") {
 
   external_deps = [
     "googletest:gtest",
+    "googletest:gtest_main"
   ]
 
   external_deps += fontmgr_external_deps
 
   deps = [
-    "../../../service:font_service_ability",
-    "//third_party/googletest:gtest_main"
+    "../../../service:font_service_ability"
   ]
 
   defines = [ "SUPPORT_GRAPHICS" ]
@@ -60,13 +60,13 @@ ohos_unittest("font_manager_module_test") {
 
   external_deps = [
     "googletest:gtest",
+    "googletest:gtest_main"
   ]
 
   external_deps += fontmgr_external_deps
 
   deps = [
-    "../../../service:font_service_ability",
-    "//third_party/googletest:gtest_main"
+    "../../../service:font_service_ability"
   ]
 
   defines = [ "SUPPORT_GRAPHICS" ]
