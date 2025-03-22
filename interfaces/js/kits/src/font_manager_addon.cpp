@@ -22,15 +22,9 @@
 namespace OHOS {
 namespace Global {
 namespace FontManager {
-#define GET_PARAMS(env, info, num)    \
-    size_t argc = num;                \
-    napi_value argv[num] = {nullptr}; \
-    napi_value thisVar = nullptr;     \
-    void *data = nullptr;             \
-    napi_get_cb_info(env, info, &argc, argv, &thisVar, &data)
 
 static constexpr int32_t ARRAY_SUBCRIPTOR_ZERO = 0;
-
+static constexpr int32_t ARGS_SIZE_ONE = 1;
 napi_value FontManagerAddon::Init(napi_env env, napi_value exports)
 {
     napi_property_descriptor properties[] = {
@@ -66,7 +60,7 @@ void FontManagerAddon::Complete(napi_env env, napi_status status, void* data)
     napi_value finalResult = nullptr;
     napi_status ret = napi_create_int32(env, fontNapiCallback->errCode_, &finalResult);
     if (ret != napi_ok) {
-        FONT_LOGE("InstallFont: create boolean result failed");
+        FONT_LOGE("InstallFont: create int result failed");
         fontNapiCallback->success_ = false;
     }
 
@@ -78,11 +72,7 @@ void FontManagerAddon::Complete(napi_env env, napi_status status, void* data)
         result[0] = GetCallbackErrorCode(env, fontNapiCallback->errCode_, fontNapiCallback->errMsg_.c_str());
         napi_get_undefined(env, &result[1]);
     }
-    if (fontNapiCallback->deferred_) {
-        ProcessPromiseResult(env, fontNapiCallback, result);
-    } else {
-        ProcessCallbackResult(env, fontNapiCallback, result);
-    }
+    ProcessPromiseResult(env, fontNapiCallback, result);
     napi_delete_async_work(env, fontNapiCallback->work_);
     delete fontNapiCallback;
 };
@@ -104,31 +94,6 @@ void FontManagerAddon::ProcessPromiseResult(napi_env env, FontNapiCallback *font
     }
 }
 
-void FontManagerAddon::ProcessCallbackResult(napi_env env, FontNapiCallback *fontCallback, napi_value (&result)[2])
-{
-    if (fontCallback == nullptr) {
-        return;
-    }
-
-    napi_value callback = nullptr;
-    napi_status status = napi_get_reference_value(env, fontCallback->callbackRef_, &callback);
-    if (status != napi_ok) {
-        FONT_LOGE("napi_get_reference_value failed status=%{public}d", status);
-        return;
-    }
-    napi_value userRet;
-    status = napi_call_function(env, nullptr, callback, sizeof(result) / sizeof(napi_value), result, &userRet);
-    if (status != napi_ok) {
-        FONT_LOGE("napi_call_function failed status=%{public}d", status);
-        return;
-    }
-    status = napi_delete_reference(env, fontCallback->callbackRef_);
-    if (status != napi_ok) {
-        FONT_LOGE("napi_call_function failed status=%{public}d", status);
-        return;
-    }
-}
-
 napi_value FontManagerAddon::GetResult(napi_env env, std::unique_ptr<FontNapiCallback> &callback,
     const std::string &name, napi_async_execute_callback execute)
 {
@@ -136,11 +101,7 @@ napi_value FontManagerAddon::GetResult(napi_env env, std::unique_ptr<FontNapiCal
     if (callback == nullptr) {
         return result;
     }
-    if (callback->callbackRef_ == nullptr) {
-        napi_create_promise(env, &callback->deferred_, &result);
-    } else {
-        napi_get_undefined(env, &result);
-    }
+    napi_create_promise(env, &callback->deferred_, &result);
     napi_value resource = nullptr;
     napi_create_string_utf8(env, name.c_str(), NAPI_AUTO_LENGTH, &resource);
     if (napi_create_async_work(env, nullptr, resource, execute, FontManagerAddon::Complete,
@@ -204,19 +165,14 @@ napi_value FontManagerAddon::ProcessFontByValue(
     napi_env env, napi_callback_info info, const std::string &name, napi_async_execute_callback execute)
 {
     FONT_LOGI("ProcessFontByValue, func:%{public}s", name.c_str());
-    GET_PARAMS(env, info, 2);
+    size_t argc = ARGS_SIZE_ONE;
+    napi_value argv[ARGS_SIZE_ONE] = {nullptr};
+    napi_value thisVar = nullptr;
+    void *data = nullptr;
+    napi_get_cb_info(env, info, &argc, argv, &thisVar, &data);
     std::unique_ptr<FontNapiCallback> callback = std::make_unique<FontNapiCallback>();
-    for (size_t i = 0; i < argc; i++) {
-        napi_valuetype valueType;
-        napi_typeof(env, argv[i], &valueType);
-        if (i == 0 && valueType == napi_string) {
-            callback->value_ = GetResNameOrPath(env, argc, argv);
-            FONT_LOGD("ProcessFontByValue callback->value_= %{public}s", callback->value_.c_str());
-        } else if (i == 1 && valueType == napi_function) {
-            napi_create_reference(env, argv[i], 1, &callback->callbackRef_);
-            break;
-        }
-    }
+    callback->value_ = GetResNameOrPath(env, argc, argv);
+    FONT_LOGD("ProcessFontByValue callback->value_= %{public}s", callback->value_.c_str());
     return GetResult(env, callback, name, execute);
 }
 
