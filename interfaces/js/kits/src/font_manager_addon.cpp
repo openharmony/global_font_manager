@@ -163,7 +163,7 @@ auto installFontFunc = [](napi_env env, void* data) {
 
     FontNapiCallback *callback = static_cast<FontNapiCallback*>(data);
     if (callback->value_.empty()) {
-        callback->SetErrorMsg("invalid param", ERR_INVALID_PARAM);
+        callback->SetErrorMsg("invalid param", ERR_FILE_NOT_EXISTS);
         return;
     }
     int ret = FontManagerClient::InstallFont(callback->value_, callback->errCode_);
@@ -185,7 +185,7 @@ auto uninstallFontFunc = [](napi_env env, void* data) {
 
     FontNapiCallback *callback = static_cast<FontNapiCallback*>(data);
     if (callback->value_.empty()) {
-        callback->SetErrorMsg("invalid param", ERR_INVALID_PARAM);
+        callback->SetErrorMsg("invalid param", ERR_UNINSTALL_FILE_NOT_EXISTS);
         return;
     }
     int ret = FontManagerClient::UninstallFont(callback->value_, callback->errCode_);

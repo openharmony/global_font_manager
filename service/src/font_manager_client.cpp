@@ -37,12 +37,12 @@ int32_t FontManagerClient::InstallFont(const std::string &fontPath, int &outValu
     std::string realPath;
     if (!PathToRealPath(fontPath, realPath)) {
         FONT_LOGE("failed to get real path %{private}s, errno %{public}d", fontPath.c_str(), errno);
-        return ERR_INVALID_PARAM;
+        return ERR_FILE_NOT_EXISTS;
     }
     int fd = open(realPath.c_str(), O_RDONLY);
     if (fd < 0) {
         FONT_LOGE("open font file failed, errno: %{public}d", errno);
-        return ERR_INVALID_PARAM;
+        return ERR_FILE_NOT_EXISTS;
     }
 
     int32_t ret = service->InstallFont(fd, outValue);

@@ -164,7 +164,7 @@ int32_t FontManager::UninstallFont(const std::string &fontFullName)
     FONT_LOGI("FontManager UninstallFont: %{public}s", fontFullName.c_str());
     if (fontFullName.empty()) {
         FONT_LOGE("FontManager::UninstallFont, fontName is empty");
-        return ERR_INVALID_PARAM;
+        return ERR_UNINSTALL_FILE_NOT_EXISTS;
     }
     FontConfig fontConfig(FONT_CONFIG_FILE);
     std::string path = fontConfig.GetFontFileByName(fontFullName);
