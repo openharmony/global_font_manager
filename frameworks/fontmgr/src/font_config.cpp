@@ -14,7 +14,6 @@
  */
 
 #include "font_config.h"
-
 #include "font_hilog.h"
 #include "securec.h"
 

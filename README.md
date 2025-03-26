@@ -3,6 +3,16 @@
 
 The font management module provides the ability to install and uninstall fonts for system applications.
 
+**Figure 1**   Architecture of the font management component
+
+![](figures/font_manager_en.png)
+
+The font management component architecture is described as follows:
+
+- Font management module, which provides third-party font installation and uninstallation interfaces for system applications.
+- Font management Napi layer (font_manager_napi) is responsible for registering and converting ArkTS interfaces to C++ interfaces.
+- The font management client (font_manager_client) interacts with the server for preliminary parameter check.
+- The font management server (font_manager_server) interacts with the client, verifies permission, and installs and uninstalls font.
 ## Directory Structure
 
 The directory structure of the fontmanager module is as follows:
@@ -16,8 +26,8 @@ The directory structure of the fontmanager module is as follows:
 │   │   │   ├── src         # Implementation code
 │   │   │   └── test        # Test code
 │   ├── interfaces          # APIs
-│   │   └── js/kits         # JavaScript APIs
-│   ├── sa_profile          # SA
+│   │   └── js/kits         # ArkTS APIs
+│   ├── sa_profile          # SystemAbility configuration files
 │   ├── service             # client,server
 │   │   └── include         # Header files
 │   │   └── src             # Implementation code
@@ -25,8 +35,7 @@ The directory structure of the fontmanager module is as follows:
 
 ## Constraints
 
-**Development language**:JavaScript
-
+**Development language**:ArkTS
 
 ## Repositories Involved
 

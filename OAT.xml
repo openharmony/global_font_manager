@@ -64,6 +64,9 @@
                 <filteritem type="filename" name="emptyTTC.ttc"/>
                 <filteritem type="filename" name="README"/>
             </filefilter>
+            <filefilter name="binaryFileTypePolicyFilter" desc="Filters for binary file policies">
+				<filteritem type="filepath" name="figures/.*.png" desc="self developed image"/>
+			</filefilter>
 		</filefilterlist>
     </oatconfig>
 </configuration>

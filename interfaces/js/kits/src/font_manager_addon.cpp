@@ -102,6 +102,7 @@ napi_value FontManagerAddon::GetResult(napi_env env, std::unique_ptr<FontNapiCal
         return result;
     }
     napi_create_promise(env, &callback->deferred_, &result);
+
     napi_value resource = nullptr;
     napi_create_string_utf8(env, name.c_str(), NAPI_AUTO_LENGTH, &resource);
     if (napi_create_async_work(env, nullptr, resource, execute, FontManagerAddon::Complete,
