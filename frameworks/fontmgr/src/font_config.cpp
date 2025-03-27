@@ -115,7 +115,7 @@ std::string FontConfig::GetFontFileByName(const std::string &fullName)
     return "";
 }
 
-char *FontConfig::GetFileData(const std::string &filePath, int &size)
+char *FontConfig::GetFileData(const std::string &filePath, long &size)
 {
     std::lock_guard<std::mutex> lock(configLock_);
     FILE *fp = std::fopen(filePath.c_str(), "r");
@@ -124,19 +124,36 @@ char *FontConfig::GetFileData(const std::string &filePath, int &size)
         return nullptr;
     }
     std::fseek(fp, 0, SEEK_END);
-    size = ftell(fp) + 1;
-    rewind(fp);
+    long fileSize = ftell(fp);
+    if (fileSize < 0) {
+        FONT_LOGE("failed to get the file size for filePath = %{public}s", filePath.c_str());
+        (void)fclose(fp);
+        return nullptr;
+    }
+    size = fileSize + 1;
+
+    if (size <= 0) {
+        FONT_LOGE("invalid file size = %ld for filePath = %{public}s", size, filePath.c_str());
+        (void)fclose(fp);
+        return nullptr;
+    }
     char *data = static_cast<char *>(malloc(size));
     if (data == nullptr) {
-        FONT_LOGE("failed malloc in GetFileData");
-        fclose(fp);
-        fp = nullptr;
+        FONT_LOGE("failed malloc in GetFileData for filePath = %{public}s", filePath.c_str());
+        (void)fclose(fp);
         return nullptr;
     }
     memset_s(data, size, 0, size);
-    std::fread(data, size, 1, fp);
-    fclose(fp);
-    fp = nullptr;
+    std::fseek(fp, 0, SEEK_SET);
+    size_t bytesRead = std::fread(data, 1, fileSize, fp);
+    if (bytesRead != static_cast<size_t>(fileSize)) {
+        FONT_LOGE("failed to read the full file content for filePath = %{public}s", filePath.c_str());
+        free(data);
+        (void)fclose(fp);
+        return nullptr;
+    }
+
+    (void)fclose(fp);
     return data;
 }
 
@@ -163,14 +180,14 @@ bool FontConfig::WriteToFile(char *fileData)
         free(fileData);
         fileData = nullptr;
     }
-    fclose(fp);
+    (void)fclose(fp);
     fp = nullptr;
     return ret;
 }
 
 std::string FontConfig::CheckConfigFile(const std::string &fontPath)
 {
-    int size = 0;
+    long size = 0;
     char *data = GetFileData(fontPath, size);
     if (data == nullptr) {
         FONT_LOGE("data is NULL");

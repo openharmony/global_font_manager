@@ -30,7 +30,7 @@ namespace FontManager {
     int FontManagerFuncTest010(void);
     int FontManagerFuncTest011(void);
     int FontManagerFuncTest012(void);
-	int FontManagerFuncTest013(void);
+    int FontManagerFuncTest013(void);
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS

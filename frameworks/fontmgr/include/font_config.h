@@ -34,7 +34,7 @@ public:
     std::string GetFontFileByName(const std::string &fullName);
  
 private:
-    char *GetFileData(const std::string &filePath, int &size);
+    char *GetFileData(const std::string &filePath, long &size);
     std::string CheckConfigFile(const std::string &fontPath);
     cJSON *ConstructCJSON(const std::string &fontFullPath, const std::vector<std::string> &fullName);
     std::unordered_map<std::string, std::vector<std::string>> GetFontsMap(const std::string &filePath);

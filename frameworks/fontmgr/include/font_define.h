@@ -33,9 +33,6 @@ enum FontErrorCode {
     ERR_UNINSTALL_FILE_NOT_EXISTS = 31100107,
     ERR_UNINSTALL_REMOVE_FAIL = 31100108,
     ERR_UNINSTALL_FAIL = 31100109,
-    // inner error code
-    ERR_CALL_IPC = 10,
-    ERR_LOAD_SA = 11,
 };
 
 const int FONT_SA_ID = 66262;

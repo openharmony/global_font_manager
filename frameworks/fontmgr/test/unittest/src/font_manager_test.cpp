@@ -36,7 +36,7 @@ const std::string INSTALL_PATH = "/data/service/el1/public/for-all-app/fonts/";
 const std::string TEMP_PATH = "/data/service/el1/public/for-all-app/fonts/temp/";
 const std::string FONT_CONFIG_FILE = INSTALL_PATH + "install_fontconfig.json";
 const std::string FONT_PATH = "/data/test/HarmonyOS_Sans.ttf";
-const std::string fontfullname = "HarmonyOS Sans";
+const std::string FONT_FULL_NAME = "HarmonyOS Sans";
 const std::string TTC_FONT_PATH = "/data/test/NotoSansCJK-Regular.ttc";
 const std::vector<std::string> TTC_FONT_FULL_NAME{"Noto Sans CJK JP",
     "Noto Sans CJK KR",
@@ -118,9 +118,9 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest002, TestSize.Level1)
     if (fd >= 0) {
         close(fd);
     }
-    ret = this->manager_.UninstallFont(fontfullname);
+    ret = this->manager_.UninstallFont(FONT_FULL_NAME);
     EXPECT_EQ(ret, SUCCESS);
-    ret = this->manager_.UninstallFont(fontfullname);
+    ret = this->manager_.UninstallFont(FONT_FULL_NAME);
     EXPECT_EQ(ret, ERR_UNINSTALL_FILE_NOT_EXISTS);
     ret = this->manager_.UninstallFont("");
     EXPECT_EQ(ret, ERR_UNINSTALL_FILE_NOT_EXISTS);

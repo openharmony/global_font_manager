@@ -24,16 +24,14 @@
 namespace OHOS {
 namespace Global {
 namespace FontManager {
-#define RETURN_FAIL_WHEN_SERVICE_NULL(service) \
-    if ((service) == nullptr) {                \
-        FONT_LOGE("Service is null");          \
-        return ERR_CALL_IPC;                   \
-    }
 
 int32_t FontManagerClient::InstallFont(const std::string &fontPath, int &outValue)
 {
     sptr<IFontService> service = FontServiceLoadManager::GetInstance()->GetFontServiceAbility(FONT_SA_ID);
-    RETURN_FAIL_WHEN_SERVICE_NULL(service);
+    if (service == nullptr) {
+        FONT_LOGE("Service is null");
+        return ERR_INSTALL_FAIL;
+    }
     std::string realPath;
     if (!PathToRealPath(fontPath, realPath)) {
         FONT_LOGE("failed to get real path %{private}s, errno %{public}d", fontPath.c_str(), errno);
@@ -55,7 +53,10 @@ int32_t FontManagerClient::InstallFont(const std::string &fontPath, int &outValu
 int32_t FontManagerClient::UninstallFont(const std::string &fontName, int &outValue)
 {
     sptr<IFontService> service = FontServiceLoadManager::GetInstance()->GetFontServiceAbility(FONT_SA_ID);
-    RETURN_FAIL_WHEN_SERVICE_NULL(service);
+    if (service == nullptr) {
+        FONT_LOGE("Service is null");
+        return ERR_UNINSTALL_FAIL;
+    }
     return service->UninstallFont(fontName, outValue);
 }
 
