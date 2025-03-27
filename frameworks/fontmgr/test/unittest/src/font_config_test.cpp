@@ -49,7 +49,7 @@ public:
 
 protected:
     FontConfig config_;
-	FontManager fontManager_;
+    FontManager fontManager_;
 };
 
 void FontConfigTest::SetUpTestCase(void)
