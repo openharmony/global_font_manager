@@ -1,9 +1,0 @@
-{
-    "patches": [
-        {
-            "project":"vendor_hihope",
-            "path":"vendor/hihope",
-            "pr_url":"https://gitee.com/openharmony/vendor_hihope/pulls/1436"
-        }
-    ]
-}
