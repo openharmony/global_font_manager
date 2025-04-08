@@ -129,10 +129,39 @@ auto installFontFunc = [](napi_env env, void* data) {
         return;
     }
     int ret = FontManagerClient::InstallFont(callback->value_, callback->errCode_);
-    if (ret) {
-        callback->SetErrorMsg("Failed to InstallFont", ret);
-        return;
+    if (ret != SUCCESS) {
+        callback->SetErrorMsg("Other error.", ERR_INSTALL_FAIL);
     }
+    if (callback->errCode_ != SUCCESS) {
+        std::string msg = "";
+        switch (callback->errCode_) {
+            case ERR_NO_PERMISSION :
+                msg = "Permission denied.";
+                break;
+            case ERR_NOT_SYSTEM_APP :
+                msg = "Non-system application.";
+                break;
+            case ERR_FILE_NOT_EXISTS :
+                msg = "Font does not exist.";
+                break;
+            case ERR_FILE_VERIFY_FAIL :
+                msg = "Font is not supported.";
+                break;
+            case ERR_COPY_FAIL :
+                msg = "Font file copy failed.";
+                break;
+            case ERR_INSTALLED_ALRADY :
+                msg = "Font file installed.";
+                break;
+            case ERR_MAX_FILE_COUNT :
+                msg = "Exceeded maximum number of installed files.";
+                break;
+            default:
+                msg = "Other error.";
+        }
+        callback->SetErrorMsg(msg, callback->errCode_);
+    }
+    return;
 };
 
 napi_value FontManagerAddon::InstallFont(napi_env env, napi_callback_info info)
@@ -151,10 +180,30 @@ auto uninstallFontFunc = [](napi_env env, void* data) {
         return;
     }
     int ret = FontManagerClient::UninstallFont(callback->value_, callback->errCode_);
-    if (ret) {
-        callback->SetErrorMsg("Failed to UninstallFont", ret);
-        return;
+    if (ret != SUCCESS) {
+        callback->SetErrorMsg("Other error.", ERR_UNINSTALL_FAIL);
     }
+    if (callback->errCode_ != SUCCESS) {
+        std::string msg = "";
+        switch (callback->errCode_) {
+            case ERR_NO_PERMISSION :
+                msg = "Permission denied.";
+                break;
+            case ERR_NOT_SYSTEM_APP :
+                msg = "Non-system application.";
+                break;
+            case ERR_UNINSTALL_FILE_NOT_EXISTS :
+                msg = "Font file does not exist.";
+                break;
+            case ERR_UNINSTALL_REMOVE_FAIL :
+                msg = "Font file delete error.";
+                break;
+            default:
+                msg = "Other error.";
+        }
+        callback->SetErrorMsg(msg, callback->errCode_);
+    }
+    return;
 };
 
 napi_value FontManagerAddon::UninstallFont(napi_env env, napi_callback_info info)
