@@ -30,17 +30,20 @@ int32_t FontManagerClient::InstallFont(const std::string &fontPath, int &outValu
     sptr<IFontService> service = FontServiceLoadManager::GetInstance()->GetFontServiceAbility(FONT_SA_ID);
     if (service == nullptr) {
         FONT_LOGE("Service is null");
-        return ERR_INSTALL_FAIL;
+        outValue = ERR_INSTALL_FAIL;
+        return SUCCESS;
     }
     std::string realPath;
     if (!PathToRealPath(fontPath, realPath)) {
         FONT_LOGE("failed to get real path %{private}s, errno %{public}d", fontPath.c_str(), errno);
-        return ERR_FILE_NOT_EXISTS;
+        outValue = ERR_FILE_NOT_EXISTS;
+        return SUCCESS;
     }
     int fd = open(realPath.c_str(), O_RDONLY);
     if (fd < 0) {
         FONT_LOGE("open font file failed, errno: %{public}d", errno);
-        return ERR_FILE_NOT_EXISTS;
+        outValue = ERR_FILE_NOT_EXISTS;
+        return SUCCESS;
     }
 
     int32_t ret = service->InstallFont(fd, outValue);
@@ -55,7 +58,8 @@ int32_t FontManagerClient::UninstallFont(const std::string &fontName, int &outVa
     sptr<IFontService> service = FontServiceLoadManager::GetInstance()->GetFontServiceAbility(FONT_SA_ID);
     if (service == nullptr) {
         FONT_LOGE("Service is null");
-        return ERR_UNINSTALL_FAIL;
+        outValue = ERR_UNINSTALL_FAIL;
+        return SUCCESS;
     }
     return service->UninstallFont(fontName, outValue);
 }
