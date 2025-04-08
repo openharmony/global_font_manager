@@ -63,7 +63,9 @@ void FontManagerAddon::Complete(napi_env env, napi_status status, void* data)
         FONT_LOGE("InstallFont: create int result failed");
         fontNapiCallback->success_ = false;
     }
-
+    if (fontNapiCallback->errCode_ != SUCCESS) {
+        fontNapiCallback->success_ = false;
+    }
     napi_value result[] = { nullptr, nullptr };
     if (fontNapiCallback->success_) {
         napi_get_undefined(env, &result[0]);
