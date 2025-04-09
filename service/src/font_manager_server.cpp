@@ -41,7 +41,7 @@ int32_t FontManagerServer::InstallFont(const int32_t fd, int32_t &outValue)
 {
     int32_t err = CheckPermission();
     if (err != SUCCESS) {
-        outValue = static_cast<int32_t>(ERR_NO_PERMISSION);
+        outValue = err;
         return SUCCESS;
     }
     outValue = FontManager::GetInstance()->InstallFont(fd);
@@ -53,7 +53,7 @@ int32_t FontManagerServer::UninstallFont(const std::string &fontName, int32_t &o
 {
     int32_t err = CheckPermission();
     if (err != SUCCESS) {
-        outValue = static_cast<int32_t>(ERR_NO_PERMISSION);
+        outValue = err;
         return SUCCESS;
     }
     outValue = FontManager::GetInstance()->UninstallFont(fontName);
