@@ -19,6 +19,7 @@
 #include "font_event_publish.h"
 #include "font_config.h"
 #include "file_utils.h"
+#include "hisysevent_adapter.h"
 #include "SkFontMgr.h"
 
 namespace OHOS {
@@ -63,7 +64,7 @@ int32_t FontManager::InstallFont(const int32_t &fd)
     if (!(CheckInstallPath() && CheckFontConfigPath())) {
         return ERR_FILE_NOT_EXISTS;
     }
-    
+
     std::vector<std::string> fullNameVector = GetFontFullName(fd);
     if (fullNameVector.size() == 0) {
         FONT_LOGE("get fontFullName failed, font file verified failed");
@@ -91,6 +92,7 @@ int32_t FontManager::InstallFont(const int32_t &fd)
         FONT_LOGE("copy file %{public}s error", sourcePath.c_str());
         return ERR_COPY_FAIL;
     }
+    HisyseventAdapter::GetInstance()->CollectUserDataSize();
     if (fontConfig.InsertFontRecord(destPath, fullNameVector)) {
         FontEventPublish::PublishFontUpdate(FontEventType::INSTALL, GetFormatFullName(fullNameVector));
         return SUCCESS;
@@ -118,13 +120,13 @@ std::vector<std::string> FontManager::GetFontFullName(const int32_t &fd)
         FONT_LOGE("fontMgr is null");
         return fullNameVector;
     }
- 
+
     int ret = fontMgr->GetFontFullName(fd, fullname);
     if (ret != SUCCESS) {
         FONT_LOGE("GetFontFullName failed, err:%{public}d", ret);
         return fullNameVector;
     }
-    
+
     for (const auto &name : fullname) {
         std::string fullnameStr;
         fullnameStr.assign((char *)name.strData.get(), name.strLen);
@@ -172,6 +174,7 @@ int32_t FontManager::UninstallFont(const std::string &fontFullName)
         FONT_LOGE("Can't find fontFullName = %{public}s", fontFullName.c_str());
         return ERR_UNINSTALL_FILE_NOT_EXISTS;
     }
+    HisyseventAdapter::GetInstance()->CollectUserDataSize();
     if (!FileUtils::RemoveFile(path)) {
         return ERR_UNINSTALL_REMOVE_FAIL;
     }
