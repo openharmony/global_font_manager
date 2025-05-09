@@ -59,8 +59,42 @@ ohos_unittest("font_manager_module_test") {
   include_dirs += fontmgr_include
 
   external_deps = [
+    "c_utils:utils",
     "googletest:gtest",
-    "googletest:gtest_main"
+    "googletest:gtest_main",
+    "hisysevent:libhisysevent"
+  ]
+
+  external_deps += fontmgr_external_deps
+
+  deps = [
+    "../../../service:font_service_ability",
+  ]
+
+  defines = [ "SUPPORT_GRAPHICS" ]
+}
+
+ohos_unittest("hisysevent_adapter_test") {
+  module_out_path = "font_manager/font_manager"
+
+  resource_config_file = "ohos_test.xml"
+
+  sources = [ 
+    "unittest/src/hisysevent_adapter_test.cpp",
+  ]
+
+  sources += fontmgr_src
+  include_dirs = [
+    "./unittest/include",
+  ]
+
+  include_dirs += fontmgr_include
+
+  external_deps = [
+    "c_utils:utils",
+    "googletest:gtest",
+    "googletest:gtest_main",
+    "hisysevent:libhisysevent"
   ]
 
   external_deps += fontmgr_external_deps
