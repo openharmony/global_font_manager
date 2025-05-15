@@ -30,6 +30,7 @@ public:
 private:
     bool CheckInstallPath();
     bool CheckFontConfigPath();
+    std::string Utf16BEToUtf8(const uint8_t* data, size_t byteLen);
     std::vector<std::string> GetFontFullName(const int32_t &fd);
     std::string GetFormatFullName(const std::vector<std::string> &fullNameVector);
     std::string CopyFile(const std::string &fontPath, const int32_t &fd);
