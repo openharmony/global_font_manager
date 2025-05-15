@@ -54,6 +54,7 @@
           "cJSON",
           "eventhandler",
           "hilog",
+          "hisysevent",
           "hitrace",
           "ipc",
           "napi",

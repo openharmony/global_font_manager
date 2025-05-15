@@ -24,6 +24,7 @@ fontmgr_src = [
         "$root_path/src/font_config.cpp",
         "$root_path/src/font_manager.cpp",
         "$root_path/src/font_event_publish.cpp",
+        "$root_path/src/hisysevent_adapter.cpp"
     ]
 
 fontmgr_external_deps = [
