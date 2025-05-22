@@ -140,7 +140,7 @@ std::vector<std::string> FontManager::GetFontFullName(const int32_t &fd)
 std::string FontManager::Utf16BEToUtf8(const uint8_t* data, size_t byteLen)
 {
     std::u16string utf16Str;
-    for(size_t i = 0; i + 1 < byteLen; i += NUM_TWO) {
+    for (size_t i = 0; i + 1 < byteLen; i += NUM_TWO) {
         uint16_t ch = (data[i] << 8) | data[i + 1];
         utf16Str.push_back(static_cast<char16_t>(ch));
     }
