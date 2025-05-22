@@ -15,6 +15,7 @@
 
 #include "font_manager.h"
 
+#include <string_ex.h>
 #include "font_hilog.h"
 #include "font_event_publish.h"
 #include "font_config.h"
@@ -28,6 +29,7 @@ static const std::string INSTALL_PATH = "/data/service/el1/public/for-all-app/fo
 static const std::string FONT_CONFIG_FILE = INSTALL_PATH + "install_fontconfig.json";
 static const std::string FONTS_TEMP_PATH = "/data/service/el1/public/for-all-app/fonts/temp/";
 static constexpr int32_t MAX_INSTALL_NUM = 200;
+static constexpr int32_t NUM_TWO = 2;
 FontManager::FontManager()
 {
 }
@@ -126,13 +128,24 @@ std::vector<std::string> FontManager::GetFontFullName(const int32_t &fd)
     }
     
     for (const auto &name : fullname) {
-        std::string fullnameStr;
-        fullnameStr.assign((char *)name.strData.get(), name.strLen);
-        fullnameStr.erase(std::remove(fullnameStr.begin(), fullnameStr.end(), '\0'), fullnameStr.end());
-        FONT_LOGI("GetFontFullname, fullnameStr:%{public}s", fullnameStr.c_str());
-        fullNameVector.emplace_back(std::move(fullnameStr));
+        if (name.strData && name.strLen > 0) {
+            std::string fullnameStr = Utf16BEToUtf8(name.strData.get(), name.strLen);
+            fullNameVector.emplace_back(std::move(fullnameStr));
+            FONT_LOGI("GetFontFullname, fullnameStr:%{public}s", fullnameStr.c_str());
+        }
     }
     return fullNameVector;
+}
+
+std::string FontManager::Utf16BEToUtf8(const uint8_t* data, size_t byteLen)
+{
+    std::u16string utf16Str;
+    for (size_t i = 0; i + 1 < byteLen; i += NUM_TWO) {
+        uint16_t ch = (data[i] << 8) | data[i + 1];
+        utf16Str.push_back(static_cast<char16_t>(ch));
+    }
+    // Convert to UTF-8
+    return Str16ToStr8(utf16Str);
 }
 
 std::string FontManager::CopyFile(const std::string &sourcePath, const int32_t &fd)
