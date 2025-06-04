@@ -375,8 +375,8 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest012, TestSize.Level1)
         close(fd);
     }
     EXPECT_EQ(ret, SUCCESS);
-    fd = open(fontPath4.c_str(), O_RDONLY);
     ASSERT_TRUE(FileUtils::CheckPathExist("/data/test/testRepeats/"));
+    fd = open(fontPath4.c_str(), O_RDONLY);
     FileUtils::CopyFile(fd, fontPath5);
     if (fd > 0) {
         close(fd);
@@ -416,8 +416,8 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest013, TestSize.Level1)
         close(fd);
     }
     EXPECT_EQ(ret, SUCCESS);
-    fd = open(fontPath3.c_str(), O_RDONLY);
     ASSERT_TRUE(FileUtils::CheckPathExist("/data/test/testRepeats/"));
+    fd = open(fontPath3.c_str(), O_RDONLY);
     FileUtils::CopyFile(fd, fontPath6);
     if (fd > 0) {
         close(fd);
