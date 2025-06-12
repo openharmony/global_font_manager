@@ -30,7 +30,8 @@ ohos_unittest("font_config_test") {
 
   external_deps = [
     "googletest:gtest",
-    "googletest:gtest_main"
+    "googletest:gtest_main",
+    "hisysevent:libhisysevent",
   ]
 
   external_deps += fontmgr_external_deps
