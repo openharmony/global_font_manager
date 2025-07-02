@@ -60,7 +60,7 @@
           "napi",
           "safwk",
           "samgr",
-          "skia"
+          "graphic_2d"
         ]
     },
       "build": {
