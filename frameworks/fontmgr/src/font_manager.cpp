@@ -21,11 +21,12 @@
 #include "font_config.h"
 #include "file_utils.h"
 #include "hisysevent_adapter.h"
-#include "SkFontMgr.h"
+#include "text/font_mgr.h"
 
 namespace OHOS {
 namespace Global {
 namespace FontManager {
+using namespace Rosen::Drawing;
 static const std::string INSTALL_PATH = "/data/service/el1/public/for-all-app/fonts/";
 static const std::string FONT_CONFIG_FILE = INSTALL_PATH + "install_fontconfig.json";
 static const std::string FONTS_TEMP_PATH = "/data/service/el1/public/for-all-app/fonts/temp/";
@@ -116,20 +117,20 @@ std::vector<std::string> FontManager::GetFontFullName(const int32_t &fd)
 {
     // 调用字体引擎接口校验字体格式
     std::vector<std::string> fullNameVector;
-    std::vector<SkByteArray> fullname;
-    sk_sp<SkFontMgr> fontMgr = SkFontMgr::RefDefault();
+    std::vector<FontByteArray> fullNameVec;
+    std::share_ptr<FontMgr> fontMgr = FontMgr::CreateDefaultFontMgr();
     if (fontMgr == nullptr) {
         FONT_LOGE("fontMgr is null");
         return fullNameVector;
     }
 
-    int ret = fontMgr->GetFontFullName(fd, fullname);
+    int ret = fontMgr->GetFontFullName(fd, fullNameVec);
     if (ret != SUCCESS) {
         FONT_LOGE("GetFontFullName failed, err:%{public}d", ret);
         return fullNameVector;
     }
 
-    for (const auto &name : fullname) {
+    for (const auto &name : fullNameVec) {
         if (name.strData && name.strLen > 0) {
             std::string fullnameStr = Utf16BEToUtf8(name.strData.get(), name.strLen);
             fullNameVector.emplace_back(std::move(fullnameStr));

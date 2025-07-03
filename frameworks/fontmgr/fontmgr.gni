@@ -33,5 +33,5 @@ fontmgr_external_deps = [
     "cJSON:cjson",
     "common_event_service:cesfwk_innerkits",
     "hilog:libhilog",
-    "skia:skia_canvaskit"
+    "graphic_2d:2d_graphics",
 ]
