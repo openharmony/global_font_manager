@@ -118,7 +118,7 @@ std::vector<std::string> FontManager::GetFontFullName(const int32_t &fd)
     // 调用字体引擎接口校验字体格式
     std::vector<std::string> fullNameVector;
     std::vector<FontByteArray> fullNameVec;
-    std::share_ptr<FontMgr> fontMgr = FontMgr::CreateDefaultFontMgr();
+    std::shared_ptr<FontMgr> fontMgr = FontMgr::CreateDefaultFontMgr();
     if (fontMgr == nullptr) {
         FONT_LOGE("fontMgr is null");
         return fullNameVector;
