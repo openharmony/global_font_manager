@@ -60,12 +60,10 @@
           "napi",
           "safwk",
           "samgr",
-<<<<<<< Updated upstream
-          "skia"
-=======
+          "skia",
           "graphic_2d",
           "runtime_core"
->>>>>>> Stashed changes
+
         ]
     },
       "build": {
