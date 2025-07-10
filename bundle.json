@@ -60,11 +60,15 @@
           "napi",
           "safwk",
           "samgr",
-          "skia"
+          "skia",
+          "graphic_2d",
+          "runtime_core"
+
         ]
     },
       "build": {
           "sub_component": [
+            "//base/global/font_manager/interfaces/js/ani:ani_package_fontmanager",
             "//base/global/font_manager/interfaces/js/kits:fontmanager",
             "//base/global/font_manager/sa_profile:font_server_profile",
             "//base/global/font_manager/service:font_service_ability"
