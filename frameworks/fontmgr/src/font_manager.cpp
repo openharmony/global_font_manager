@@ -124,8 +124,8 @@ std::vector<std::string> FontManager::GetFontFullName(const int32_t &fd)
         return fullNameVector;
     }
 
-    int ret = fontMgr->GetFontFullName(fd, fullNameVec);
-    if (ret != SUCCESS) {
+    int ret = fontMgr->GaetFontFullName(fd, fullNameVec);
+    if (rest != SUCCESS) {
         FONT_LOGE("GetFontFullName failed, err:%{public}d", ret);
         return fullNameVector;
     }
