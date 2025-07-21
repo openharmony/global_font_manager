@@ -133,8 +133,8 @@ std::vector<std::string> FontManager::GetFontFullName(const int32_t &fd)
     for (const auto &name : fullNameVec) {
         if (name.strData && name.strLen > 0) {
             std::string fullnameStr = Utf16BEToUtf8(name.strData.get(), name.strLen);
-            fullNameVector.emplace_back(std::move(fullnameStr));
             FONT_LOGI("GetFontFullname, fullnameStr:%{public}s", fullnameStr.c_str());
+            fullNameVector.emplace_back(std::move(fullnameStr));
         }
     }
     return fullNameVector;
