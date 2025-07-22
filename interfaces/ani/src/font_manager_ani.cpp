@@ -25,6 +25,8 @@ namespace OHOS {
 namespace Global {
 namespace FontManager {
 
+static const char* CLASS_NAME_BUSINESSERROR = "L@ohos/base/BusinessError;";
+
 static const std::unordered_map<int, std::string> errorMsg = {
     {ERR_NO_PERMISSION, "Permission denied."},
     {ERR_NOT_SYSTEM_APP, "Non-system application."},
@@ -84,75 +86,39 @@ std::string FontManagerAni::ANIStringToStdString(ani_env *env, ani_string ani_st
     return buf;
 }
 
-ani_object FontManagerAni::CreateError(ani_env *env, const std::string &msg)
+void FontManagerAni::ThrowAniError(ani_env *env, ani_int code, const std::string &message)
 {
     ani_class cls {};
-    ani_method method {};
-    ani_object obj = nullptr;
-    ani_status status = ANI_ERROR;
-    if (env == nullptr) {
-        FONT_LOGE("null env");
-        return nullptr;
+    if (ANI_OK != env->FindClass(CLASS_NAME_BUSINESSERROR, &cls)) {
+        FONT_LOGE("find class %{public}s failed", CLASS_NAME_BUSINESSERROR);
+        return;
     }
-
-    ani_string aniMsg = nullptr;
-    if ((status = env->String_NewUTF8(msg.c_str(), msg.size(), &aniMsg)) != ANI_OK) {
-        FONT_LOGE("String_NewUTF8 failed %{public}d", status);
-        return nullptr;
+    ani_method ctor {};
+    if (ANI_OK != env->Class_FindMethod(cls, "<ctor>", ":V", &ctor)) {
+        FONT_LOGE("find method BusinessError constructor failed");
+        return;
     }
-
-    ani_ref undefRef;
-    if ((status = env->GetUndefined(&undefRef)) != ANI_OK) {
-        FONT_LOGE("GetUndefined failed %{public}d", status);
-        return nullptr;
+    ani_object error {};
+    if (ANI_OK != env->Object_New(cls, ctor, &error)) {
+        FONT_LOGE("new object %{public}s failed", CLASS_NAME_BUSINESSERROR);
+        return;
     }
-
-    if ((status = env->FindClass("Lescompat/Error;", &cls)) != ANI_OK) {
-        FONT_LOGE("FindClass failed %{public}d", status);
-        return nullptr;
+    if (ANI_OK != env->Object_SetPropertyByName_Int(error, "code", code)) {
+        FONT_LOGE("set property BusinessError.code failed");
+        return;
     }
-    if ((status = env->Class_FindMethod(cls, "<ctor>", "Lstd/core/String;Lescompat/ErrorOptions;:V", &method)) !=
-        ANI_OK) {
-        FONT_LOGE("Class_FindMethod failed %{public}d", status);
-        return nullptr;
+    ani_string messageRef {};
+    if (ANI_OK != env->String_NewUTF8(message.c_str(), message.size(), &messageRef)) {
+        FONT_LOGE("new message string failed");
+        return;
     }
-
-    if ((status = env->Object_New(cls, method, &obj, aniMsg, undefRef)) != ANI_OK) {
-        FONT_LOGE("Object_New failed %{public}d", status);
-        return nullptr;
+    if (ANI_OK != env->Object_SetPropertyByName_Ref(error, "message", static_cast<ani_ref>(messageRef))) {
+        FONT_LOGE("set property BusinessError.message failed");
+        return;
     }
-    return obj;
-}
-
-ani_object FontManagerAni::CreateBusinessError(ani_env *env, int code, const std::string &msg)
-{
-    ani_class cls {};
-    ani_method method {};
-    ani_object obj = nullptr;
-    ani_status status = ANI_ERROR;
-    if (env == nullptr) {
-        FONT_LOGE("null env");
-        return nullptr;
+    if (ANI_OK != env->ThrowError(static_cast<ani_error>(error))) {
+        FONT_LOGE("throwError ani_error object failed");
     }
-    if ((status = env->FindClass("L@ohos/base/BusinessError;", &cls)) != ANI_OK) {
-        FONT_LOGE("FindClass failed %{public}d", status);
-        return nullptr;
-    }
-    if ((status = env->Class_FindMethod(cls, "<ctor>", "DLescompat/Error;:V", &method)) != ANI_OK) {
-        FONT_LOGE("Class_FindMethod failed %{public}d", status);
-        return nullptr;
-    }
-    ani_object error = CreateError(env, msg);
-    if (error == nullptr) {
-        FONT_LOGE("error nulll");
-        return nullptr;
-    }
-    ani_double dCode(code);
-    if ((status = env->Object_New(cls, method, &obj, dCode, error)) != ANI_OK) {
-        FONT_LOGE("Object_New failed %{public}d", status);
-        return nullptr;
-    }
-    return obj;
 }
 
 void FontManagerAni::ThrowError(ani_env *env, int errorCode)
@@ -162,9 +128,7 @@ void FontManagerAni::ThrowError(ani_env *env, int errorCode)
     if (it != errorMsg.end()) {
         msg = it->second;
     }
-
-    ani_object error = CreateBusinessError(env, errorCode, msg);
-    env->ThrowError(static_cast<ani_error>(error));
+    ThrowAniError(env, errorCode, msg);
 }
 
 ani_status FontManagerAni::Init(ani_env* env)
