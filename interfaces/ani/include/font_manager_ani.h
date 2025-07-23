@@ -30,8 +30,7 @@ public:
 private:
     static std::string ANIStringToStdString(ani_env *env, ani_string ani_str);
     static void ThrowError(ani_env *env, int errorCode);
-    static ani_object CreateError(ani_env *env, const std::string &msg);
-    static ani_object CreateBusinessError(ani_env *env, int code, const std::string &msg);
+    static void ThrowAniError(ani_env *env, ani_int code, const std::string &message);
 };
 }
 }
