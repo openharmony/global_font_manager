@@ -39,40 +39,48 @@ FontManagerServer::FontManagerServer(int32_t saId, bool runOnCreate) : SystemAbi
 
 int32_t FontManagerServer::InstallFont(const int32_t fd, int32_t &outValue)
 {
-    int32_t err = CheckPermission();
-    if (err != SUCCESS) {
-        outValue = err;
-        return SUCCESS;
+    RemoveUnloadFontServiceTask();
+    int32_t ret = CheckPermission();
+    if (ret != SUCCESS) {
+        outValue = ret;
+    } else {
+        outValue = FontManager::GetInstance()->InstallFont(fd);
     }
-    outValue = FontManager::GetInstance()->InstallFont(fd);
-    UnloadFontServiceAbility();
+    AddUnloadFontServiceTask();
     return SUCCESS;
 }
 
 int32_t FontManagerServer::UninstallFont(const std::string &fontName, int32_t &outValue)
 {
-    int32_t err = CheckPermission();
-    if (err != SUCCESS) {
-        outValue = err;
-        return SUCCESS;
+    RemoveUnloadFontServiceTask();
+    int32_t ret = CheckPermission();
+    if (ret != SUCCESS) {
+        outValue = ret;
+    } else {
+        outValue = FontManager::GetInstance()->UninstallFont(fontName);
     }
-    outValue = FontManager::GetInstance()->UninstallFont(fontName);
-    UnloadFontServiceAbility();
+    AddUnloadFontServiceTask();
     return SUCCESS;
 }
 
-void FontManagerServer::UnloadFontServiceAbility()
+void FontManagerServer::AddUnloadFontServiceTask()
 {
     auto task = [this]() {
         auto fontSaLoadManager = DelayedSingleton<FontServiceLoadManager>::GetInstance();
         if (fontSaLoadManager != nullptr) {
-            FONT_LOGI("FontManagerServer::UnloadFontServiceAbility start to unload fontManager SA.");
+            FONT_LOGI("FontManagerServer start to unload fontManager SA.");
             fontSaLoadManager->UnloadFontService(FONT_SA_ID);
         }
     };
     if (handler_ != nullptr) {
-        handler_->RemoveTask(UNLOAD_TASK);
         handler_->PostTask(task, UNLOAD_TASK, DELAY_MILLISECONDS_FOR_UNLOAD_SA);
+    }
+}
+
+void FontManagerServer::RemoveUnloadFontServiceTask()
+{
+    if (handler_ != nullptr) {
+        handler_->RemoveTask(UNLOAD_TASK);
     }
 }
 
@@ -87,7 +95,7 @@ void FontManagerServer::OnStart(const SystemAbilityOnDemandReason &startReason)
     }
     FileUtils::DeleteDir(FONTS_TEMP_PATH, false);
     handler_ = std::make_shared<AppExecFwk::EventHandler>(AppExecFwk::EventRunner::Create(true));
-    UnloadFontServiceAbility();
+    AddUnloadFontServiceTask();
 }
 
 void FontManagerServer::OnStop(const SystemAbilityOnDemandReason &stopReason)

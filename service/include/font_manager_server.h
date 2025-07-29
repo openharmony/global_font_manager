@@ -43,7 +43,8 @@ protected:
     void OnStop(const SystemAbilityOnDemandReason &startReason) override;
 
 private:
-    void UnloadFontServiceAbility();
+    void AddUnloadFontServiceTask();
+    void RemoveUnloadFontServiceTask();
     int32_t CheckPermission();
     // font service unload event handler.
     std::shared_ptr <AppExecFwk::EventHandler> handler_;
