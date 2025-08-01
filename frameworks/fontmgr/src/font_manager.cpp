@@ -78,6 +78,13 @@ int32_t FontManager::InstallFont(const int32_t &fd)
     FontConfig fontConfig(FONT_CONFIG_FILE);
     for (const auto &fullName : fullNameVector) {
         std::string path = fontConfig.GetFontFileByName(fullName);
+        if (!path.empty() && !FileUtils::CheckPathExist(path)) {
+            if (!fontConfig.DeleteFontRecord(path)) {
+                FONT_LOGE("update install_fontconfig fail");
+                return ERR_INSTALL_FAIL;
+            }
+            break;
+        }
         if (!path.empty()) {
             FONT_LOGI("Font already installed");
             return ERR_INSTALLED_ALRADY;
