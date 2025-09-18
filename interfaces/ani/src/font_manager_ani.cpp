@@ -25,7 +25,7 @@ namespace OHOS {
 namespace Global {
 namespace FontManager {
 
-static const char* CLASS_NAME_BUSINESSERROR = "L@ohos/base/BusinessError;";
+static const char* CLASS_NAME_BUSINESSERROR = "@ohos.base.BusinessError";
 
 static const std::unordered_map<int, std::string> errorMsg = {
     {ERR_NO_PERMISSION, "Permission denied."},
@@ -94,7 +94,7 @@ void FontManagerAni::ThrowAniError(ani_env *env, ani_int code, const std::string
         return;
     }
     ani_method ctor {};
-    if (ANI_OK != env->Class_FindMethod(cls, "<ctor>", ":V", &ctor)) {
+    if (ANI_OK != env->Class_FindMethod(cls, "<ctor>", ":", &ctor)) {
         FONT_LOGE("find method BusinessError constructor failed");
         return;
     }
@@ -133,7 +133,7 @@ void FontManagerAni::ThrowError(ani_env *env, int errorCode)
 
 ani_status FontManagerAni::Init(ani_env* env)
 {
-    static const char* nameSpaceName = "L@ohos/fontManager/fontManager;";
+    static const char* nameSpaceName = "@ohos.fontManager.fontManager";
     ani_namespace ns;
     if (ANI_OK != env->FindNamespace(nameSpaceName, &ns)) {
         FONT_LOGE("Find namespace '%{public}s' failed", nameSpaceName);
