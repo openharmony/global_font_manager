@@ -103,7 +103,7 @@ void FontManagerAni::ThrowAniError(ani_env *env, ani_int code, const std::string
         FONT_LOGE("new object %{public}s failed", CLASS_NAME_BUSINESSERROR);
         return;
     }
-    if (ANI_OK != env->Object_SetPropertyByName_Int(error, "code", code)) {
+    if (ANI_OK != env->Object_SetPropertyByName_Int(error, "code_", code)) {
         FONT_LOGE("set property BusinessError.code failed");
         return;
     }
