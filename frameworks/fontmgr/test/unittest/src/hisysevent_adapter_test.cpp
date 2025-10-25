@@ -28,7 +28,7 @@ using testing::ext::TestSize;
 namespace OHOS {
 namespace Global {
 namespace FontManager {
-static const std::string INSTALL_PATH = "/data/service/el1/public/for-all-app/fonts/";
+static const std::string INSTALL_PATH = "/data/service/el1/public/fonts/";
 void HisyseventAdapterTest::SetUpTestCase(void) {}
 void HisyseventAdapterTest::TearDownTestCase(void) {}
 void HisyseventAdapterTest::SetUp(void) {}

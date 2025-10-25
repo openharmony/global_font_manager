@@ -61,7 +61,8 @@
           "safwk",
           "samgr",
           "graphic_2d",
-	      "runtime_core"
+          "runtime_core",
+          "os_account"
         ]
     },
       "build": {

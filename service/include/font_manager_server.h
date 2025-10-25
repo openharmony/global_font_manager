@@ -48,6 +48,8 @@ private:
     int32_t CheckPermission();
     // font service unload event handler.
     std::shared_ptr <AppExecFwk::EventHandler> handler_;
+    void InitUserInstallDir(const std::string& userId);
+    void DeleteUserInstallDir(const std::string& userId);
 };
 } // namespace FontManager
 } // namespace Global

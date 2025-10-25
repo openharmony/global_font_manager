@@ -129,10 +129,10 @@ auto installFontFunc = [](napi_env env, void* data) {
         return;
     }
     int ret = FontManagerClient::InstallFont(callback->value_, callback->errCode_);
-    if (ret != SUCCESS) {
+    if (ret != ERR_OK) {
         callback->SetErrorMsg("Other error.", ERR_INSTALL_FAIL);
     }
-    if (callback->errCode_ != SUCCESS) {
+    if (callback->errCode_ != ERR_OK) {
         std::string msg = "";
         switch (callback->errCode_) {
             case ERR_NO_PERMISSION :
@@ -180,10 +180,10 @@ auto uninstallFontFunc = [](napi_env env, void* data) {
         return;
     }
     int ret = FontManagerClient::UninstallFont(callback->value_, callback->errCode_);
-    if (ret != SUCCESS) {
+    if (ret != ERR_OK) {
         callback->SetErrorMsg("Other error.", ERR_UNINSTALL_FAIL);
     }
-    if (callback->errCode_ != SUCCESS) {
+    if (callback->errCode_ != ERR_OK) {
         std::string msg = "";
         switch (callback->errCode_) {
             case ERR_NO_PERMISSION :

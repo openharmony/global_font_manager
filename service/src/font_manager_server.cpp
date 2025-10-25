@@ -23,7 +23,10 @@
 #include "font_service_load_manager.h"
 #include "ipc_skeleton.h"
 #include "tokenid_kit.h"
-
+#include "common_event_support.h"
+#ifdef ACCOUNT_ENABLE
+#include "os_account_manager.h"
+#endif
 namespace OHOS {
 namespace Global {
 namespace FontManager {
@@ -40,27 +43,37 @@ FontManagerServer::FontManagerServer(int32_t saId, bool runOnCreate) : SystemAbi
 int32_t FontManagerServer::InstallFont(const int32_t fd, int32_t &outValue)
 {
     RemoveUnloadFontServiceTask();
+    int32_t userId = INVALID_USERID;
     int32_t ret = CheckPermission();
-    if (ret != SUCCESS) {
+    if (ret != ERR_OK) {
         outValue = ret;
-    } else {
-        outValue = FontManager::GetInstance()->InstallFont(fd);
+        return ERR_OK;
     }
+    if (AccountSA::OsAccountManager::GetOsAccountLocalIdFromUid(IPCSkeleton::GetCallingUid(), userId) != ERR_OK) {
+        outValue = ERR_INSTALL_FAIL;
+        return ERR_OK;
+    }
+    outValue = FontManager::GetInstance()->InstallFont(fd, userId);
     AddUnloadFontServiceTask();
-    return SUCCESS;
+    return ERR_OK;
 }
 
 int32_t FontManagerServer::UninstallFont(const std::string &fontName, int32_t &outValue)
 {
     RemoveUnloadFontServiceTask();
+    int32_t userId = INVALID_USERID;
     int32_t ret = CheckPermission();
-    if (ret != SUCCESS) {
+    if (ret != ERR_OK) {
         outValue = ret;
-    } else {
-        outValue = FontManager::GetInstance()->UninstallFont(fontName);
+        return ERR_OK;
     }
+    if (AccountSA::OsAccountManager::GetOsAccountLocalIdFromUid(IPCSkeleton::GetCallingUid(), userId) != ERR_OK) {
+        outValue = ERR_INSTALL_FAIL;
+        return ERR_OK;
+    }
+    outValue = FontManager::GetInstance()->UninstallFont(fontName, userId);
     AddUnloadFontServiceTask();
-    return SUCCESS;
+    return ERR_OK;
 }
 
 void FontManagerServer::AddUnloadFontServiceTask()
@@ -86,16 +99,46 @@ void FontManagerServer::RemoveUnloadFontServiceTask()
 
 void FontManagerServer::OnStart(const SystemAbilityOnDemandReason &startReason)
 {
-    FONT_LOGI("FontManagerServer OnStart, startReason name %{public}s", startReason.GetName().c_str());
+    std::string reasonName = startReason.GetName();
+    FONT_LOGI("FontManagerServer OnStart, startReason name %{public}s", reasonName.c_str());
     bool status = Publish(this);
     if (status) {
         FONT_LOGI("FontManagerServer Publish success.");
     } else {
         FONT_LOGI("FontManagerServer Publish failed.");
     }
-    FileUtils::DeleteDir(FONTS_TEMP_PATH, false);
+    if (reasonName == EventFwk::CommonEventSupport::COMMON_EVENT_USER_ADDED) {
+        std::string userId = startReason.GetValue();
+        InitUserInstallDir(userId);
+        FONT_LOGI("FontManagerServer InitUserInstallDir finish.");
+    }
+    if (reasonName == EventFwk::CommonEventSupport::COMMON_EVENT_USER_REMOVED) {
+        std::string userId = startReason.GetValue();
+        DeleteUserInstallDir(userId);
+        FONT_LOGI("FontManagerServer DeleteUserInstallDir finish.");
+    }
+
     handler_ = std::make_shared<AppExecFwk::EventHandler>(AppExecFwk::EventRunner::Create(true));
     AddUnloadFontServiceTask();
+}
+
+void FontManagerServer::InitUserInstallDir(const std::string& userId)
+{
+    std::string installPath = INSTALL_PATH_PREFIX + userId + "/";
+    if (!FileUtils::CheckPathExist(installPath)) {
+        if (!FileUtils::CreatDirWithPermission(installPath)) {
+            FONT_LOGE("FontManagerServer InitUserInstallDir CreatDirWithPermission err.");
+            return;
+        }
+    }
+    FONT_LOGI("FontManagerServer InitUserInstallDir suc.");
+    return;
+}
+
+void FontManagerServer::DeleteUserInstallDir(const std::string& userId)
+{
+    std::string installPath = INSTALL_PATH_PREFIX + userId + "/";
+    FileUtils::DeleteDir(installPath, true);
 }
 
 void FontManagerServer::OnStop(const SystemAbilityOnDemandReason &stopReason)
@@ -117,7 +160,7 @@ int32_t FontManagerServer::CheckPermission()
         FONT_LOGE("FontManagerServer caller process doesn't have UPDATE_FONT permission.");
         return ERR_NO_PERMISSION;
     }
-    return SUCCESS;
+    return ERR_OK;
 }
 } // namespace FontManager
 } // namespace Global

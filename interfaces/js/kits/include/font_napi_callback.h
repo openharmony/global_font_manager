@@ -32,7 +32,7 @@ struct FontNapiCallback {
     bool success_;
     int errCode_;
 
-    FontNapiCallback() : work_(nullptr), deferred_(nullptr), success_(true), errCode_(SUCCESS) {}
+    FontNapiCallback() : work_(nullptr), deferred_(nullptr), success_(true), errCode_(ERR_OK) {}
 
     void SetErrorMsg(const std::string &msg, int32_t errCode)
     {

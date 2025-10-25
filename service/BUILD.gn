@@ -108,6 +108,16 @@ ohos_shared_library("font_manager_server") {
 
   external_deps += fontmgr_external_deps
 
+  os_account_enable = false
+  if (defined(global_parts_info) && defined(global_parts_info.account_os_account)) {
+    os_account_enable = true
+  }
+
+  if (os_account_enable) {
+    external_deps += [ "os_account:os_account_innerkits" ]
+    defines = [ "ACCOUNT_ENABLE" ]
+  }
+
   branch_protector_ret = "pac_ret"
   sanitize = {
     boundary_sanitize = true

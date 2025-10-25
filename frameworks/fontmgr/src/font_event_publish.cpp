@@ -28,7 +28,8 @@ static const std::string FONT_UPDATE_FOR_POLICY = "usual.event.FONT_UPDATE_FOR_P
 static const std::string FONT_EVENT_TYPE = "eventType";
 static const std::string FONT_EVENT_FONT_NAMES = "fontFullNames";
 
-bool FontEventPublish::PublishFontUpdate(const FontEventType eventType, const std::string &fullName)
+bool FontEventPublish::PublishFontUpdate(const FontEventType eventType, const std::string &fullName,
+    const int32_t &userId)
 {
     OHOS::EventFwk::CommonEventPublishInfo publishInfo;
     publishInfo.SetOrdered(false);
@@ -39,7 +40,7 @@ bool FontEventPublish::PublishFontUpdate(const FontEventType eventType, const st
     updateWant.SetParam(FONT_EVENT_FONT_NAMES, fullName);
 
     OHOS::EventFwk::CommonEventData event(updateWant);
-    return OHOS::EventFwk::CommonEventManager::PublishCommonEvent(event, publishInfo, nullptr);
+    return OHOS::EventFwk::CommonEventManager::PublishCommonEventAsUser(event, publishInfo, userId);
 }
 } // namespace FontManager
 } // namespace Global
