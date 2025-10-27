@@ -68,7 +68,6 @@ bool FontManager::CheckFontConfigPath(const std::string &installPath)
 int32_t FontManager::InstallFont(const int32_t &fd, const int32_t userId)
 {
     std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + "/";
-    FileUtils::DeleteDir(installPath + TEMP_FILE, true);
     if (!(CheckAndInitInstallPath(installPath) && CheckFontConfigPath(installPath))) {
         return ERR_FILE_NOT_EXISTS;
     }

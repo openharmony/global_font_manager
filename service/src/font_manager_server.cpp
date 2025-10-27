@@ -35,7 +35,7 @@ static const std::string FONTS_TEMP_PATH = "/data/service/el1/public/for-all-app
 static const std::string UNLOAD_TASK = "font_service_unload";
 static const std::string PERMISSION_UPDATE_FONT = "ohos.permission.UPDATE_FONT";
 static const uint32_t DELAY_MILLISECONDS_FOR_UNLOAD_SA = 10000;
-
+static const uint32_t ONE_CALLING = 1;
 FontManagerServer::FontManagerServer(int32_t saId, bool runOnCreate) : SystemAbility(saId, runOnCreate)
 {
 }
@@ -43,46 +43,68 @@ FontManagerServer::FontManagerServer(int32_t saId, bool runOnCreate) : SystemAbi
 int32_t FontManagerServer::InstallFont(const int32_t fd, int32_t &outValue)
 {
     RemoveUnloadFontServiceTask();
+    callingCount_++;
+    InstallFontInner(fd, outValue);
+    callingCount_--;
+    AddUnloadFontServiceTask();
+    return ERR_OK;
+}
+
+void FontManagerServer::InstallFontInner(const int32_t fd, int32_t &outValue)
+{
     int32_t userId = INVALID_USERID;
     int32_t ret = CheckPermission();
     if (ret != ERR_OK) {
         outValue = ret;
-        return ERR_OK;
+        return;
     }
-    if (AccountSA::OsAccountManager::GetOsAccountLocalIdFromUid(IPCSkeleton::GetCallingUid(), userId) != ERR_OK) {
+    ret = AccountSA::OsAccountManager::GetOsAccountLocalIdFromUid(IPCSkeleton::GetCallingUid(), userId);
+    if (ret != ERR_OK) {
         outValue = ERR_INSTALL_FAIL;
-        return ERR_OK;
+        return;
     }
     outValue = FontManager::GetInstance()->InstallFont(fd, userId);
-    AddUnloadFontServiceTask();
-    return ERR_OK;
+    if (callingCount_ == ONE_CALLING) {
+        std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + "/";
+        FileUtils::DeleteDir(installPath + TEMP_FILE, true);
+    }
 }
 
 int32_t FontManagerServer::UninstallFont(const std::string &fontName, int32_t &outValue)
 {
     RemoveUnloadFontServiceTask();
+    callingCount_++;
+    UninstallFontInner(fontName, outValue);
+    callingCount_--;
+    AddUnloadFontServiceTask();
+    return ERR_OK;
+}
+
+void FontManagerServer::UninstallFontInner(const std::string &fontName, int32_t &outValue)
+{
     int32_t userId = INVALID_USERID;
     int32_t ret = CheckPermission();
     if (ret != ERR_OK) {
         outValue = ret;
-        return ERR_OK;
+        return;
     }
-    if (AccountSA::OsAccountManager::GetOsAccountLocalIdFromUid(IPCSkeleton::GetCallingUid(), userId) != ERR_OK) {
+    ret = AccountSA::OsAccountManager::GetOsAccountLocalIdFromUid(IPCSkeleton::GetCallingUid(), userId);
+    if (ret != ERR_OK) {
         outValue = ERR_INSTALL_FAIL;
-        return ERR_OK;
+        return;
     }
     outValue = FontManager::GetInstance()->UninstallFont(fontName, userId);
-    AddUnloadFontServiceTask();
-    return ERR_OK;
 }
 
 void FontManagerServer::AddUnloadFontServiceTask()
 {
     auto task = [this]() {
-        auto fontSaLoadManager = DelayedSingleton<FontServiceLoadManager>::GetInstance();
-        if (fontSaLoadManager != nullptr) {
-            FONT_LOGI("FontManagerServer start to unload fontManager SA.");
-            fontSaLoadManager->UnloadFontService(FONT_SA_ID);
+        if (callingCount_ == 0) {
+            auto fontSaLoadManager = DelayedSingleton<FontServiceLoadManager>::GetInstance();
+            if (fontSaLoadManager != nullptr) {
+                FONT_LOGI("FontManagerServer start to unload fontManager SA.");
+                fontSaLoadManager->UnloadFontService(FONT_SA_ID);
+            }
         }
     };
     if (handler_ != nullptr) {

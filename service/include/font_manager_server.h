@@ -16,6 +16,7 @@
 #ifndef GLOBAL_FONT_MANAGER_FONT_SERVER_H
 #define GLOBAL_FONT_MANAGER_FONT_SERVER_H
 
+#include <atomic>
 #include "event_handler.h"
 #include "font_service_stub.h"
 #include "system_ability.h"
@@ -43,6 +44,8 @@ protected:
     void OnStop(const SystemAbilityOnDemandReason &startReason) override;
 
 private:
+    void InstallFontInner(const int32_t fd, int32_t &outValue);
+    void UninstallFontInner(const std::string &fontName, int32_t &outValue);
     void AddUnloadFontServiceTask();
     void RemoveUnloadFontServiceTask();
     int32_t CheckPermission();
@@ -50,6 +53,7 @@ private:
     std::shared_ptr <AppExecFwk::EventHandler> handler_;
     void InitUserInstallDir(const std::string& userId);
     void DeleteUserInstallDir(const std::string& userId);
+    std::atomic_uint callingCount_ {0};
 };
 } // namespace FontManager
 } // namespace Global
