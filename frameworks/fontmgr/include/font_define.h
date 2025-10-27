@@ -20,7 +20,7 @@ namespace Global {
 namespace FontManager {
 enum FontErrorCode {
     // Common error code
-    SUCCESS = 0,
+    ERR_OK = 0,
     ERR_NO_PERMISSION = 201,
     ERR_NOT_SYSTEM_APP = 202,
 
@@ -36,6 +36,12 @@ enum FontErrorCode {
 };
 
 const int FONT_SA_ID = 66262;
+
+const std::string INSTALL_PATH_APP = "/data/service/el1/public/for-all-app/fonts/";
+const std::string INSTALL_PATH_PREFIX = "/data/service/el1/public/fonts/";
+const std::string FONT_CONFIG_FILE = "install_fontconfig.json";
+const std::string TEMP_FILE = "temp/";
+constexpr int32_t INVALID_USERID = -1;
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS

@@ -26,9 +26,8 @@
 #include <vector>
 
 namespace {
-const std::string INSTALL_PATH = "/data/service/el1/public/for-all-app/fonts/";
-const std::string TEMP_PATH = "/data/service/el1/public/for-all-app/fonts/temp/";
-const std::string FONT_CONFIG_FILE = INSTALL_PATH + "install_fontconfig.json";
+const std::string INSTALL_PATH_TEST = "/data/service/el1/public/fonts/100/";
+const std::string FONT_CONFIG_FILE_TEST = INSTALL_PATH_TEST + "install_fontconfig.json";
 }
 
 using testing::ext::TestSize;
@@ -40,7 +39,7 @@ namespace FontManager {
 
 class FontConfigTest : public testing::Test {
 public:
-    FontConfigTest() : config_(FONT_CONFIG_FILE)
+    FontConfigTest() : config_(FONT_CONFIG_FILE_TEST)
     {}
     static void SetUpTestCase(void);
     static void TearDownTestCase(void);
@@ -54,22 +53,22 @@ protected:
 
 void FontConfigTest::SetUpTestCase(void)
 {
-    FileUtils::RemoveFile(FONT_CONFIG_FILE);
+    FileUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
 }
 
 void FontConfigTest::TearDownTestCase(void)
 {
-    FileUtils::RemoveFile(FONT_CONFIG_FILE);
+    FileUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
 }
 
 void FontConfigTest::SetUp(void)
 {
-    FileUtils::RemoveFile(FONT_CONFIG_FILE);
+    FileUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
 }
 
 void FontConfigTest::TearDown(void)
 {
-    FileUtils::RemoveFile(FONT_CONFIG_FILE);
+    FileUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
 }
 
 /**
@@ -79,8 +78,8 @@ void FontConfigTest::TearDown(void)
  */
 HWTEST_F(FontConfigTest, FontConfigFuncTest001, TestSize.Level1)
 {
-    ASSERT_EQ(fontManager_.CheckFontConfigPath(), true);
-    std::string fontFullPath = INSTALL_PATH + "HarmonyOS_Sans.ttf";
+    ASSERT_EQ(fontManager_.CheckFontConfigPath(INSTALL_PATH_TEST), true);
+    std::string fontFullPath = INSTALL_PATH_TEST + "HarmonyOS_Sans.ttf";
     std::vector<std::string> fullName{"HarmonyOS-Sans"};
 
     EXPECT_EQ(this->config_.InsertFontRecord(fontFullPath, fullName), true);
@@ -96,8 +95,8 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest001, TestSize.Level1)
  */
 HWTEST_F(FontConfigTest, FontConfigFuncTest002, TestSize.Level1)
 {
-    ASSERT_EQ(fontManager_.CheckFontConfigPath(), true);
-    std::string fontFullPath = INSTALL_PATH + "HarmonyOS_Sans.ttf";
+    ASSERT_EQ(fontManager_.CheckFontConfigPath(INSTALL_PATH_TEST), true);
+    std::string fontFullPath = INSTALL_PATH_TEST + "HarmonyOS_Sans.ttf";
     std::vector<std::string> fullName{"HarmonyOS-Sans"};
 
     EXPECT_EQ(this->config_.InsertFontRecord(fontFullPath, fullName), true);
@@ -120,14 +119,14 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest002, TestSize.Level1)
  */
 HWTEST_F(FontConfigTest, FontConfigFuncTest003, TestSize.Level1)
 {
-    ASSERT_EQ(fontManager_.CheckFontConfigPath(), true);
-    std::string fontFullPath1 = INSTALL_PATH + "HarmonyOS_Sans1.ttf";
+    ASSERT_EQ(fontManager_.CheckFontConfigPath(INSTALL_PATH_TEST), true);
+    std::string fontFullPath1 = INSTALL_PATH_TEST + "HarmonyOS_Sans1.ttf";
     std::vector<std::string> fullName1{"HarmonyOS-Sans1"};
-    std::string fontFullPath2 = INSTALL_PATH + "HarmonyOS_Sans2.ttf";
+    std::string fontFullPath2 = INSTALL_PATH_TEST + "HarmonyOS_Sans2.ttf";
     std::vector<std::string> fullName2{"HarmonyOS-Sans2"};
-    std::string fontFullPath3 = INSTALL_PATH + "HarmonyOS_Sans3.ttf";
+    std::string fontFullPath3 = INSTALL_PATH_TEST + "HarmonyOS_Sans3.ttf";
     std::vector<std::string> fullName3{"HarmonyOS-Sans3"};
-    std::string fontFullPath4 = INSTALL_PATH + "HarmonyOS_Sans4.ttf";
+    std::string fontFullPath4 = INSTALL_PATH_TEST + "HarmonyOS_Sans4.ttf";
     std::vector<std::string> fullName4{"HarmonyOS-Sans4"};
 
     EXPECT_EQ(this->config_.InsertFontRecord(fontFullPath1, fullName1), true);
@@ -145,8 +144,8 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest003, TestSize.Level1)
  */
 HWTEST_F(FontConfigTest, FontConfigFuncTest004, TestSize.Level1)
 {
-    ASSERT_EQ(fontManager_.CheckFontConfigPath(), true);
-    std::string fontFullPath = INSTALL_PATH + "HarmonyOS_Sans.ttf";
+    ASSERT_EQ(fontManager_.CheckFontConfigPath(INSTALL_PATH_TEST), true);
+    std::string fontFullPath = INSTALL_PATH_TEST + "HarmonyOS_Sans.ttf";
     std::vector<std::string> fullName{"HarmonyOS-Sans"};
 
     EXPECT_EQ(this->config_.InsertFontRecord(fontFullPath, fullName), true);
@@ -162,8 +161,8 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest004, TestSize.Level1)
  */
 HWTEST_F(FontConfigTest, FontConfigFuncTest005, TestSize.Level1)
 {
-    ASSERT_EQ(fontManager_.CheckFontConfigPath(), true);
-    std::string fontFullPath = INSTALL_PATH + "NotoSansCJK-Regular.ttc";
+    ASSERT_EQ(fontManager_.CheckFontConfigPath(INSTALL_PATH_TEST), true);
+    std::string fontFullPath = INSTALL_PATH_TEST + "NotoSansCJK-Regular.ttc";
     std::vector<std::string> fullName{
         "Noto Sans CJK JP", "Noto Sans CJK KR", "Noto Sans CJK SC", "Noto Sans CJK TC",
         "Noto Sans CJK HK", "Noto Sans Mono CJK JP", "Noto Sans Mono CJK KR",
@@ -182,8 +181,8 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest005, TestSize.Level1)
  */
 HWTEST_F(FontConfigTest, FontConfigFuncTest006, TestSize.Level1)
 {
-    ASSERT_EQ(fontManager_.CheckFontConfigPath(), true);
-    std::string fontFullPath = INSTALL_PATH + "NotoSansCJK-Regular.ttc";
+    ASSERT_EQ(fontManager_.CheckFontConfigPath(INSTALL_PATH_TEST), true);
+    std::string fontFullPath = INSTALL_PATH_TEST + "NotoSansCJK-Regular.ttc";
     std::vector<std::string> fullName{
         "Noto Sans CJK JP", "Noto Sans CJK KR", "Noto Sans CJK SC", "Noto Sans CJK TC",
         "Noto Sans CJK HK", "Noto Sans Mono CJK JP", "Noto Sans Mono CJK KR",
@@ -209,17 +208,17 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest006, TestSize.Level1)
  */
 HWTEST_F(FontConfigTest, FontConfigFuncTest007, TestSize.Level1)
 {
-    ASSERT_EQ(fontManager_.CheckFontConfigPath(), true);
-    std::string fontFullPath1 = INSTALL_PATH + "NotoSansCJK-Regular1.ttc";
+    ASSERT_EQ(fontManager_.CheckFontConfigPath(INSTALL_PATH_TEST), true);
+    std::string fontFullPath1 = INSTALL_PATH_TEST + "NotoSansCJK-Regular1.ttc";
     std::vector<std::string> fullName1{"Noto Serif CJK JP",
         "Noto Serif CJK KR", "Noto Serif CJK SC", "Noto Serif CJK TC", "Noto Serif CJK HK"};
-    std::string fontFullPath2 = INSTALL_PATH + "NotoSansCJK-Regular2.ttc";
+    std::string fontFullPath2 = INSTALL_PATH_TEST + "NotoSansCJK-Regular2.ttc";
     std::vector<std::string> fullName2{"Noto Serif CJK JP",
         "Noto Serif CJK KR", "Noto Serif CJK SC", "Noto Serif CJK TC", "Noto Serif CJK HK"};
-    std::string fontFullPath3 = INSTALL_PATH + "NotoSansCJK-Regular3.ttc";
+    std::string fontFullPath3 = INSTALL_PATH_TEST + "NotoSansCJK-Regular3.ttc";
     std::vector<std::string> fullName3{"Noto Serif CJK JP",
         "Noto Serif CJK KR", "Noto Serif CJK SC", "Noto Serif CJK TC", "Noto Serif CJK HK"};
-    std::string fontFullPath4 = INSTALL_PATH + "NotoSansCJK-Regular4.ttc";
+    std::string fontFullPath4 = INSTALL_PATH_TEST + "NotoSansCJK-Regular4.ttc";
     std::vector<std::string> fullName4{"Noto Serif CJK JP",
         "Noto Serif CJK KR", "Noto Serif CJK SC", "Noto Serif CJK TC", "Noto Serif CJK HK"};
 
@@ -238,8 +237,8 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest007, TestSize.Level1)
  */
 HWTEST_F(FontConfigTest, FontConfigFuncTest008, TestSize.Level1)
 {
-    ASSERT_EQ(fontManager_.CheckFontConfigPath(), true);
-    std::string fontFullPath = INSTALL_PATH + "NotoSansCJK-Regular.ttc";
+    ASSERT_EQ(fontManager_.CheckFontConfigPath(INSTALL_PATH_TEST), true);
+    std::string fontFullPath = INSTALL_PATH_TEST + "NotoSansCJK-Regular.ttc";
     std::vector<std::string> fullName{
         "Noto Serif CJK JP", "Noto Serif CJK KR", "Noto Serif CJK SC", "Noto Serif CJK TC", "Noto Serif CJK HK"};
 
