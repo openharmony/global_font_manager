@@ -29,7 +29,7 @@ idl_gen_interface("font_service_interface") {
 
 config("font_client_config") {
   include_dirs = [
-    "include",
+    "client/include",
     "inner_api/include",
     "${target_gen_dir}",
   ]
@@ -37,7 +37,7 @@ config("font_client_config") {
 
 config("font_server_config") {
   include_dirs = [
-    "include",
+    "server/include",
     "${target_gen_dir}",
   ]
 }
@@ -53,11 +53,11 @@ group("font_service_ability") {
 ohos_shared_library("font_manager_client") {
   output_values = get_target_outputs(":font_service_interface")
   sources = [
-    "src/font_manager_client.cpp",
-    "src/font_service_load_manager.cpp",
-    "src/font_sa_load_callback.cpp",
-    "src/data_migration_cb_agent.cpp",
-    "src/font_manager_death_recipient.cpp",
+    "client/src/font_manager_client.cpp",
+    "client/src/font_service_load_manager.cpp",
+    "client/src/font_sa_load_callback.cpp",
+    "client/src/data_migration_cb_agent.cpp",
+    "client/src/font_manager_death_recipient.cpp",
     "inner_api/src/font_manager_kits.cpp",
   ]
 
@@ -66,7 +66,7 @@ ohos_shared_library("font_manager_client") {
   sources += filter_include(output_values, [ "*_callback_event.cpp" ])
   public_configs = [ ":font_client_config" ]
 
-  include_dirs = fontmgr_include
+  include_dirs = [ "../common/include" ]
 
   deps = [ ":font_service_interface" ]
 
@@ -96,14 +96,15 @@ ohos_shared_library("font_manager_client") {
 ohos_shared_library("font_manager_server") {
   shlib_type = "sa"
   output_values = get_target_outputs(":font_service_interface")
-  sources = [ "src/font_manager_server.cpp" ]
+  sources = [ "server/src/font_manager_server.cpp" ]
   sources += filter_include(output_values, [ "*_stub.cpp" ])
   sources += filter_include(output_values, [ "*_callback_proxy.cpp" ])
   sources += filter_include(output_values, [ "*_callback_event.cpp" ])
   sources += fontmgr_src
   public_configs = [ ":font_server_config" ]
 
-  include_dirs = fontmgr_include
+  include_dirs = [ "../common/include" ]
+  include_dirs += fontmgr_include
 
   deps = [
     ":font_manager_client",
@@ -111,7 +112,6 @@ ohos_shared_library("font_manager_server") {
   ]
 
   external_deps = [
-    "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
     "access_token:libtokenid_sdk",
     "c_utils:utils",

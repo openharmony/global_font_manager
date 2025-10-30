@@ -34,14 +34,14 @@ ohos_fuzztest("ServiceInstallFontFuzzTest") {
   include_dirs = [
     "${target_gen_dir}",
     "../utils",
-    "../../../service/include",
-    "../../../frameworks/fontmgr/include",
+    "../../../service/client/include",
+    "../../../common/include",
   ]
   sources = [
     "fuzzer.cpp",
     "../utils/fuzz_data.cpp",
-    "../../../service/src/font_sa_load_callback.cpp",
-    "../../../service/src/font_service_load_manager.cpp"
+    "../../../service/client/src/font_sa_load_callback.cpp",
+    "../../../service/client/src/font_service_load_manager.cpp"
   ]
   idl_path = get_target_outputs(":font_service_interface")
   sources += filter_include(idl_path, [ "*_stub.cpp" ])

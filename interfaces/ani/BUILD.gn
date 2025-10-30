@@ -17,7 +17,7 @@ import("//build/ohos.gni")
 config("fontmgr_ani_config") {
   include_dirs = [
     "include",
-    "../../frameworks/fontmgr/include",
+    "../../common/include",
   ]
 }
 

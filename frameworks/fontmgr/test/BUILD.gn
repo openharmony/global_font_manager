@@ -24,6 +24,7 @@ ohos_unittest("font_config_test") {
   sources += fontmgr_src
   include_dirs = [
     "./unittest/include",
+    "../../../common/include",
   ]
 
   include_dirs += fontmgr_include
@@ -66,6 +67,7 @@ ohos_unittest("font_manager_module_test") {
   sources += fontmgr_src
   include_dirs = [
     "./unittest/include",
+    "../../../common/include",
   ]
 
   include_dirs += fontmgr_include

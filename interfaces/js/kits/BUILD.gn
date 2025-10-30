@@ -16,7 +16,7 @@ import("//build/ohos.gni")
 config("fontmgr_napi_config") {
   include_dirs = [
     "include",
-    "../../../frameworks/fontmgr/include",
+    "../../../common/include",
   ]
 }
 
