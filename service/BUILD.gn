@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Huawei Device Co., Ltd.
+# Copyright (c) 2024-2025 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,11 +17,25 @@ import("//build/config/components/idl_tool/idl.gni")
 
 idl_gen_interface("font_service_interface") {
   sources = [ "IFontService.idl" ]
+  sources_callback = ["IDataMigrationCallback.idl"]
   log_domainid = "0xD001E00"
   log_tag = "FONT_MSG"
+  sources_common = [
+    "IDataMigrationCallbackEvent.idl",
+  ]
+  part_name = "font_manager"
+  subsystem_name = "global"
 }
 
 config("font_client_config") {
+  include_dirs = [
+    "include",
+    "inner_api/include",
+    "${target_gen_dir}",
+  ]
+}
+
+config("font_server_config") {
   include_dirs = [
     "include",
     "${target_gen_dir}",
@@ -42,9 +56,14 @@ ohos_shared_library("font_manager_client") {
     "src/font_manager_client.cpp",
     "src/font_service_load_manager.cpp",
     "src/font_sa_load_callback.cpp",
+    "src/data_migration_cb_agent.cpp",
+    "src/font_manager_death_recipient.cpp",
+    "inner_api/src/font_manager_kits.cpp",
   ]
 
   sources += filter_include(output_values, [ "*_proxy.cpp" ])
+  sources += filter_include(output_values, [ "*_callback_stub.cpp" ])
+  sources += filter_include(output_values, [ "*_callback_event.cpp" ])
   public_configs = [ ":font_client_config" ]
 
   include_dirs = fontmgr_include
@@ -79,14 +98,12 @@ ohos_shared_library("font_manager_server") {
   output_values = get_target_outputs(":font_service_interface")
   sources = [ "src/font_manager_server.cpp" ]
   sources += filter_include(output_values, [ "*_stub.cpp" ])
+  sources += filter_include(output_values, [ "*_callback_proxy.cpp" ])
+  sources += filter_include(output_values, [ "*_callback_event.cpp" ])
   sources += fontmgr_src
+  public_configs = [ ":font_server_config" ]
 
-  include_dirs = [
-    "include",
-    "${target_gen_dir}",
-  ]
-
-  include_dirs += fontmgr_include
+  include_dirs = fontmgr_include
 
   deps = [
     ":font_manager_client",

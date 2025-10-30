@@ -24,6 +24,8 @@
 namespace OHOS {
 namespace Global {
 namespace FontManager {
+FontManagerClient::FontManagerClient() {}
+FontManagerClient::~FontManagerClient() {}
 
 int32_t FontManagerClient::InstallFont(const std::string &fontPath, int &outValue)
 {
@@ -62,6 +64,26 @@ int32_t FontManagerClient::UninstallFont(const std::string &fontName, int &outVa
         return ERR_OK;
     }
     return service->UninstallFont(fontName, outValue);
+}
+
+int32_t FontManagerClient::DataMigration(std::unique_ptr<DataMigrationCallback> callback)
+{
+    sptr<IFontService> service = FontServiceLoadManager::GetInstance()->GetFontServiceAbility(FONT_SA_ID);
+    if (service == nullptr) {
+        FONT_LOGE("Service is null");
+        return ERR_SYSTEM_ERROR;
+    }
+    sptr<DataMigrationCbAgent> cbAgent = new (std::nothrow) DataMigrationCbAgent(std::move(callback));
+    if (cbAgent == nullptr) {
+        FONT_LOGE("cbAgent is null");
+        return ERR_SYSTEM_ERROR;
+    }
+    sptr<IRemoteObject> remote = cbAgent->AsObject();
+    if (remote == nullptr) {
+        FONT_LOGE("DataMigration callback is not callback");
+        return ERR_SYSTEM_ERROR;
+    }
+    return service->DataMigration(cbAgent);
 }
 
 bool FontManagerClient::PathToRealPath(const std::string& path, std::string& realPath)

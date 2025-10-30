@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,28 +13,27 @@
  * limitations under the License.
  */
 
-#include "font_manager_addon.h"
-
-#include "napi/native_api.h"
-#include "napi/native_common.h"
+#include "font_manager_death_recipient.h"
+#include "font_hilog.h"
 
 namespace OHOS {
 namespace Global {
 namespace FontManager {
-
-static napi_module g_FontResourceModule = {
-    .nm_version = 1,
-    .nm_flags = 0,
-    .nm_filename = nullptr,
-    .nm_register_func = FontManagerAddonInit,
-    .nm_modname = "fontmanager",
-    .nm_priv = nullptr,
-    .reserved = { 0 }
-};
-
-extern "C" __attribute__((constructor)) void AbilityRegister()
+void FontManagerDeathRecipient::OnRemoteDied(const wptr<IRemoteObject>& wptrDeath)
 {
-    napi_module_register(&g_FontResourceModule);
+    if (wptrDeath == nullptr) {
+        FONT_LOGE("FontManagerDeathRecipient OnRemoteDied: wptrDeath is nullptr");
+        return;
+    }
+    sptr<IRemoteObject> object = wptrDeath.promote();
+    if (object == nullptr) {
+        FONT_LOGE("FontManagerDeathRecipient OnRemoteDied: object is nullptr");
+        return;
+    }
+    if (callback_ != nullptr) {
+        FONT_LOGW("FontManagerDeathRecipient OnRemoteDied: call OnRemoteDied callback");
+        callback_(object);
+    }
 }
 } // namespace FontManager
 } // namespace Global

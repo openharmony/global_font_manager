@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2024-2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,6 +15,7 @@
 
 #include "font_manager.h"
 
+#include <fcntl.h>
 #include <string_ex.h>
 #include "font_hilog.h"
 #include "font_event_publish.h"
@@ -22,6 +23,10 @@
 #include "file_utils.h"
 #include "hisysevent_adapter.h"
 #include "text/font_mgr.h"
+#include "directory_ex.h"
+#ifdef ACCOUNT_ENABLE
+#include "os_account_manager.h"
+#endif
 
 namespace OHOS {
 namespace Global {
@@ -29,6 +34,9 @@ namespace FontManager {
 using namespace Rosen::Drawing;
 static constexpr int32_t MAX_INSTALL_NUM = 200;
 static constexpr int32_t NUM_TWO = 2;
+static constexpr int32_t COPY_SPEED = 5 * 1024 / 60; // Mb/s
+static constexpr int32_t MAX_TRIGGER_COUNT = 100;
+static constexpr double EPSILON = 0.5;
 FontManager::FontManager()
 {
 }
@@ -159,12 +167,42 @@ std::vector<std::string> FontManager::GetFontFullName(const int32_t &fd)
 std::string FontManager::Utf16BEToUtf8(const uint8_t* data, size_t byteLen)
 {
     std::u16string utf16Str;
-    for(size_t i = 0; i + 1 < byteLen; i += NUM_TWO) {
+    for (size_t i = 0; i + 1 < byteLen; i += NUM_TWO) {
         uint16_t ch = (data[i] << 8) | data[i + 1];
         utf16Str.push_back(static_cast<char16_t>(ch));
     }
     // Convert to UTF-8
     return Str16ToStr8(utf16Str);
+}
+
+bool FontManager::CopyFileForDataMigration(const std::string &srcPath, const int32_t userId)
+{
+    std::string fileName = FileUtils::GetFileName(srcPath);
+    std::string tempPath = INSTALL_PATH_PREFIX + TEMP_FILE + fileName;
+    std::string desPath = INSTALL_PATH_PREFIX + std::to_string(userId) + "/" + fileName;
+    if (FileUtils::CheckPathExist(desPath)) {
+        FONT_LOGI("CopyFileForDataMigration path is exist(%{public}s) ", desPath.c_str());
+        return true;
+    }
+    int fd = open(srcPath.c_str(), O_RDONLY);
+    if (fd < 0) {
+        FONT_LOGE("CopyFileForDataMigration pen font file failed, errno: %{public}d", errno);
+        return false;
+    }
+
+    if (!FileUtils::CopyFile(fd, tempPath)) {
+        FONT_LOGE("CopyFileForDataMigration copy file %{public}s error", tempPath.c_str());
+        close(fd);
+        return false;
+    }
+    if (!FileUtils::RenameFile(tempPath, desPath)) {
+        FONT_LOGE("CopyFileForDataMigration rename file %{public}s error", fileName.c_str());
+        FileUtils::RemoveFile(tempPath);
+        close(fd);
+        return false;
+    }
+    close(fd);
+    return true;
 }
 
 std::string FontManager::CopyFileForInstall(const std::string &installPath, const std::string &fileName,
@@ -217,10 +255,167 @@ int32_t FontManager::UninstallFont(const std::string &fontFullName, const int32_
     return ERR_OK;
 }
 
+std::vector<int32_t> FontManager::GetAllCreatedUserIds()
+{
+    std::vector<int32_t> allUserIds;
+#ifdef ACCOUNT_ENABLE
+    std::vector<AccountSA::OsAccountInfo> osAccountInfos;
+    ErrCode ret = AccountSA::OsAccountManager::QueryAllCreatedOsAccounts(osAccountInfos);
+    if (ret != ERR_OK || osAccountInfos.empty()) {
+        FONT_LOGE("FontManager::GetAllCreatedUserIds failed.err=%{public}d", ret);
+    }
+    for (const auto &info : osAccountInfos) {
+        allUserIds.push_back(info.GetLocalId());
+    }
+    return allUserIds;
+#else
+    FONT_LOGI("FontManager osAccount not support.");
+    return allUserIds;
+#endif
+}
+
+int32_t FontManager::DataMigrationInner(const RemoteCallbackPtr& callback)
+{
+    if (OHOS::IsEmptyFolder(INSTALL_PATH_APP)) {
+        FONT_LOGE("FontManager INSTALL_PATH_APP is empty.");
+        return ERR_NOT_NEED_DATA_MIGRATION;
+    }
+    std::vector<int32_t> userIds = GetAllCreatedUserIds();
+    if (userIds.empty()) {
+        FONT_LOGE("FontManager userIds empty.");
+        return ERR_SYSTEM_ERROR;
+    }
+    if (!InitAllUserDir(userIds) || !InitDataMigrationTempDir()) {
+        FONT_LOGE("FontManager DataMigrationInner InitDir err.");
+        return ERR_SYSTEM_ERROR;
+    }
+    std::vector<std::string> paths;
+    OHOS::GetDirFiles(INSTALL_PATH_APP, paths);
+    EventDataBeginCallback(callback);
+    for (size_t i = 0; i < paths.size(); ++i) {
+        if (ShouldCallback(i, paths.size())) {
+            EventDataProgressCallback(i, paths.size(), userIds.size(), callback);
+        }
+        int ret = StartOneFileCopyTask(paths[i], userIds);
+        if (ret != ERR_OK) {
+            FONT_LOGE("FontManager StartOneFileCopyTask err.path:%{public}s.", paths[i].c_str());
+            return ERR_SYSTEM_ERROR;
+        }
+        FONT_LOGI("FontManager::StartOneFileCopyTask suc path = %{public}s.", paths[i].c_str());
+    }
+    FileUtils::DeleteDir(INSTALL_PATH_PREFIX + TEMP_FILE, true);
+    return ERR_OK;
+}
+
+void FontManager::DataMigration(const RemoteCallbackPtr& callback)
+{
+    FileUtils::DeleteDir(INSTALL_PATH_APP + TEMP_FILE, true);
+    int32_t ret = DataMigrationInner(callback);
+    EventDataResultCallback(ret, callback);
+}
+
+int32_t FontManager::StartOneFileCopyTask(const std::string& path, const std::vector<int32_t>& userIds)
+{
+    for (const auto& userId : userIds) {
+        if (!CopyFileForDataMigration(path, userId)) {
+            FONT_LOGE("StartOneFileCopyTask copy file %{public}s error", path.c_str());
+            return ERR_SYSTEM_ERROR;
+        }
+    }
+    if (!FileUtils::RemoveFile(path)) {
+        FONT_LOGE("StartOneFileCopyTask RemoveFile file (%{public}s) error", path.c_str());
+        return ERR_SYSTEM_ERROR;
+    }
+    return ERR_OK;
+}
+
+bool FontManager::InitAllUserDir(const std::vector<int32_t> userIds)
+{
+    for (const auto& userId : userIds) {
+        std::string path = INSTALL_PATH_PREFIX + std::to_string(userId) + "/";
+        if (!FileUtils::CreatDirWithPermission(path)) {
+            FONT_LOGI("FontManager::GetAllCreatedUserIds userid = %{public}d.", userId);
+            return false;
+        }
+    }
+    return true;
+}
+
+bool FontManager::InitDataMigrationTempDir()
+{
+    std::string tempPath = INSTALL_PATH_PREFIX + TEMP_FILE;
+    if (!FileUtils::CheckPathExist(tempPath)) {
+        if (!FileUtils::CreatDirWithPermission(tempPath)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 std::string FontManager::GetRealPath(const std::string &installPath, const std::string &path)
 {
     std::string fileName = FileUtils::GetFileName(path);
     return installPath + fileName;
+}
+
+void FontManager::EventDataBeginCallback(const RemoteCallbackPtr& callback)
+{
+    EventData eventData = {.event = ProgressType::START, .timeRemain = 0, .progressRate = 0, .progressResult = 0};
+    RefreshEventData(eventData, callback);
+}
+
+void FontManager::EventDataProgressCallback(int32_t i, int32_t size, int32_t idsize, const RemoteCallbackPtr& callback)
+{
+
+    std::uintmax_t remainSize = OHOS::GetFolderSize(INSTALL_PATH_APP) * idsize >> 20;
+    int32_t timeRemain = remainSize / COPY_SPEED;
+    if (timeRemain < 1) {
+        timeRemain = 1;
+    }
+    int32_t progressRate =
+        i == 0 ? i : static_cast<int32_t>((static_cast<int64_t>(i) * MAX_TRIGGER_COUNT + size / 2) / size);
+    EventData eventData = {.event = ProgressType::PROGRESS_DOING,
+                            .timeRemain = timeRemain,
+                            .progressRate = progressRate,
+                            .progressResult = 0};
+    RefreshEventData(eventData, callback);
+}
+
+void FontManager::EventDataResultCallback(int32_t result, const RemoteCallbackPtr& callback)
+{
+    EventData eventData = {.event = ProgressType::PROGRESS_RESULT,
+                            .timeRemain = 0,
+                            .progressRate = 0,
+                            .progressResult = result};
+    RefreshEventData(eventData, callback);
+}
+
+void FontManager::EventDataHeartBeatCallback(const RemoteCallbackPtr& callback)
+{
+    EventData eventData = {.event = ProgressType::HEART_BEAT,
+                            .timeRemain = 0,
+                            .progressRate = 0,
+                            .progressResult = 0};
+    RefreshEventData(eventData, callback);
+}
+
+bool FontManager::ShouldCallback(int32_t i, int32_t totalCount)
+{
+    if (totalCount <= MAX_TRIGGER_COUNT) {
+        return true;
+    }
+    double step = static_cast<double>(totalCount) / static_cast<double>(MAX_TRIGGER_COUNT);
+    int32_t expectedTriggerIndex = static_cast<int32_t>(std::round(i / step));
+    double triggerPos = expectedTriggerIndex * step;
+    return std::fabs(i - triggerPos) < EPSILON;
+}
+
+void FontManager::RefreshEventData(const EventData& eventData, const RemoteCallbackPtr& callback)
+{
+    sptr<IRemoteObject> object = callback->AsObject();
+    if (object != nullptr) {
+        callback->Handle(ERR_OK, std::move(eventData));
+    }
 }
 } // namespace FontManager
 } // namespace Global

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2024-2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -23,6 +23,7 @@
 #include "ifont_service.h"
 #include "iremote_object.h"
 #include "iservice_registry.h"
+#include "font_manager_death_recipient.h"
 
 namespace OHOS {
 namespace Global {
@@ -49,6 +50,10 @@ private:
     LoadSaStatus loadSaStatus_ = LoadSaStatus::WAIT_RESULT;
     std::condition_variable proxyConVar_;
     std::mutex serviceLock_;
+
+    void OnServiceDied(const sptr<IRemoteObject>& remote);
+    sptr<FontManagerDeathRecipient> serviceDeath_ = new (std::nothrow)
+        FontManagerDeathRecipient(std::bind(&FontServiceLoadManager::OnServiceDied, this, std::placeholders::_1));
 };
 } // namespace FontManager
 } // namespace Global

@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Huawei Device Co., Ltd.
+# Copyright (c) 2024-2025 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -37,7 +37,8 @@ ohos_unittest("font_config_test") {
   external_deps += fontmgr_external_deps
 
   deps = [
-    "../../../service:font_service_ability"
+    "../../../service:font_manager_server",
+    "../../../service:font_service_interface",
   ]
 
   defines = [ "SUPPORT_GRAPHICS" ]
@@ -79,7 +80,8 @@ ohos_unittest("font_manager_module_test") {
   external_deps += fontmgr_external_deps
 
   deps = [
-    "../../../service:font_service_ability",
+    "../../../service:font_manager_server",
+    "../../../service:font_service_interface",
   ]
 
   defines = [ "SUPPORT_GRAPHICS" ]

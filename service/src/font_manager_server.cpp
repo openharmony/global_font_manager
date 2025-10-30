@@ -15,6 +15,8 @@
  
 #include "font_manager_server.h"
 
+#include <thread>
+#include <chrono>
 #include "accesstoken_kit.h"
 #include "file_utils.h"
 #include "font_define.h"
@@ -31,13 +33,21 @@ namespace OHOS {
 namespace Global {
 namespace FontManager {
 REGISTER_SYSTEM_ABILITY_BY_ID(FontManagerServer, FONT_SA_ID, false);
-static const std::string FONTS_TEMP_PATH = "/data/service/el1/public/for-all-app/fonts/temp/";
+namespace {
 static const std::string UNLOAD_TASK = "font_service_unload";
 static const std::string PERMISSION_UPDATE_FONT = "ohos.permission.UPDATE_FONT";
-static const uint32_t DELAY_MILLISECONDS_FOR_UNLOAD_SA = 10000;
-static const uint32_t ONE_CALLING = 1;
+static constexpr uint32_t DELAY_MILLISECONDS_FOR_UNLOAD_SA = 10000;
+static constexpr uint32_t DELAY_DATA_MIGRATION = 200;
+static constexpr uint32_t HEARTBEAT_INTERVAL = 60;
+static constexpr uint32_t ONE_CALLING = 1;
+static constexpr int32_t INVALID_USERID = -1;
+}
 FontManagerServer::FontManagerServer(int32_t saId, bool runOnCreate) : SystemAbility(saId, runOnCreate)
 {
+    deathRecipient_ = new (std::nothrow)
+        FontManagerDeathRecipient(std::bind(&FontManagerServer::OnServiceDied,
+                                            this,
+                                            std::placeholders::_1));
 }
 
 int32_t FontManagerServer::InstallFont(const int32_t fd, int32_t &outValue)
@@ -58,11 +68,17 @@ void FontManagerServer::InstallFontInner(const int32_t fd, int32_t &outValue)
         outValue = ret;
         return;
     }
+#ifdef ACCOUNT_ENABLE
     ret = AccountSA::OsAccountManager::GetOsAccountLocalIdFromUid(IPCSkeleton::GetCallingUid(), userId);
     if (ret != ERR_OK) {
         outValue = ERR_INSTALL_FAIL;
         return;
     }
+#else
+    FONT_LOGE("FontManagerServer:this device not support os account.");
+    outValue = ERR_INSTALL_FAIL;
+    return;
+#endif
     outValue = FontManager::GetInstance()->InstallFont(fd, userId);
     if (callingCount_ == ONE_CALLING) {
         std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + "/";
@@ -88,18 +104,81 @@ void FontManagerServer::UninstallFontInner(const std::string &fontName, int32_t 
         outValue = ret;
         return;
     }
+#ifdef ACCOUNT_ENABLE
     ret = AccountSA::OsAccountManager::GetOsAccountLocalIdFromUid(IPCSkeleton::GetCallingUid(), userId);
     if (ret != ERR_OK) {
-        outValue = ERR_INSTALL_FAIL;
+        outValue = ERR_UNINSTALL_FAIL;
         return;
     }
+#else
+    FONT_LOGE("FontManagerServer:this device not support os account.");
+    outValue = ERR_UNINSTALL_FAIL;
+    return;
+#endif
     outValue = FontManager::GetInstance()->UninstallFont(fontName, userId);
+}
+
+int32_t FontManagerServer::DataMigration(const sptr<IDataMigrationCallback>& callback)
+{
+    RemoveUnloadFontServiceTask();
+    callingCount_++;
+    int32_t ret = DataMigrationInner(callback);
+    callingCount_--;
+    AddUnloadFontServiceTask();
+    return ret;
+}
+
+int32_t FontManagerServer::DataMigrationInner(const sptr<IDataMigrationCallback>& callback)
+{
+    int32_t ret = CheckPermission();
+    if (ret != ERR_OK) {
+        FONT_LOGI("FontManagerServer no permission.");
+        return ret;
+    }
+    if (handler_ == nullptr) {
+        FONT_LOGE("FontManagerServer handler_ is null.");
+        return ERR_SYSTEM_ERROR;
+    }
+    if (isDataMigrationing_) {
+        FONT_LOGE("FontManagerServer is DataMigrationing.");
+        return ERR_DATA_MIGRATIONING;
+    }
+    auto task = [this, callback]() {
+        StartDataMigrationTask(callback);
+    };
+    handler_->PostTask(task, DELAY_DATA_MIGRATION);
+    FONT_LOGI("FontManagerServer DataMigration call success.");
+    return ERR_OK;
+}
+
+void FontManagerServer::StartDataMigrationTask(const sptr<IDataMigrationCallback>& callback)
+{
+    RemoveUnloadFontServiceTask();
+    isDataMigrationing_ = true;
+    StartHeartBeatTask(callback);
+    FontManager::GetInstance()->DataMigration(callback);
+    isDataMigrationing_ = false;
+    FONT_LOGI("FontManagerServer DataMigration finish.");
+    AddUnloadFontServiceTask();
+}
+
+void FontManagerServer::StartHeartBeatTask(const sptr<IDataMigrationCallback>& callback)
+{
+    std::thread([this, callback]() {
+        FONT_LOGI("FontManagerServer HeartBeat thread started.");
+        while (isDataMigrationing_) {
+            FONT_LOGI("FontManagerServer HeartBeat....");
+            FontManager::GetInstance()->EventDataHeartBeatCallback(callback);
+            std::this_thread::sleep_for(std::chrono::seconds(HEARTBEAT_INTERVAL));
+        }
+        FONT_LOGI("FontManagerServer HeartBeat thread stoped.");
+    }).detach();
 }
 
 void FontManagerServer::AddUnloadFontServiceTask()
 {
     auto task = [this]() {
-        if (callingCount_ == 0) {
+        if (callingCount_ == 0 && !isDataMigrationing_) {
             auto fontSaLoadManager = DelayedSingleton<FontServiceLoadManager>::GetInstance();
             if (fontSaLoadManager != nullptr) {
                 FONT_LOGI("FontManagerServer start to unload fontManager SA.");
@@ -166,6 +245,15 @@ void FontManagerServer::DeleteUserInstallDir(const std::string& userId)
 void FontManagerServer::OnStop(const SystemAbilityOnDemandReason &stopReason)
 {
     FONT_LOGI("FontManagerServer OnStop, stopReason name %{public}s", stopReason.GetName().c_str());
+}
+
+void FontManagerServer::OnServiceDied(const sptr<IRemoteObject>& remote)
+{
+    FONT_LOGI("FontManagerServer OnServiceDied");
+    if (remote == nullptr) {
+        FONT_LOGE("FontManagerServer OnServiceDied:remote is nullptr.");
+        return;
+    }
 }
 
 int32_t FontManagerServer::CheckPermission()

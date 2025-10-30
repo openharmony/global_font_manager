@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,29 +13,21 @@
  * limitations under the License.
  */
 
-#include "font_manager_addon.h"
+#ifndef GLOBAL_FONT_MANAGER_IDATA_MIGRATION_CALLBACK_H
+#define GLOBAL_FONT_MANAGER_IDATA_MIGRATION_CALLBACK_H
 
-#include "napi/native_api.h"
-#include "napi/native_common.h"
+#include <string>
+#include "idata_migration_callback_event.h"
 
 namespace OHOS {
 namespace Global {
 namespace FontManager {
-
-static napi_module g_FontResourceModule = {
-    .nm_version = 1,
-    .nm_flags = 0,
-    .nm_filename = nullptr,
-    .nm_register_func = FontManagerAddonInit,
-    .nm_modname = "fontmanager",
-    .nm_priv = nullptr,
-    .reserved = { 0 }
+class DataMigrationCallback {
+public:
+    virtual ~DataMigrationCallback() = default;
+    virtual void OnHandle(uint32_t errCode, const EventData& eventData) = 0;
 };
-
-extern "C" __attribute__((constructor)) void AbilityRegister()
-{
-    napi_module_register(&g_FontResourceModule);
-}
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS
+#endif // GLOBAL_FONT_MANAGER_IDATA_MIGRATION_CALLBACK_H

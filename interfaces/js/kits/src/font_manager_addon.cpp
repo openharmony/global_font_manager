@@ -17,22 +17,44 @@
 
 #include "font_define.h"
 #include "font_hilog.h"
-#include "font_manager_client.h"
+#include "font_manager_kits.h"
+#include "js_data_migration_callback.h"
 
 namespace OHOS {
 namespace Global {
 namespace FontManager {
-
+using namespace AbilityRuntime;
 static constexpr int32_t ARRAY_SUBCRIPTOR_ZERO = 0;
+static constexpr int32_t ARGS_SIZE_ZERO = 0;
 static constexpr int32_t ARGS_SIZE_ONE = 1;
-napi_value FontManagerAddon::Init(napi_env env, napi_value exports)
+FontManagerAddon::FontManagerAddon()
 {
-    napi_property_descriptor properties[] = {
-        DECLARE_NAPI_FUNCTION("installFont", InstallFont),
-        DECLARE_NAPI_FUNCTION("uninstallFont", UninstallFont)
-    };
-    napi_define_properties(env, exports, sizeof(properties) / sizeof(properties[0]), properties);
-    return exports;
+}
+FontManagerAddon::~FontManagerAddon()
+{
+}
+
+napi_value FontManagerAddonInit(napi_env env, napi_value exports)
+{
+    FONT_LOGI("FontManagerAddon::Init");
+    if (env == nullptr || exports == nullptr) {
+        FONT_LOGI("FontManagerAddon::Init env or exports is null.");
+        return CreateJsUndefined(env);
+    }
+    std::unique_ptr<FontManagerAddon> JsCMManager = std::make_unique<FontManagerAddon>();
+    napi_wrap(env, exports, JsCMManager.release(), FontManagerAddon::Finalizer, nullptr, nullptr);
+    const char *moduleName = "FontManagerAddon";
+    BindNativeFunction(env, exports, "installFont", moduleName, FontManagerAddon::InstallFont);
+    BindNativeFunction(env, exports, "uninstallFont", moduleName, FontManagerAddon::UninstallFont);
+    BindNativeFunction(env, exports, "dataMigration", moduleName, FontManagerAddon::DataMigration);
+    return CreateJsUndefined(env);
+}
+
+void FontManagerAddon::Finalizer(napi_env env, void* data, void* hint)
+{
+    FONT_LOGI("FontManagerAddon::Finalizer");
+    std::unique_ptr<FontManagerAddon>(static_cast<FontManagerAddon*>(data));
+    (void)hint;
 }
 
 napi_value GetCallbackErrorCode(napi_env env, const int32_t errCode, const std::string &errMsg)
@@ -128,7 +150,7 @@ auto installFontFunc = [](napi_env env, void* data) {
         callback->SetErrorMsg("invalid param", ERR_FILE_NOT_EXISTS);
         return;
     }
-    int ret = FontManagerClient::InstallFont(callback->value_, callback->errCode_);
+    int ret = FontManagerKits::GetInstance().InstallFont(callback->value_, callback->errCode_);
     if (ret != ERR_OK) {
         callback->SetErrorMsg("Other error.", ERR_INSTALL_FAIL);
     }
@@ -179,7 +201,7 @@ auto uninstallFontFunc = [](napi_env env, void* data) {
         callback->SetErrorMsg("invalid param", ERR_UNINSTALL_FILE_NOT_EXISTS);
         return;
     }
-    int ret = FontManagerClient::UninstallFont(callback->value_, callback->errCode_);
+    int ret = FontManagerKits::GetInstance().UninstallFont(callback->value_, callback->errCode_);
     if (ret != ERR_OK) {
         callback->SetErrorMsg("Other error.", ERR_UNINSTALL_FAIL);
     }
@@ -252,6 +274,40 @@ std::string FontManagerAddon::GetResNameOrPath(napi_env env, size_t argc, napi_v
         return "";
     }
     return buf.data();
+}
+
+napi_value FontManagerAddon::DataMigration(napi_env env, napi_callback_info info)
+{
+    GET_NAPI_INFO_AND_CALL(env, info, FontManagerAddon, DataMigrationInner);
+}
+
+napi_value FontManagerAddon::DataMigrationInner(napi_env env, AbilityRuntime::NapiCallbackInfo& info)
+{
+    FONT_LOGI("FontManagerAddon DataMigrationInner enter.");
+    if (info.argc != ARGS_SIZE_ONE) {
+        FONT_LOGE("Argc is invalid:%{public}zu", info.argc);
+        napi_throw(env, CreateJsError(env, static_cast<int32_t>(ERR_INVALID_PARAM)));
+        return CreateJsUndefined(env);
+    }
+    napi_value value = info.argv[ARGS_SIZE_ZERO];
+    bool isCallable = false;
+    napi_is_callable(env, value, &isCallable);
+    if (value == nullptr || !isCallable) {
+        FONT_LOGE("Callback(info->argv[0]) is not callable.");
+        napi_throw(env, CreateJsError(env, static_cast<int32_t>(ERR_INVALID_PARAM)));
+        return CreateJsUndefined(env);
+    }
+    auto listener = std::make_unique<JsDataMigrationCallback>(env, value);
+    int32_t result = FontManagerKits::GetInstance().DataMigration(std::move(listener));
+    FONT_LOGI("FontManagerAddon::DataMigration result is %{public}d", result);
+    if (result != ERR_OK) {
+        napi_throw(env, CreateJsError(env, result));
+        return CreateJsUndefined(env);
+    } else {
+        napi_value ret = nullptr;
+        napi_create_int32(env, result, &ret);
+        return ret;
+    }
 }
 } // namespace FontManager
 } // namespace Global

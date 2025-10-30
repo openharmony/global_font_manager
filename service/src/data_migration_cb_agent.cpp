@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,29 +13,29 @@
  * limitations under the License.
  */
 
-#include "font_manager_addon.h"
-
-#include "napi/native_api.h"
-#include "napi/native_common.h"
+#include "font_define.h"
+#include "data_migration_cb_agent.h"
+#include "data_migration_callback.h"
 
 namespace OHOS {
 namespace Global {
 namespace FontManager {
+DataMigrationCbAgent::DataMigrationCbAgent(std::unique_ptr<DataMigrationCallback> callback)
+    : DataMigrationCallbackStub(), callback_(std::move(callback))
+{}
 
-static napi_module g_FontResourceModule = {
-    .nm_version = 1,
-    .nm_flags = 0,
-    .nm_filename = nullptr,
-    .nm_register_func = FontManagerAddonInit,
-    .nm_modname = "fontmanager",
-    .nm_priv = nullptr,
-    .reserved = { 0 }
-};
+DataMigrationCbAgent::~DataMigrationCbAgent()
+{}
 
-extern "C" __attribute__((constructor)) void AbilityRegister()
+ErrCode DataMigrationCbAgent::Handle(uint32_t errCode, const EventData& eventData)
 {
-    napi_module_register(&g_FontResourceModule);
+    if (callback_ != nullptr) {
+        callback_->OnHandle(errCode, eventData);
+        return ERR_OK;
+    }
+    return ERR_SYSTEM_ERROR;
 }
+
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS

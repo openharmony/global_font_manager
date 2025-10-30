@@ -15,14 +15,19 @@
 
 #ifndef GLOBAL_FONT_MANAGER_FONT_ERROR_H
 #define GLOBAL_FONT_MANAGER_FONT_ERROR_H
+
+#include <string>
+
 namespace OHOS {
 namespace Global {
 namespace FontManager {
+using ErrCode = int;
 enum FontErrorCode {
     // Common error code
     ERR_OK = 0,
     ERR_NO_PERMISSION = 201,
     ERR_NOT_SYSTEM_APP = 202,
+    ERR_INVALID_PARAM = 401,
 
     ERR_FILE_NOT_EXISTS = 31100101,
     ERR_FILE_VERIFY_FAIL = 31100102,
@@ -33,6 +38,9 @@ enum FontErrorCode {
     ERR_UNINSTALL_FILE_NOT_EXISTS = 31100107,
     ERR_UNINSTALL_REMOVE_FAIL = 31100108,
     ERR_UNINSTALL_FAIL = 31100109,
+    ERR_SYSTEM_ERROR = 31100110,
+    ERR_DATA_MIGRATIONING = 31100111,
+    ERR_NOT_NEED_DATA_MIGRATION = 31100112,
 };
 
 const int FONT_SA_ID = 66262;
@@ -41,7 +49,6 @@ const std::string INSTALL_PATH_APP = "/data/service/el1/public/for-all-app/fonts
 const std::string INSTALL_PATH_PREFIX = "/data/service/el1/public/fonts/";
 const std::string FONT_CONFIG_FILE = "install_fontconfig.json";
 const std::string TEMP_FILE = "temp/";
-constexpr int32_t INVALID_USERID = -1;
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS
