@@ -18,10 +18,14 @@
 #include "font_define.h"
 #include "font_hilog.h"
 #include "font_service_load_manager.h"
-
-namespace {
+#include "permission_common.h"
+namespace OHOS {
+namespace Global {
+namespace FontManager {
 void ServiceUnInstallFuzz(const std::string& fontName)
 {
+    std::string processName = "ServiceUnInstallFuzz";
+    OHOS::Global::FontManager::SetFontManagerPermission(processName);
     OHOS::sptr<OHOS::Global::FontManager::IFontService> service = OHOS::Global::FontManager::FontServiceLoadManager::
         GetInstance()->GetFontServiceAbility(OHOS::Global::FontManager::FONT_SA_ID);
     if ((service) == nullptr) {
@@ -31,7 +35,6 @@ void ServiceUnInstallFuzz(const std::string& fontName)
     int32_t result;
     (void)service->UninstallFont(fontName, result);
 }
-}  // namespace
 
 /* Fuzzer entry point */
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* input, size_t size)
@@ -41,3 +44,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* input, size_t size)
 
     return 0;
 }
+} // namespace FontManager
+} // namespace Global
+} // namespace OHOS

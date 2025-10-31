@@ -57,7 +57,6 @@ ohos_shared_library("font_manager_client") {
     "client/src/font_service_load_manager.cpp",
     "client/src/font_sa_load_callback.cpp",
     "client/src/data_migration_cb_agent.cpp",
-    "client/src/font_manager_death_recipient.cpp",
     "inner_api/src/font_manager_kits.cpp",
   ]
 

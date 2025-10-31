@@ -12,8 +12,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef SOTER_FUZZER_H
-#define SOTER_FUZZER_H
+#ifndef FONT_MANAGER_FUZZER_H
+#define FONT_MANAGER_FUZZER_H
 
 #define FUZZ_PROJECT_NAME "service_installfont_fuzzer"
 

@@ -38,10 +38,6 @@ sptr<IFontService> FontServiceLoadManager::GetFontServiceAbility(int32_t systemA
         std::lock_guard<std::mutex> lock(serviceLock_);
         sptr<IRemoteObject> object = manager->CheckSystemAbility(systemAbilityId);
         if (object != nullptr) {
-            if (serviceDeath_ != nullptr) {
-                object->RemoveDeathRecipient(serviceDeath_);
-                object->AddDeathRecipient(serviceDeath_);
-            }
             return iface_cast<IFontService>(object);
         }
     }
@@ -55,15 +51,7 @@ sptr<IFontService> FontServiceLoadManager::GetFontServiceAbility(int32_t systemA
         FONT_LOGE("Get remote object from samgr failed");
         return nullptr;
     }
-    if (serviceDeath_ != nullptr) {
-        object->AddDeathRecipient(serviceDeath_);
-    }
     return iface_cast<IFontService>(object);
-}
-
-void FontServiceLoadManager::OnServiceDied(const sptr<IRemoteObject>& remote)
-{
-    FONT_LOGW("FontServiceLoadManager OnServiceDied called.");
 }
  
 void FontServiceLoadManager::OnLoadSystemAbilitySuccess()

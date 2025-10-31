@@ -53,8 +53,8 @@
         </policylist>
 		<filefilterlist>
 			<filefilter name="binaryFileTypePolicyFilter" desc="Filters for binary file policies">
-				<filteritem type="filepath" name="frameworks/fontmgr/test/unittest/data/.*.ttf" desc="self test ttf"/>
-				<filteritem type="filepath" name="frameworks/fontmgr/test/unittest/data/.*.ttc" desc="self test ttc"/>
+				<filteritem type="filepath" name="test/unittest/data/.*.ttf" desc="self test ttf"/>
+				<filteritem type="filepath" name="test/unittest/data/.*.ttc" desc="self test ttc"/>
 			</filefilter>
             <filefilter name="defaultPolicyFilter" desc="license文件头校验策略的过滤条件">
                 <filteritem type="filename" name="emptyTTC.ttc"/>

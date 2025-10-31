@@ -148,7 +148,7 @@ bool FileUtils::CopyFileByFd(int32_t sourceFd, int32_t targetFd)
         return false;
     }
     if (targetFd < 0) {
-        FONT_LOGE("Failed to write to target file");
+        FONT_LOGE("targetFd check err(< 0)");
         return false;
     }
     lseek(sourceFd, 0, SEEK_SET);

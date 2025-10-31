@@ -17,9 +17,8 @@
       "OHOS::Global::FontManager::FontManagerKits::GetInstance()";
       "vtable for OHOS::Global::FontManager::FontServiceLoadManager";
       "OHOS::Global::FontManager::FontServiceLoadManager::FontServiceLoadManager()";
+      "OHOS::Global::FontManager::FontServiceLoadManager::GetFontServiceAbility(int)";
       "OHOS::Global::FontManager::FontServiceLoadManager::UnloadFontService(int)";
-      "vtable for OHOS::Global::FontManager::FontManagerDeathRecipient";
-      "VTT for OHOS::Global::FontManager::FontManagerDeathRecipient";
     };
   local:
     *;

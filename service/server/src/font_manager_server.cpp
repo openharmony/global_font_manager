@@ -44,10 +44,6 @@ static constexpr int32_t INVALID_USERID = -1;
 }
 FontManagerServer::FontManagerServer(int32_t saId, bool runOnCreate) : SystemAbility(saId, runOnCreate)
 {
-    deathRecipient_ = new (std::nothrow)
-        FontManagerDeathRecipient(std::bind(&FontManagerServer::OnServiceDied,
-                                            this,
-                                            std::placeholders::_1));
 }
 
 int32_t FontManagerServer::InstallFont(const int32_t fd, int32_t &outValue)
@@ -247,24 +243,9 @@ void FontManagerServer::OnStop(const SystemAbilityOnDemandReason &stopReason)
     FONT_LOGI("FontManagerServer OnStop, stopReason name %{public}s", stopReason.GetName().c_str());
 }
 
-void FontManagerServer::OnServiceDied(const sptr<IRemoteObject>& remote)
-{
-    FONT_LOGI("FontManagerServer OnServiceDied");
-    if (remote == nullptr) {
-        FONT_LOGE("FontManagerServer OnServiceDied:remote is nullptr.");
-        return;
-    }
-}
-
 int32_t FontManagerServer::CheckPermission()
 {
-    uint64_t accessTokenID = IPCSkeleton::GetCallingFullTokenID();
     uint32_t callerToken = IPCSkeleton::GetCallingTokenID();
-    bool isSystemApp = Security::AccessToken::TokenIdKit::IsSystemAppByFullTokenID(accessTokenID);
-    if (!isSystemApp) {
-        FONT_LOGE("caller process is not System app.");
-        return ERR_NOT_SYSTEM_APP;
-    }
     int result = Security::AccessToken::AccessTokenKit::VerifyAccessToken(callerToken, PERMISSION_UPDATE_FONT);
     if (result != Security::AccessToken::PermissionState::PERMISSION_GRANTED) {
         FONT_LOGE("FontManagerServer caller process doesn't have UPDATE_FONT permission.");

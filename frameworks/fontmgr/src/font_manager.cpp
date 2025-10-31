@@ -120,7 +120,7 @@ int32_t FontManager::InstallFont(const int32_t &fd, const int32_t userId)
     std::string jsonPath = INSTALL_PATH_APP + realFileName;
     HisyseventAdapter::GetInstance()->CollectUserDataSize();
     if (!fontConfig.InsertFontRecord(jsonPath, fullNameVector)) {
-        FONT_LOGE("update install_fontconfig fail, path = %{public}s", jsonPath.c_str());
+        FONT_LOGE("update install_fontconfig fail, fileName = %{public}s", realFileName.c_str());
         return ERR_INSTALL_FAIL;
     }
     FontEventPublish::PublishFontUpdate(FontEventType::INSTALL, GetFormatFullName(fullNameVector), userId);
@@ -181,7 +181,7 @@ bool FontManager::CopyFileForDataMigration(const std::string &srcPath, const int
     std::string tempPath = INSTALL_PATH_PREFIX + TEMP_FILE + fileName;
     std::string desPath = INSTALL_PATH_PREFIX + std::to_string(userId) + "/" + fileName;
     if (FileUtils::CheckPathExist(desPath)) {
-        FONT_LOGI("CopyFileForDataMigration path is exist(%{public}s) ", desPath.c_str());
+        FONT_LOGI("CopyFileForDataMigration path is exist(%{public}s) ", fileName.c_str());
         return true;
     }
     int fd = open(srcPath.c_str(), O_RDONLY);
@@ -191,7 +191,7 @@ bool FontManager::CopyFileForDataMigration(const std::string &srcPath, const int
     }
 
     if (!FileUtils::CopyFile(fd, tempPath)) {
-        FONT_LOGE("CopyFileForDataMigration copy file %{public}s error", tempPath.c_str());
+        FONT_LOGE("CopyFileForDataMigration copy file %{public}s error", fileName.c_str());
         close(fd);
         return false;
     }
@@ -298,10 +298,9 @@ int32_t FontManager::DataMigrationInner(const RemoteCallbackPtr& callback)
         }
         int ret = StartOneFileCopyTask(paths[i], userIds);
         if (ret != ERR_OK) {
-            FONT_LOGE("FontManager StartOneFileCopyTask err.path:%{public}s.", paths[i].c_str());
             return ERR_SYSTEM_ERROR;
         }
-        FONT_LOGI("FontManager::StartOneFileCopyTask suc path = %{public}s.", paths[i].c_str());
+        FONT_LOGI("FontManager::FileCopyTask suc.FileName:%{public}s.", FileUtils::GetFileName(paths[i]).c_str());
     }
     FileUtils::DeleteDir(INSTALL_PATH_PREFIX + TEMP_FILE, true);
     return ERR_OK;
@@ -318,12 +317,12 @@ int32_t FontManager::StartOneFileCopyTask(const std::string& path, const std::ve
 {
     for (const auto& userId : userIds) {
         if (!CopyFileForDataMigration(path, userId)) {
-            FONT_LOGE("StartOneFileCopyTask copy file %{public}s error", path.c_str());
+            FONT_LOGE("StartOneFileCopyTask copy file %{public}s error", FileUtils::GetFileName(path).c_str());
             return ERR_SYSTEM_ERROR;
         }
     }
     if (!FileUtils::RemoveFile(path)) {
-        FONT_LOGE("StartOneFileCopyTask RemoveFile file (%{public}s) error", path.c_str());
+        FONT_LOGE("StartOneFileCopyTask RemoveFile file (%{public}s) error", FileUtils::GetFileName(path).c_str());
         return ERR_SYSTEM_ERROR;
     }
     return ERR_OK;
@@ -334,7 +333,7 @@ bool FontManager::InitAllUserDir(const std::vector<int32_t> userIds)
     for (const auto& userId : userIds) {
         std::string path = INSTALL_PATH_PREFIX + std::to_string(userId) + "/";
         if (!FileUtils::CreatDirWithPermission(path)) {
-            FONT_LOGI("FontManager::GetAllCreatedUserIds userid = %{public}d.", userId);
+            FONT_LOGE("InitAllUserDir CreatDirWithPermission err. userid = %{public}d.", userId);
             return false;
         }
     }

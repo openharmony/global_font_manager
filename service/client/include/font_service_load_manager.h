@@ -23,7 +23,6 @@
 #include "ifont_service.h"
 #include "iremote_object.h"
 #include "iservice_registry.h"
-#include "font_manager_death_recipient.h"
 
 namespace OHOS {
 namespace Global {
@@ -50,10 +49,6 @@ private:
     LoadSaStatus loadSaStatus_ = LoadSaStatus::WAIT_RESULT;
     std::condition_variable proxyConVar_;
     std::mutex serviceLock_;
-
-    void OnServiceDied(const sptr<IRemoteObject>& remote);
-    sptr<FontManagerDeathRecipient> serviceDeath_ = new (std::nothrow)
-        FontManagerDeathRecipient(std::bind(&FontServiceLoadManager::OnServiceDied, this, std::placeholders::_1));
 };
 } // namespace FontManager
 } // namespace Global

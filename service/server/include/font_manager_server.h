@@ -52,7 +52,6 @@ private:
     void UninstallFontInner(const std::string &fontName, int32_t &outValue);
     int32_t DataMigrationInner(const sptr<IDataMigrationCallback>& callback);
     void AddUnloadFontServiceTask();
-    void OnServiceDied(const sptr<IRemoteObject>& remote);
     void RemoveUnloadFontServiceTask();
     int32_t CheckPermission();
     // font service unload event handler.
@@ -61,7 +60,6 @@ private:
     void DeleteUserInstallDir(const std::string& userId);
     void StartDataMigrationTask(const RemoteCallbackPtr& callback);
     void StartHeartBeatTask(const sptr<IDataMigrationCallback>& callback);
-    sptr<IRemoteObject::DeathRecipient> deathRecipient_ {};
     std::atomic_uint callingCount_ {0};
     std::atomic<bool> isDataMigrationing_ {false};
 };
