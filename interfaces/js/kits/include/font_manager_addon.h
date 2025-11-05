@@ -44,6 +44,7 @@ private:
     static napi_value GetResult(napi_env env, std::unique_ptr<FontNapiCallback> &callback,
         const std::string &name, napi_async_execute_callback execute);
     napi_value DataMigrationInner(napi_env env, AbilityRuntime::NapiCallbackInfo& info);
+    std::string GetDataMigrationErrMsg(int32_t errCode);
 };
 } // namespace FontManager
 } // namespace Global

@@ -24,9 +24,16 @@ namespace OHOS {
 namespace Global {
 namespace FontManager {
 using namespace AbilityRuntime;
+namespace{
+static const std::unordered_map<uint32_t, std::string> g_DataMigrationErrMsgMap = {
+    {ERR_NO_PERMISSION, "Dont have permission."},
+    {ERR_DATA_MIGRATIONING, "The device is dataMigrationing."},
+    {ERR_SYSTEM_ERROR, "System service exception."}
+};
 static constexpr int32_t ARRAY_SUBCRIPTOR_ZERO = 0;
-static constexpr int32_t ARGS_SIZE_ZERO = 0;
+static constexpr int32_t ARGS_ZERO = 0;
 static constexpr int32_t ARGS_SIZE_ONE = 1;
+}
 FontManagerAddon::FontManagerAddon()
 {
 }
@@ -289,25 +296,44 @@ napi_value FontManagerAddon::DataMigrationInner(napi_env env, AbilityRuntime::Na
         napi_throw(env, CreateJsError(env, static_cast<int32_t>(ERR_INVALID_PARAM)));
         return CreateJsUndefined(env);
     }
-    napi_value value = info.argv[ARGS_SIZE_ZERO];
-    bool isCallable = false;
-    napi_is_callable(env, value, &isCallable);
-    if (value == nullptr || !isCallable) {
-        FONT_LOGE("Callback(info->argv[0]) is not callable.");
+    napi_value value = info.argv[ARGS_ZERO];
+    napi_valuetype valuetype;
+    napi_status ret = napi_typeof(env, value, &valuetype);
+    if (ret != napi_ok || valuetype != napi_object) {
+        FONT_LOGE("Callback(info->argv[0]) is not object.");
         napi_throw(env, CreateJsError(env, static_cast<int32_t>(ERR_INVALID_PARAM)));
         return CreateJsUndefined(env);
     }
-    auto listener = std::make_unique<JsDataMigrationCallback>(env, value);
+    napi_value onHeartBeatValue;
+    NAPI_CALL(env, napi_get_named_property(env, value, "onHeartBeat", &onHeartBeatValue));
+    auto heartBeatCallback = std::make_shared<JsRefHolder>(env, onHeartBeatValue);
+    napi_value onProgressValue;
+    NAPI_CALL(env, napi_get_named_property(env, value, "onProgress", &onProgressValue));
+    auto progressCallback = std::make_shared<JsRefHolder>(env, onProgressValue);
+    napi_value onResultValue;
+    NAPI_CALL(env, napi_get_named_property(env, value, "onResult", &onResultValue));
+    auto resultCallback = std::make_shared<JsRefHolder>(env, onResultValue);
+    auto listener = std::make_unique<JsDataMigrationCallback>(env, heartBeatCallback, progressCallback,
+        resultCallback);
     int32_t result = FontManagerKits::GetInstance().DataMigration(std::move(listener));
     FONT_LOGI("FontManagerAddon::DataMigration result is %{public}d", result);
     if (result != ERR_OK) {
-        napi_throw(env, CreateJsError(env, result));
+        napi_throw(env, CreateJsError(env, result, GetDataMigrationErrMsg(result)));
         return CreateJsUndefined(env);
     } else {
         napi_value ret = nullptr;
         napi_create_int32(env, result, &ret);
         return ret;
     }
+}
+
+std::string FontManagerAddon::GetDataMigrationErrMsg(int32_t errCode)
+{
+    auto it = g_DataMigrationErrMsgMap.find(errCode);
+    if (it != g_DataMigrationErrMsgMap.end()) {
+        return g_DataMigrationErrMsgMap.at(errCode);
+    }
+    return g_DataMigrationErrMsgMap.at(ERR_SYSTEM_ERROR);
 }
 } // namespace FontManager
 } // namespace Global

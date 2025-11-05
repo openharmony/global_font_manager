@@ -56,10 +56,7 @@ private:
     int32_t CheckPermission();
     // font service unload event handler.
     std::shared_ptr <AppExecFwk::EventHandler> handler_;
-    void InitUserInstallDir(const std::string& userId);
-    void DeleteUserInstallDir(const std::string& userId);
     void StartDataMigrationTask(const RemoteCallbackPtr& callback);
-    void StartHeartBeatTask(const sptr<IDataMigrationCallback>& callback);
     std::atomic_uint callingCount_ {0};
     std::atomic<bool> isDataMigrationing_ {false};
 };

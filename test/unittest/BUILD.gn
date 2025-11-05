@@ -81,6 +81,7 @@ ohos_unittest("font_manager_module_test") {
 
   sources = [ 
     "src/font_manager_test.cpp",
+    "src/data_migration_manager_test.cpp",
   ]
 
   sources += fontmgr_src

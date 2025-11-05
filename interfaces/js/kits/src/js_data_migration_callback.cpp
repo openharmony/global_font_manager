@@ -16,70 +16,106 @@
 #include "js_data_migration_callback.h"
 
 #include <cstdlib>
+#include <uv.h>
 #include "font_define.h"
 
 namespace OHOS {
 namespace Global {
 namespace FontManager {
 using namespace AbilityRuntime;
-static const std::unordered_map<uint32_t, std::string> g_DataMigrationErrMsgMap = {
-    {ERR_NOT_NEED_DATA_MIGRATION, "The device dont need font data migration."},
-    {ERR_SYSTEM_ERROR, "System service exception."}
+namespace{
+struct DeleteRefHolder {
+    napi_env env {nullptr};
+    napi_ref ref {nullptr};
 };
+constexpr int32_t ARGS_ZERO = 0;
+constexpr int32_t ARGS_ONE = 1;
+}
 
-JsDataMigrationCallback::JsDataMigrationCallback(napi_env env, napi_value value)
-    : env_(env)
+JsRefHolder::JsRefHolder(napi_env env, napi_value value)
 {
-    napi_status status = napi_create_reference(env, value, 1, &cbRef_);
-    if (status != napi_ok) {
-        FONT_LOGE("JsDataMigrationCallback napi_create_reference failed.");
-        napi_throw(env, CreateJsError(env, ERR_INVALID_PARAM));
+    if (env == nullptr || value == nullptr) {
+        FONT_LOGE("JsRefHolder env or value is null.");
+        return;
     }
+    napi_valuetype valuetype;
+    napi_status result = napi_typeof(env, value, &valuetype);
+    if (result != napi_ok || valuetype != napi_function) {
+        FONT_LOGE("JsRefHolder value is not function.");
+        return;
+    }
+    result = napi_create_reference(env, value, 1, &ref_);
+    if (result != napi_ok) {
+        FONT_LOGE("JsRefHolder napi_create_reference fail.");
+        ref_ = nullptr;
+        return;
+    }
+    env_ = env;
+}
 
+JsRefHolder::~JsRefHolder()
+{
+    if (!IsValid()) {
+        FONT_LOGI("JsRefHolder Invalid.");
+        return;
+    }
+    FONT_LOGI("JsRefHolder delete reference.");
+    uv_loop_s *loop = nullptr;
+    napi_status napiStatus = napi_get_uv_event_loop(env_, &loop);
+    if (napiStatus != napi_ok || loop == nullptr) {
+        FONT_LOGE("JsRefHolder napi_get_uv_event_loop fail.");
+        return;
+    }
+    std::shared_ptr<DeleteRefHolder> deleteRefHolder = std::make_shared<DeleteRefHolder>();
+    if (deleteRefHolder == nullptr) {
+        FONT_LOGE("JsRefHolder deleteRefHolder is nullptr.");
+        return;
+    }
+    deleteRefHolder->env = env_;
+    deleteRefHolder->ref = ref_;
+    auto task = [deleteRefHolder] () {
+        FONT_LOGI("JsRefHolder deleteRefHolder start.");
+        if (deleteRefHolder == nullptr) {
+            FONT_LOGE("JsRefHolder deleteRefHolder is nullptr.");
+            return;
+        }
+        napi_status ret = napi_delete_reference(deleteRefHolder->env, deleteRefHolder->ref);
+        if (ret != napi_ok) {
+            FONT_LOGE("JsRefHolder napi_delete_reference fail %{public}d.", ret);
+            return;
+        }
+    };
+    if (napi_status::napi_ok != napi_send_event(env_, task, napi_eprio_immediate)) {
+        FONT_LOGE("JsRefHolder napi_send_event faid.");
+    }
+}
+
+bool JsRefHolder::IsValid() const
+{
+    return (env_ != nullptr && ref_ != nullptr);
+}
+
+napi_ref JsRefHolder::Get() const
+{
+    return ref_;
+}
+
+JsDataMigrationCallback::JsDataMigrationCallback(napi_env env, const std::shared_ptr<JsRefHolder> &heartBeatCallback,
+        const std::shared_ptr<JsRefHolder> &progressCallback,
+        const std::shared_ptr<JsRefHolder> &resultCallback)
+    : env_(env), heartBeatCallback_(heartBeatCallback),
+    progressCallback_(progressCallback), resultCallback_(resultCallback)
+{
 }
 
 JsDataMigrationCallback::~JsDataMigrationCallback()
 {
-    ReleaseRef();
 }
 
-void JsDataMigrationCallback::ReleaseRef()
-{
-    if (env_ == nullptr) {
-        FONT_LOGE("JsDataMigrationCallback ReleaseRef env is null.");
-        return;
-    }
-    if (cbRef_ == nullptr) {
-        FONT_LOGE("JsDataMigrationCallback ReleaseRef cbRef is null.");
-        return;
-    }
-    auto cb = cbRef_;
-    cbRef_ = nullptr;
-    std::unique_ptr<AbilityRuntime::NapiAsyncTask::CompleteCallback> complete =
-        std::make_unique<AbilityRuntime::NapiAsyncTask::CompleteCallback>(
-            [cb](napi_env env, AbilityRuntime::NapiAsyncTask&, int32_t) {
-                if (napi_delete_reference(env, cb) != napi_ok) {
-                    FONT_LOGE("JsDataMigrationCallback failed to delete method reference.");
-                    return;
-                }
-                FONT_LOGI("JsDataMigrationCallback delete method reference OK.");
-            }
-        );
-    napi_ref callback = nullptr;
-    std::unique_ptr<AbilityRuntime::NapiAsyncTask::ExecuteCallback> execute = nullptr;
-    AbilityRuntime::NapiAsyncTask::Schedule("JsDataMigrationCallback::ReleaseRef",
-                                            env_,
-                                            std::make_unique<AbilityRuntime::NapiAsyncTask>(
-                                                callback,
-                                                std::move(execute),
-                                                std::move(complete)
-                                            ));
-}
-
-void JsDataMigrationCallback::CallJsMethod(napi_env env, const napi_value* argv, size_t argc)
+void JsDataMigrationCallback::CallJsMethod(napi_env env, napi_ref funcRef, const napi_value* argv, size_t argc)
 {
     napi_value method = nullptr;
-    if (napi_get_reference_value(env, cbRef_, &method) != napi_ok) {
+    if (napi_get_reference_value(env, funcRef, &method) != napi_ok) {
         FONT_LOGE("JsDataMigrationCallback CallJsMethod failed to get method from reference.");
         return;
     }
@@ -94,19 +130,6 @@ void JsDataMigrationCallback::CallJsMethod(napi_env env, const napi_value* argv,
     }
 }
 
-napi_value GenerateErrMsg(const napi_env &env, int32_t errCode)
-{
-    napi_value errMsg;
-    auto it = g_DataMigrationErrMsgMap.find(errCode);
-    if (it != g_DataMigrationErrMsgMap.end()) {
-        errMsg = AbilityRuntime::CreateJsError(env, errCode, g_DataMigrationErrMsgMap.at(errCode));
-    } else {
-        errMsg = AbilityRuntime::CreateJsError(env, ERR_SYSTEM_ERROR, g_DataMigrationErrMsgMap.at(ERR_SYSTEM_ERROR));
-    }
-    NAPI_ASSERT(env, errMsg != nullptr, "create error failed.");
-    return errMsg;
-}
-
 void JsDataMigrationCallback::OnHandle(uint32_t errCode, const EventData& eventData)
 {
     if (env_ == nullptr) {
@@ -116,28 +139,14 @@ void JsDataMigrationCallback::OnHandle(uint32_t errCode, const EventData& eventD
     std::unique_ptr<AbilityRuntime::NapiAsyncTask::CompleteCallback> complete =
         std::make_unique<AbilityRuntime::NapiAsyncTask::CompleteCallback>(
             [this, errCode, eventData](napi_env env, AbilityRuntime::NapiAsyncTask& task, int32_t status) {
-                napi_value jsErrCode;
-                if (errCode == ERR_OK) {
-                    napi_create_uint32(env, errCode, &jsErrCode);
-                } else {
-                    jsErrCode = GenerateErrMsg(env, errCode);
+                FONT_LOGI("JsDataMigrationCallback CallJsMethod currentEventType:%{public}d", eventData.event);
+                if (eventData.event == ProgressType::HEART_BEAT) {
+                    DoHeartbeatCallback();
+                } else if (eventData.event == ProgressType::PROGRESS_DOING) {
+                    DoProgressCallback(eventData);
+                } else if (eventData.event == ProgressType::PROGRESS_RESULT) {
+                    DoResultCallback(eventData);
                 }
-                napi_value jsEventData;
-                napi_create_object(env, &jsEventData);
-                napi_value value;
-                napi_create_int32(env, static_cast<int32_t>(eventData.event), &value);
-                napi_set_named_property(env, jsEventData, "event", value);
-                napi_create_int32(env, static_cast<int32_t>(eventData.timeRemain), &value);
-                napi_set_named_property(env, jsEventData, "timeRemain", value);
-                napi_create_int32(env, static_cast<int32_t>(eventData.progressRate), &value);
-                napi_set_named_property(env, jsEventData, "progressRate", value);
-                napi_create_int32(env, static_cast<int32_t>(eventData.progressResult), &value);
-                napi_set_named_property(env, jsEventData, "progressResult", value);
-                
-                napi_value argv[] = {jsErrCode, jsEventData};
-                CallJsMethod(env, argv, AbilityRuntime::ArraySize(argv));
-                FONT_LOGI("JsDataMigrationCallback CallJsMethod errCode:%{public}d, currentEventType:%{public}d",
-                    errCode, eventData.event);
             }
         );
     napi_ref callback = nullptr;
@@ -146,6 +155,47 @@ void JsDataMigrationCallback::OnHandle(uint32_t errCode, const EventData& eventD
         "JsDataMigrationCallback::OnHandle", env_,
         std::make_unique<AbilityRuntime::NapiAsyncTask>(callback, std::move(execute), std::move(complete))
     );
+}
+
+void JsDataMigrationCallback::DoHeartbeatCallback()
+{
+    if (heartBeatCallback_ == nullptr) {
+        FONT_LOGE("DoHeartbeatCallback heartBeatCallback_ is nullptr.");
+        return;
+    }
+    napi_value params[ARGS_ZERO];
+    return CallJsMethod(env_, heartBeatCallback_->Get(), params, ARGS_ZERO);
+}
+
+void JsDataMigrationCallback::DoProgressCallback(const EventData& eventData)
+{
+    if (progressCallback_ == nullptr) {
+        FONT_LOGE("DoProgressCallback progressCallback_ is nullptr.");
+        return;
+    }
+    napi_value progressData;
+    napi_create_object(env_, &progressData);
+    napi_value value;
+    napi_create_int32(env_, static_cast<int32_t>(eventData.timeRemaining), &value);
+    napi_set_named_property(env_, progressData, "timeRemaining", value);
+    napi_create_int32(env_, static_cast<int32_t>(eventData.progressPercentage), &value);
+    napi_set_named_property(env_, progressData, "progressPercentage", value);
+    napi_value params[ARGS_ONE];
+    params[0] = progressData;
+    return CallJsMethod(env_, progressCallback_->Get(), params, ARGS_ONE);
+}
+
+void JsDataMigrationCallback::DoResultCallback(const EventData& eventData)
+{
+    if (resultCallback_ == nullptr) {
+        FONT_LOGE("DoProgressCallback progressCallback_ is nullptr.");
+        return;
+    }
+    napi_value value;
+    napi_create_int32(env_, static_cast<int32_t>(eventData.progressResult), &value);
+    napi_value params[ARGS_ONE];
+    params[0] = value;
+    return CallJsMethod(env_, resultCallback_->Get(), params, ARGS_ONE);
 }
 } // namespace FontManager
 } // namespace Global

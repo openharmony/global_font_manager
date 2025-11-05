@@ -14,7 +14,6 @@
  */
 
 #include <gtest/gtest.h>
-#include "font_config_test.h"
 #define private public
 #define protected public
 #include "font_config.h"

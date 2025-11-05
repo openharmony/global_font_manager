@@ -25,7 +25,7 @@ namespace FontManager {
 class FileUtils {
 public:
     static bool CheckPathExist(const std::string &pathName);
-    static bool CreatDirWithPermission(const std::string &fileDir);
+    static bool CreateDirWithPermission(const std::string &fileDir);
     static bool CreateFileWithPermission(const std::string &filePath, const std::string &defalutStr = "");
     static std::string GetFileName(const std::string &path);
     static bool CopyFile(int32_t sourceFd, const std::string& path);

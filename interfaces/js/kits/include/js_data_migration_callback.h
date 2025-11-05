@@ -28,20 +28,36 @@
 namespace OHOS {
 namespace Global {
 namespace FontManager {
+class JsRefHolder : public NoCopyable {
+public:
+    JsRefHolder(napi_env env, napi_value value);
+    ~JsRefHolder() override;
+    bool IsValid() const;
+    napi_ref Get() const;
+private:
+    napi_env env_ {nullptr};
+    napi_ref ref_ {nullptr};
+};
+
 class JsDataMigrationCallback : public DataMigrationCallback {
 public:
     explicit JsDataMigrationCallback(napi_env env) : env_(env){};
-    JsDataMigrationCallback(napi_env env, napi_value value);
+    JsDataMigrationCallback(napi_env env, const std::shared_ptr<JsRefHolder> &heartBeatCallback,
+        const std::shared_ptr<JsRefHolder> &progressCallback,
+        const std::shared_ptr<JsRefHolder> &resultCallback);
     ~JsDataMigrationCallback() override;
 
     void OnHandle(uint32_t errCode, const EventData& eventData) override;
 
 private:
-    void CallJsMethod(napi_env env, const napi_value* argv, size_t argc);
-    void ReleaseRef();
-
-    napi_ref cbRef_ = nullptr;
+    void CallJsMethod(napi_env env, napi_ref funcRef, const napi_value* argv, size_t argc);
+    void DoHeartbeatCallback();
+    void DoProgressCallback(const EventData& eventData);
+    void DoResultCallback(const EventData& eventData);
     napi_env env_ = nullptr;
+    std::shared_ptr<JsRefHolder> heartBeatCallback_ = nullptr;
+    std::shared_ptr<JsRefHolder> progressCallback_ = nullptr;
+    std::shared_ptr<JsRefHolder> resultCallback_ = nullptr;
 };
 } // namespace FontManager
 } // namespace Global

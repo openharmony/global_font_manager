@@ -75,7 +75,7 @@ bool FileUtils::CreateFileWithPermission(const std::string &filePath, const std:
     return true;
 }
 
-bool FileUtils::CreatDirWithPermission(const std::string &fileDir)
+bool FileUtils::CreateDirWithPermission(const std::string &fileDir)
 {
     if (fileDir.empty() || strstr(fileDir.c_str(), "/.") != NULL || strstr(fileDir.c_str(), "./") != NULL) {
         FONT_LOGE("dirName %{public}s is invalid", fileDir.c_str());

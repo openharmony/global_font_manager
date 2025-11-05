@@ -15,13 +15,13 @@
  
 #include "font_manager_server.h"
 
-#include <thread>
 #include <chrono>
 #include "accesstoken_kit.h"
 #include "file_utils.h"
 #include "font_define.h"
 #include "font_hilog.h"
 #include "font_manager.h"
+#include "data_migration_manager.h"
 #include "font_service_load_manager.h"
 #include "ipc_skeleton.h"
 #include "tokenid_kit.h"
@@ -37,8 +37,6 @@ namespace {
 static const std::string UNLOAD_TASK = "font_service_unload";
 static const std::string PERMISSION_UPDATE_FONT = "ohos.permission.UPDATE_FONT";
 static constexpr uint32_t DELAY_MILLISECONDS_FOR_UNLOAD_SA = 10000;
-static constexpr uint32_t DELAY_DATA_MIGRATION = 200;
-static constexpr uint32_t HEARTBEAT_INTERVAL = 60;
 static constexpr uint32_t ONE_CALLING = 1;
 static constexpr int32_t INVALID_USERID = -1;
 }
@@ -142,7 +140,7 @@ int32_t FontManagerServer::DataMigrationInner(const sptr<IDataMigrationCallback>
     auto task = [this, callback]() {
         StartDataMigrationTask(callback);
     };
-    handler_->PostTask(task, DELAY_DATA_MIGRATION);
+    handler_->PostTask(task);
     FONT_LOGI("FontManagerServer DataMigration call success.");
     return ERR_OK;
 }
@@ -151,24 +149,10 @@ void FontManagerServer::StartDataMigrationTask(const sptr<IDataMigrationCallback
 {
     RemoveUnloadFontServiceTask();
     isDataMigrationing_ = true;
-    StartHeartBeatTask(callback);
-    FontManager::GetInstance()->DataMigration(callback);
+    DataMigrationManager::GetInstance()->DataMigration(callback);
     isDataMigrationing_ = false;
     FONT_LOGI("FontManagerServer DataMigration finish.");
     AddUnloadFontServiceTask();
-}
-
-void FontManagerServer::StartHeartBeatTask(const sptr<IDataMigrationCallback>& callback)
-{
-    std::thread([this, callback]() {
-        FONT_LOGI("FontManagerServer HeartBeat thread started.");
-        while (isDataMigrationing_) {
-            FONT_LOGI("FontManagerServer HeartBeat....");
-            FontManager::GetInstance()->EventDataHeartBeatCallback(callback);
-            std::this_thread::sleep_for(std::chrono::seconds(HEARTBEAT_INTERVAL));
-        }
-        FONT_LOGI("FontManagerServer HeartBeat thread stoped.");
-    }).detach();
 }
 
 void FontManagerServer::AddUnloadFontServiceTask()
@@ -206,36 +190,18 @@ void FontManagerServer::OnStart(const SystemAbilityOnDemandReason &startReason)
     }
     if (reasonName == EventFwk::CommonEventSupport::COMMON_EVENT_USER_ADDED) {
         std::string userId = startReason.GetValue();
-        InitUserInstallDir(userId);
-        FONT_LOGI("FontManagerServer InitUserInstallDir finish.");
+        std::string installPath = INSTALL_PATH_PREFIX + userId + "/";
+        FontManager::GetInstance()->CheckAndInitInstallPath(installPath);
     }
     if (reasonName == EventFwk::CommonEventSupport::COMMON_EVENT_USER_REMOVED) {
         std::string userId = startReason.GetValue();
-        DeleteUserInstallDir(userId);
+        std::string installPath = INSTALL_PATH_PREFIX + userId + "/";
+        FileUtils::DeleteDir(installPath, true);
         FONT_LOGI("FontManagerServer DeleteUserInstallDir finish.");
     }
 
     handler_ = std::make_shared<AppExecFwk::EventHandler>(AppExecFwk::EventRunner::Create(true));
     AddUnloadFontServiceTask();
-}
-
-void FontManagerServer::InitUserInstallDir(const std::string& userId)
-{
-    std::string installPath = INSTALL_PATH_PREFIX + userId + "/";
-    if (!FileUtils::CheckPathExist(installPath)) {
-        if (!FileUtils::CreatDirWithPermission(installPath)) {
-            FONT_LOGE("FontManagerServer InitUserInstallDir CreatDirWithPermission err.");
-            return;
-        }
-    }
-    FONT_LOGI("FontManagerServer InitUserInstallDir suc.");
-    return;
-}
-
-void FontManagerServer::DeleteUserInstallDir(const std::string& userId)
-{
-    std::string installPath = INSTALL_PATH_PREFIX + userId + "/";
-    FileUtils::DeleteDir(installPath, true);
 }
 
 void FontManagerServer::OnStop(const SystemAbilityOnDemandReason &stopReason)

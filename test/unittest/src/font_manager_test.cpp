@@ -13,8 +13,6 @@
  * limitations under the License.
  */
 
-#include "font_manager_test.h"
-
 #include <gtest/gtest.h>
 #include <fcntl.h>
 #include <string>
@@ -32,9 +30,7 @@
 #undef protected
 #include "file_utils.h"
 #include "font_define.h"
-#include "callback_mock.h"
 #include "directory_ex.h"
-#include "permission_common.h"
 
 namespace {
 const std::string INSTALL_PATH_TEST = "/data/service/el1/public/fonts/100/";
@@ -72,8 +68,7 @@ public:
     void TearDown();
 
 protected:
-    bool CopyFile(const string &srcPath, const string &desPath);
-    FontManager manager_;
+    std::shared_ptr<FontManager> manager_;
 };
 
 void FontManagerTest::SetUpTestCase(void)
@@ -85,27 +80,14 @@ void FontManagerTest::TearDownTestCase(void)
 }
 
 void FontManagerTest::SetUp(void)
-{}
+{
+    manager_ = FontManager::GetInstance();
+}
 
 void FontManagerTest::TearDown(void)
 {
     FileUtils::DeleteDir(INSTALL_PATH_TEST, false);
     FileUtils::DeleteDir(INSTALL_PATH_APP, false);
-}
-
-bool FontManagerTest::CopyFile(const string &srcPath, const string &desPath)
-{
-    int fd = open(srcPath.c_str(), O_RDONLY);
-    if (fd < 0) {
-        return false;
-    }
-
-    if (!FileUtils::CopyFile(fd, desPath)) {
-        close(fd);
-        return false;
-    }
-    close(fd);
-    return true;
 }
 
 /**
@@ -117,13 +99,13 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest001, TestSize.Level1)
 {
     int fd = open(FONT_PATH.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
-    int ret = this->manager_.InstallFont(fd, TEST_USERID);
+    int ret = manager_->InstallFont(fd, TEST_USERID);
     EXPECT_EQ(ret, ERR_OK);
     if (fd >= 0) {
         close(fd);
     }
     fd = open(FONT_PATH.c_str(), O_RDONLY);
-    ret = this->manager_.InstallFont(fd, TEST_USERID);
+    ret = manager_->InstallFont(fd, TEST_USERID);
     EXPECT_EQ(ret, ERR_INSTALLED_ALRADY);
 }
 
@@ -136,16 +118,16 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest002, TestSize.Level1)
 {
     int fd = open(FONT_PATH.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
-    int ret = this->manager_.InstallFont(fd, TEST_USERID);
+    int ret = manager_->InstallFont(fd, TEST_USERID);
     EXPECT_EQ(ret, ERR_OK);
     if (fd >= 0) {
         close(fd);
     }
-    ret = this->manager_.UninstallFont(FONT_FULL_NAME, TEST_USERID);
+    ret = manager_->UninstallFont(FONT_FULL_NAME, TEST_USERID);
     EXPECT_EQ(ret, ERR_OK);
-    ret = this->manager_.UninstallFont(FONT_FULL_NAME, TEST_USERID);
+    ret = manager_->UninstallFont(FONT_FULL_NAME, TEST_USERID);
     EXPECT_EQ(ret, ERR_UNINSTALL_FILE_NOT_EXISTS);
-    ret = this->manager_.UninstallFont("", TEST_USERID);
+    ret = manager_->UninstallFont("", TEST_USERID);
     EXPECT_EQ(ret, ERR_UNINSTALL_FILE_NOT_EXISTS);
 }
 
@@ -158,7 +140,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest003, TestSize.Level1)
 {
     int fd = open(FONT_PATH.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
-    auto fullNameVector = this->manager_.GetFontFullName(fd);
+    auto fullNameVector = manager_->GetFontFullName(fd);
     std::vector<std::string> fullName{"HarmonyOS Sans"};
     EXPECT_EQ(fullName, fullNameVector);
     if (fd >= 0) {
@@ -180,35 +162,35 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest004, TestSize.Level1)
     const std::string emptyTTCPath = "/data/test/emptyTTC.ttc";
     int fd = open(errTTFPath.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
-    auto fullNameVector = this->manager_.GetFontFullName(fd);
+    auto fullNameVector = manager_->GetFontFullName(fd);
     EXPECT_EQ(fullNameVector.size(), 0);
     if (fd >= 0) {
         close(fd);
     }
     fd = open(emptyTTFPath.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
-    fullNameVector = this->manager_.GetFontFullName(fd);
+    fullNameVector = manager_->GetFontFullName(fd);
     EXPECT_EQ(fullNameVector.size(), 0);
     if (fd >= 0) {
         close(fd);
     }
     fd = open(errorType.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
-    fullNameVector = this->manager_.GetFontFullName(fd);
+    fullNameVector = manager_->GetFontFullName(fd);
     EXPECT_EQ(fullNameVector.size(), 0);
     if (fd >= 0) {
         close(fd);
     }
     fd = open(errorTTCPath.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
-    fullNameVector = this->manager_.GetFontFullName(fd);
+    fullNameVector = manager_->GetFontFullName(fd);
     EXPECT_EQ(fullNameVector.size(), 0);
     if (fd >= 0) {
         close(fd);
     }
     fd = open(emptyTTCPath.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
-    fullNameVector = this->manager_.GetFontFullName(fd);
+    fullNameVector = manager_->GetFontFullName(fd);
     EXPECT_EQ(fullNameVector.size(), 0);
     if (fd >= 0) {
         close(fd);
@@ -222,12 +204,12 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest004, TestSize.Level1)
  */
 HWTEST_F(FontManagerTest, FontManagerFuncTest005, TestSize.Level1)
 {
-    int ret = this->manager_.CheckFontConfigPath(INSTALL_PATH_TEST);
+    int ret = manager_->CheckFontConfigPath(INSTALL_PATH_TEST);
     EXPECT_EQ(ret, true);
     FileUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
-    ret = this->manager_.CheckFontConfigPath(INSTALL_PATH_TEST);
+    ret = manager_->CheckFontConfigPath(INSTALL_PATH_TEST);
     EXPECT_EQ(ret, true);
-    ret = this->manager_.CheckFontConfigPath(INSTALL_PATH_TEST);
+    ret = manager_->CheckFontConfigPath(INSTALL_PATH_TEST);
     EXPECT_EQ(ret, true);
 }
 
@@ -242,7 +224,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest006, TestSize.Level1)
     EXPECT_EQ(FileUtils::CopyFile(fd, FONT_CONFIG_FILE_TEST), true);
     fd = open(FONT_PATH.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
-    int ret = this->manager_.InstallFont(fd, TEST_USERID);
+    int ret = manager_->InstallFont(fd, TEST_USERID);
     EXPECT_EQ(ret, ERR_MAX_FILE_COUNT);
     if (fd >= 0) {
         close(fd);
@@ -263,7 +245,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest007, TestSize.Level1)
     }
     fd = open(FONT_PATH.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
-    int ret = this->manager_.InstallFont(fd, TEST_USERID);
+    int ret = manager_->InstallFont(fd, TEST_USERID);
     EXPECT_EQ(ret, ERR_OK);
     if (fd >= 0) {
         close(fd);
@@ -279,13 +261,13 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest008, TestSize.Level1)
 {
     int fd = open(TTC_FONT_PATH.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
-    int ret = this->manager_.InstallFont(fd, TEST_USERID);
+    int ret = manager_->InstallFont(fd, TEST_USERID);
     EXPECT_EQ(ret, ERR_OK);
     if (fd >= 0) {
         close(fd);
     }
     fd = open(TTC_FONT_PATH.c_str(), O_RDONLY);
-    ret = this->manager_.InstallFont(fd, TEST_USERID);
+    ret = manager_->InstallFont(fd, TEST_USERID);
     EXPECT_EQ(ret, ERR_INSTALLED_ALRADY);
 }
 
@@ -298,16 +280,16 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest009, TestSize.Level1)
 {
     int fd = open(TTC_FONT_PATH.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
-    int ret = this->manager_.InstallFont(fd, TEST_USERID);
+    int ret = manager_->InstallFont(fd, TEST_USERID);
     EXPECT_EQ(ret, ERR_OK);
     if (fd >= 0) {
         close(fd);
     }
-    ret = this->manager_.UninstallFont(TTC_FONT_FULL_NAME[0], TEST_USERID);
+    ret = manager_->UninstallFont(TTC_FONT_FULL_NAME[0], TEST_USERID);
     EXPECT_EQ(ret, ERR_OK);
-    ret = this->manager_.UninstallFont(TTC_FONT_FULL_NAME[0], TEST_USERID);
+    ret = manager_->UninstallFont(TTC_FONT_FULL_NAME[0], TEST_USERID);
     EXPECT_EQ(ret, ERR_UNINSTALL_FILE_NOT_EXISTS);
-    ret = this->manager_.UninstallFont("", TEST_USERID);
+    ret = manager_->UninstallFont("", TEST_USERID);
     EXPECT_EQ(ret, ERR_UNINSTALL_FILE_NOT_EXISTS);
 }
 
@@ -320,7 +302,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest010, TestSize.Level1)
 {
     int fd = open(TTC_FONT_PATH.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
-    auto fullNameVector = this->manager_.GetFontFullName(fd);
+    auto fullNameVector = manager_->GetFontFullName(fd);
     std::sort(fullNameVector.begin(), fullNameVector.end());
     auto ttcFullName = TTC_FONT_FULL_NAME;
     std::sort(ttcFullName.begin(), ttcFullName.end());
@@ -344,35 +326,35 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest011, TestSize.Level1)
     const std::string emptyTTCPath = "/data/test/emptyTTC.ttc";
     int fd = open(errTTFPath.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
-    int ret = this->manager_.InstallFont(fd, TEST_USERID);
+    int ret = manager_->InstallFont(fd, TEST_USERID);
     EXPECT_EQ(ret, ERR_FILE_VERIFY_FAIL);
     if (fd >= 0) {
         close(fd);
     }
     fd = open(emptyTTFPath.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
-    ret = this->manager_.InstallFont(fd, TEST_USERID);
+    ret = manager_->InstallFont(fd, TEST_USERID);
     EXPECT_EQ(ret, ERR_FILE_VERIFY_FAIL);
     if (fd >= 0) {
         close(fd);
     }
     fd = open(errorType.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
-    ret = this->manager_.InstallFont(fd, TEST_USERID);
+    ret = manager_->InstallFont(fd, TEST_USERID);
     EXPECT_EQ(ret, ERR_FILE_VERIFY_FAIL);
     if (fd >= 0) {
         close(fd);
     }
     fd = open(errorTTCPath.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
-    ret = this->manager_.InstallFont(fd, TEST_USERID);
+    ret = manager_->InstallFont(fd, TEST_USERID);
     EXPECT_EQ(ret, ERR_FILE_VERIFY_FAIL);
     if (fd >= 0) {
         close(fd);
     }
     fd = open(emptyTTCPath.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
-    ret = this->manager_.InstallFont(fd, TEST_USERID);
+    ret = manager_->InstallFont(fd, TEST_USERID);
     EXPECT_EQ(ret, ERR_FILE_VERIFY_FAIL);
     if (fd >= 0) {
         close(fd);
@@ -386,14 +368,14 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest011, TestSize.Level1)
  */
 HWTEST_F(FontManagerTest, FontManagerFuncTest012, TestSize.Level1)
 {
-    FileUtils::CreatDirWithPermission("/data/test/testRepeats/");
+    FileUtils::CreateDirWithPermission("/data/test/testRepeats/");
     const std::string fontPath1 = "/data/test/TestFont_Sans.ttf";
     const std::string fontPath4 = "/data/test/NotoSansVai-Regular.ttf";
     const std::string fontPath5 = "/data/test/testRepeats/TestFont_Sans.ttf";
 
     int fd = open(fontPath1.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
-    int ret = this->manager_.InstallFont(fd, TEST_USERID);
+    int ret = manager_->InstallFont(fd, TEST_USERID);
     if (fd > 0) {
         close(fd);
     }
@@ -406,7 +388,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest012, TestSize.Level1)
     }
     fd = open(fontPath5.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
-    ret = this->manager_.InstallFont(fd, TEST_USERID);
+    ret = manager_->InstallFont(fd, TEST_USERID);
     if (fd > 0) {
         close(fd);
     }
@@ -427,14 +409,14 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest012, TestSize.Level1)
  */
 HWTEST_F(FontManagerTest, FontManagerFuncTest013, TestSize.Level1)
 {
-    FileUtils::CreatDirWithPermission("/data/test/testRepeats/");
+    FileUtils::CreateDirWithPermission("/data/test/testRepeats/");
     const std::string fontPath2 = "/data/test/NotoSansCJK-Regular.ttc";
     const std::string fontPath3 = "/data/test/NotoSerifCJK-Regular.ttc";
     const std::string fontPath6 = "/data/test/testRepeats/NotoSerifCJK-Regular.ttc";
 
     int fd = open(fontPath2.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
-    int ret = this->manager_.InstallFont(fd, TEST_USERID);
+    int ret = manager_->InstallFont(fd, TEST_USERID);
     if (fd > 0) {
         close(fd);
     }
@@ -447,7 +429,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest013, TestSize.Level1)
     }
     fd = open(fontPath6.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
-    ret = this->manager_.InstallFont(fd, TEST_USERID);
+    ret = manager_->InstallFont(fd, TEST_USERID);
     if (fd > 0) {
         close(fd);
     }
@@ -459,106 +441,6 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest013, TestSize.Level1)
         }
     }
     EXPECT_EQ(rmdir("/data/test/testRepeats") != -1, true);
-}
-
-/**
- * @tc.name: FontManagerFuncTest014
- * @tc.desc: Test FontManager CopyFileForDataMigration case
- * @tc.type: FUNC
- */
-HWTEST_F(FontManagerTest, FontManagerFuncTest014, TestSize.Level1)
-{
-    const std::string fontPath = "/data/test/NotoSansCJK-Regular.ttc";
-    bool res = this->manager_.InitAllUserDir({TEST_USERID});
-    ASSERT_TRUE(res);
-    res = this->manager_.InitDataMigrationTempDir();
-    ASSERT_TRUE(res);
-    res = this->manager_.InitDataMigrationTempDir();
-    ASSERT_TRUE(res);
-    res = this->manager_.CopyFileForDataMigration(fontPath, TEST_USERID);
-    EXPECT_EQ(res, true);
-    res = this->manager_.CopyFileForDataMigration(fontPath, TEST_USERID);
-    EXPECT_EQ(res, true);
-    EXPECT_EQ(FileUtils::RemoveFile(INSTALL_PATH_TEST + "NotoSansCJK-Regular.ttc"), true);
-}
-
-/**
- * @tc.name: FontManagerFuncTest015
- * @tc.desc: Test FontManager DataMigration case
- * @tc.type: FUNC
- */
-HWTEST_F(FontManagerTest, FontManagerFuncTest015, TestSize.Level1)
-{
-    std::string processName = "FontManagerFuncTest015";
-    SetFontManagerPermission(processName);
-    std::vector<std::string> srcPaths = {
-        "/data/test/NotoSansCJK-Regular.ttc",
-        "/data/test/NotoSerifCJK-Regular.ttc",
-        "/data/test/TestFont_Sans.ttf",
-        "/data/test/emptyTTF.ttf",
-        "/data/test/200install_fontconfig.json"
-    };
-    for (const auto &path : srcPaths) {
-        std::string fileName = FileUtils::GetFileName(path);
-        EXPECT_TRUE(this->CopyFile(path, INSTALL_PATH_APP + fileName));
-    }
-    sptr<IDataMigrationCallback> cb = new (std::nothrow) TestCallback();
-    if (cb == nullptr) {
-        return;
-    }
-    this->manager_.DataMigration(cb);
-    this->manager_.EventDataHeartBeatCallback(cb);
-    std::vector<std::string> paths;
-    OHOS::GetDirFiles(INSTALL_PATH_TEST, paths);
-    EXPECT_EQ(paths.size() == srcPaths.size(), true);
-}
-
-/**
- * @tc.name: FontManagerFuncTest016
- * @tc.desc: Test FontManager DataMigration case
- * @tc.type: FUNC
- */
-HWTEST_F(FontManagerTest, FontManagerFuncTest016, TestSize.Level1)
-{
-    ResetTokenAndUid();
-    std::vector<std::string> srcPaths = {
-        "/data/test/NotoSansCJK-Regular.ttc",
-        "/data/test/NotoSerifCJK-Regular.ttc",
-        "/data/test/TestFont_Sans.ttf",
-        "/data/test/emptyTTF.ttf",
-        "/data/test/200install_fontconfig.json"
-    };
-    for (const auto &path : srcPaths) {
-        std::string fileName = FileUtils::GetFileName(path);
-        EXPECT_TRUE(this->CopyFile(path, INSTALL_PATH_APP + fileName));
-    }
-    sptr<IDataMigrationCallback> cb = new (std::nothrow) TestCallback();
-    if (cb == nullptr) {
-        return;
-    }
-    this->manager_.DataMigration(cb);
-    std::vector<std::string> paths;
-    OHOS::GetDirFiles(INSTALL_PATH_TEST, paths);
-    EXPECT_EQ(paths.size() == 0, true);
-}
-
-/**
- * @tc.name: FontManagerFuncTest017
- * @tc.desc: Test FontManager DataMigration case
- * @tc.type: FUNC
- */
-HWTEST_F(FontManagerTest, FontManagerFuncTest017, TestSize.Level1)
-{
-    std::string processName = "FontManagerFuncTest017";
-    SetFontManagerPermission(processName);
-    sptr<IDataMigrationCallback> cb = new (std::nothrow) TestCallback();
-    if (cb == nullptr) {
-        return;
-    }
-    this->manager_.DataMigration(cb);
-    std::vector<std::string> paths;
-    OHOS::GetDirFiles(INSTALL_PATH_TEST, paths);
-    EXPECT_EQ(paths.size() == 0, true);
 }
 } // namespace FontManager
 } // namespace Global

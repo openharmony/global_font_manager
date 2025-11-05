@@ -13,17 +13,16 @@
  * limitations under the License.
  */
 
- package OHOS.Global.FontManager;
- enum ProgressType {
-     START = 0,
-     PROGRESS_DOING,
-     PROGRESS_RESULT,
-     HEART_BEAT,
- };
+package OHOS.Global.FontManager;
+enum ProgressType {
+    HEART_BEAT = 0,
+    PROGRESS_DOING,
+    PROGRESS_RESULT,
+};
 
- struct EventData {
-     ProgressType event;
-     int timeRemain;
-     int progressRate;
-     int progressResult;
- };
+struct EventData {
+    ProgressType event;
+    int timeRemaining;
+    int progressPercentage;
+    int progressResult;
+};
