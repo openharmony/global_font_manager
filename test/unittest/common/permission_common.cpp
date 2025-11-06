@@ -28,10 +28,10 @@ namespace FontManager {
 constexpr int PERMISSION_NUM = 1;
 constexpr int ROOT_UID = 0;
 constexpr int FONT_MANAGER_UID = 7027;
-uint64_t selfTokenId_ = 0;
+uint64_t g_selfTokenId = 0;
 void SetFontManagerPermission(const std::string& processName)
 {
-    selfTokenId_ = GetSelfTokenID();
+    g_selfTokenId = GetSelfTokenID();
     uint64_t tokenId;
     const char* perms[PERMISSION_NUM] = {
         "ohos.permission.MANAGE_LOCAL_ACCOUNTS",
@@ -58,7 +58,7 @@ void SetFontManagerPermission(const std::string& processName)
 void ResetTokenAndUid()
 {
     seteuid(ROOT_UID);
-    SetSelfTokenID(selfTokenId_);
+    SetSelfTokenID(g_selfTokenId);
 }
 } // namespace FontManager
 } // namespace Global

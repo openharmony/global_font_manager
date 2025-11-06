@@ -23,7 +23,7 @@ namespace OHOS {
 namespace Global {
 namespace FontManager {
 using namespace AbilityRuntime;
-namespace{
+namespace {
 struct DeleteRefHolder {
     napi_env env {nullptr};
     napi_ref ref {nullptr};
@@ -101,10 +101,9 @@ napi_ref JsRefHolder::Get() const
 }
 
 JsDataMigrationCallback::JsDataMigrationCallback(napi_env env, const std::shared_ptr<JsRefHolder> &heartBeatCallback,
-        const std::shared_ptr<JsRefHolder> &progressCallback,
-        const std::shared_ptr<JsRefHolder> &resultCallback)
-    : env_(env), heartBeatCallback_(heartBeatCallback),
-    progressCallback_(progressCallback), resultCallback_(resultCallback)
+    const std::shared_ptr<JsRefHolder> &progressCallback, const std::shared_ptr<JsRefHolder> &resultCallback)
+    : env_(env), heartBeatCallback_(heartBeatCallback), progressCallback_(progressCallback),
+    resultCallback_(resultCallback)
 {
 }
 

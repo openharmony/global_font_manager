@@ -141,7 +141,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest003, TestSize.Level1)
     int fd = open(FONT_PATH.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
     auto fullNameVector = manager_->GetFontFullName(fd);
-    std::vector<std::string> fullName{"HarmonyOS Sans"};
+    std::vector<std::string> fullName{FONT_FULL_NAME};
     EXPECT_EQ(fullName, fullNameVector);
     if (fd >= 0) {
         close(fd);

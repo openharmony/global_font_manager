@@ -24,7 +24,7 @@ namespace OHOS {
 namespace Global {
 namespace FontManager {
 using namespace AbilityRuntime;
-namespace{
+namespace {
 static const std::unordered_map<uint32_t, std::string> g_DataMigrationErrMsgMap = {
     {ERR_NO_PERMISSION, "Dont have permission."},
     {ERR_DATA_MIGRATIONING, "The device is dataMigrationing."},

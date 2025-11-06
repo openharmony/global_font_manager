@@ -30,7 +30,6 @@ public:
 
 private:
     std::unique_ptr<DataMigrationCallback> callback_;
-
 };
 } // namespace FontManager
 } // namespace Global

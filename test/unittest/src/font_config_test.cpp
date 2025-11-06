@@ -80,7 +80,7 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest001, TestSize.Level1)
     ASSERT_EQ(fontManager_.CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
     ASSERT_EQ(fontManager_.CheckFontConfigPath(INSTALL_PATH_TEST), true);
     std::string fontFullPath = INSTALL_PATH_TEST + "TestFont_Sans.ttf";
-    std::vector<std::string> fullName{"HarmonyOS-Sans"};
+    std::vector<std::string> fullName{"TestFont-Sans"};
 
     EXPECT_EQ(this->config_.InsertFontRecord(fontFullPath, fullName), true);
 
@@ -98,7 +98,7 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest002, TestSize.Level1)
     ASSERT_EQ(fontManager_.CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
     ASSERT_EQ(fontManager_.CheckFontConfigPath(INSTALL_PATH_TEST), true);
     std::string fontFullPath = INSTALL_PATH_TEST + "TestFont_Sans.ttf";
-    std::vector<std::string> fullName{"HarmonyOS-Sans"};
+    std::vector<std::string> fullName{"TestFont-Sans"};
 
     EXPECT_EQ(this->config_.InsertFontRecord(fontFullPath, fullName), true);
 
@@ -123,13 +123,13 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest003, TestSize.Level1)
     ASSERT_EQ(fontManager_.CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
     ASSERT_EQ(fontManager_.CheckFontConfigPath(INSTALL_PATH_TEST), true);
     std::string fontFullPath1 = INSTALL_PATH_TEST + "TestFont_Sans1.ttf";
-    std::vector<std::string> fullName1{"HarmonyOS-Sans1"};
+    std::vector<std::string> fullName1{"TestFont-Sans1"};
     std::string fontFullPath2 = INSTALL_PATH_TEST + "TestFont_Sans2.ttf";
-    std::vector<std::string> fullName2{"HarmonyOS-Sans2"};
+    std::vector<std::string> fullName2{"TestFont-Sans2"};
     std::string fontFullPath3 = INSTALL_PATH_TEST + "TestFont_Sans3.ttf";
-    std::vector<std::string> fullName3{"HarmonyOS-Sans3"};
+    std::vector<std::string> fullName3{"TestFont-Sans3"};
     std::string fontFullPath4 = INSTALL_PATH_TEST + "TestFont_Sans4.ttf";
-    std::vector<std::string> fullName4{"HarmonyOS-Sans4"};
+    std::vector<std::string> fullName4{"TestFont-Sans4"};
 
     EXPECT_EQ(this->config_.InsertFontRecord(fontFullPath1, fullName1), true);
     EXPECT_EQ(this->config_.InsertFontRecord(fontFullPath2, fullName2), true);
@@ -149,11 +149,11 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest004, TestSize.Level1)
     ASSERT_EQ(fontManager_.CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
     ASSERT_EQ(fontManager_.CheckFontConfigPath(INSTALL_PATH_TEST), true);
     std::string fontFullPath = INSTALL_PATH_TEST + "TestFont_Sans.ttf";
-    std::vector<std::string> fullName{"HarmonyOS-Sans"};
+    std::vector<std::string> fullName{"TestFont-Sans"};
 
     EXPECT_EQ(this->config_.InsertFontRecord(fontFullPath, fullName), true);
 
-    EXPECT_EQ(this->config_.GetFontFileByName("HarmonyOS-Sans"), fontFullPath);
+    EXPECT_EQ(this->config_.GetFontFileByName("TestFont-Sans"), fontFullPath);
     EXPECT_EQ(this->config_.GetFontFileByName("ERROR"), "");
 }
 

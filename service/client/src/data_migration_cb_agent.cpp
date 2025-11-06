@@ -35,7 +35,6 @@ ErrCode DataMigrationCbAgent::Handle(uint32_t errCode, const EventData& eventDat
     }
     return ERR_SYSTEM_ERROR;
 }
-
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS
