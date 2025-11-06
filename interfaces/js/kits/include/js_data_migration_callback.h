@@ -47,7 +47,7 @@ public:
         const std::shared_ptr<JsRefHolder> &resultCallback);
     ~JsDataMigrationCallback() override;
 
-    void OnHandle(uint32_t errCode, const EventData& eventData) override;
+    void OnHandle(const EventData& eventData) override;
 
 private:
     void CallJsMethod(napi_env env, napi_ref funcRef, const napi_value* argv, size_t argc);

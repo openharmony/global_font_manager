@@ -129,7 +129,7 @@ void JsDataMigrationCallback::CallJsMethod(napi_env env, napi_ref funcRef, const
     }
 }
 
-void JsDataMigrationCallback::OnHandle(uint32_t errCode, const EventData& eventData)
+void JsDataMigrationCallback::OnHandle(const EventData& eventData)
 {
     if (env_ == nullptr) {
         FONT_LOGE("JsDataMigrationCallback OnHandle env_ is null.");
@@ -137,7 +137,7 @@ void JsDataMigrationCallback::OnHandle(uint32_t errCode, const EventData& eventD
     }
     std::unique_ptr<AbilityRuntime::NapiAsyncTask::CompleteCallback> complete =
         std::make_unique<AbilityRuntime::NapiAsyncTask::CompleteCallback>(
-            [this, errCode, eventData](napi_env env, AbilityRuntime::NapiAsyncTask& task, int32_t status) {
+            [this, eventData](napi_env env, AbilityRuntime::NapiAsyncTask& task, int32_t status) {
                 FONT_LOGI("JsDataMigrationCallback CallJsMethod currentEventType:%{public}d", eventData.event);
                 if (eventData.event == ProgressType::HEART_BEAT) {
                     DoHeartbeatCallback();

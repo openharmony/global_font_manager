@@ -22,7 +22,7 @@ namespace Global {
 namespace FontManager {
 class TestCallback : public IRemoteStub<IDataMigrationCallback> {
 public:
-    ErrCode Handle(uint32_t errcode, const EventData& eventData) override
+    ErrCode Handle(const EventData& eventData) override
     {
         return ERR_OK;
     }

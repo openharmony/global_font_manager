@@ -27,10 +27,10 @@ DataMigrationCbAgent::DataMigrationCbAgent(std::unique_ptr<DataMigrationCallback
 DataMigrationCbAgent::~DataMigrationCbAgent()
 {}
 
-ErrCode DataMigrationCbAgent::Handle(uint32_t errCode, const EventData& eventData)
+ErrCode DataMigrationCbAgent::Handle(const EventData& eventData)
 {
     if (callback_ != nullptr) {
-        callback_->OnHandle(errCode, eventData);
+        callback_->OnHandle(eventData);
         return ERR_OK;
     }
     return ERR_SYSTEM_ERROR;

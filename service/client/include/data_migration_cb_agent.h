@@ -26,7 +26,7 @@ class DataMigrationCbAgent : public DataMigrationCallbackStub {
 public:
     explicit DataMigrationCbAgent(std::unique_ptr<DataMigrationCallback> callback);
     virtual ~DataMigrationCbAgent() override;
-    ErrCode Handle(uint32_t errCode, const EventData& eventData) override;
+    ErrCode Handle(const EventData& eventData) override;
 
 private:
     std::unique_ptr<DataMigrationCallback> callback_;

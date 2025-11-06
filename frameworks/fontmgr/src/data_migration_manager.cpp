@@ -235,7 +235,7 @@ void DataMigrationManager::RefreshEventData(const EventData& eventData, const Re
 {
     sptr<IRemoteObject> object = callback->AsObject();
     if (object != nullptr) {
-        callback->Handle(ERR_OK, std::move(eventData));
+        callback->Handle(std::move(eventData));
     }
 }
 } // namespace FontManager

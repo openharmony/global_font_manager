@@ -25,7 +25,7 @@ namespace FontManager {
 class DataMigrationCallback {
 public:
     virtual ~DataMigrationCallback() = default;
-    virtual void OnHandle(uint32_t errCode, const EventData& eventData) = 0;
+    virtual void OnHandle(const EventData& eventData) = 0;
 };
 } // namespace FontManager
 } // namespace Global

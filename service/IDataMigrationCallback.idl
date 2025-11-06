@@ -17,5 +17,5 @@
  import IDataMigrationCallbackEvent;
 
  [callback] interface OHOS.Global.FontManager.IDataMigrationCallback {
-    void Handle([in] unsigned int errcode, [in] EventData eventData);
+    void Handle([in] EventData eventData);
  }
