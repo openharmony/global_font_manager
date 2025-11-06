@@ -56,5 +56,19 @@ ohos_fuzztest("ServiceInstallFontFuzzTest") {
     "ipc:ipc_core",
     "samgr:samgr_proxy",
     "safwk:system_ability_fwk",
+    "eventhandler:libeventhandler",
+    "hisysevent:libhisysevent",
   ]
+
+  external_deps += fontmgr_external_deps
+
+  os_account_enable = false
+  if (defined(global_parts_info) && defined(global_parts_info.account_os_account)) {
+    os_account_enable = true
+  }
+
+  if (os_account_enable) {
+    external_deps += [ "os_account:os_account_innerkits" ]
+    defines = [ "ACCOUNT_ENABLE" ]
+  }
 }
