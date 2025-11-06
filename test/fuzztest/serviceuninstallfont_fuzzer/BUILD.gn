@@ -51,5 +51,6 @@ ohos_fuzztest("ServiceUnInstallFontFuzzTest") {
     "hilog:libhilog",
     "ipc:ipc_core",
     "samgr:samgr_proxy",
+    "safwk:system_ability_fwk",
   ]
 }
