@@ -50,7 +50,7 @@ protected:
 private:
     void InstallFontInner(const int32_t fd, int32_t &outValue);
     void UninstallFontInner(const std::string &fontName, int32_t &outValue);
-    int32_t DataMigrationInner(const sptr<IDataMigrationCallback>& callback);
+    int32_t DataMigrationInner(const RemoteCallbackPtr& callback);
     void AddUnloadFontServiceTask();
     void RemoveUnloadFontServiceTask();
     int32_t CheckPermission();

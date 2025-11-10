@@ -33,7 +33,7 @@ public:
     void DataMigration(const RemoteCallbackPtr& callback);
 
 private:
-    void StartHeartBeatTask(const sptr<IDataMigrationCallback>& callback);
+    void StartHeartBeatTask(const RemoteCallbackPtr& callback);
     int32_t DataMigrationInner(const RemoteCallbackPtr& callback);
     int32_t StartOneFileCopyTask(const std::string& path, const std::vector<int32_t>& userIds);
     bool CopyFileForDataMigration(const std::string &srcPath, const int32_t userId);
