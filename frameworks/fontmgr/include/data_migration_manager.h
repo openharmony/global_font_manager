@@ -26,26 +26,26 @@
 namespace OHOS {
 namespace Global {
 namespace FontManager {
-using RemoteCallbackPtr = sptr<IDataMigrationCallback>;
 class DataMigrationManager : public DelayedSingleton<DataMigrationManager> {
     DECLARE_DELAYED_SINGLETON(DataMigrationManager);
 public:
-    void DataMigration(const RemoteCallbackPtr& callback);
+    void DataMigration(const sptr<IDataMigrationCallback>& callback);
 
 private:
-    void StartHeartBeatTask(const RemoteCallbackPtr& callback);
-    int32_t DataMigrationInner(const RemoteCallbackPtr& callback);
+    void StartHeartBeatTask();
+    int32_t DataMigrationInner();
     int32_t StartOneFileCopyTask(const std::string& path, const std::vector<int32_t>& userIds);
     bool CopyFileForDataMigration(const std::string &srcPath, const int32_t userId);
     bool ShouldCallback(int32_t i, int32_t totalCount);
-    void EventDataHeartBeatCallback(const RemoteCallbackPtr& callback);
-    void EventDataProgressCallback(int32_t i, int32_t size, int32_t idsize, const RemoteCallbackPtr& callback);
-    void EventDataResultCallback(int32_t result, const RemoteCallbackPtr& callback);
+    void EventDataHeartBeatCallback();
+    void EventDataProgressCallback(int32_t i, int32_t size, int32_t idsize);
+    void EventDataResultCallback(int32_t result);
     std::vector<int32_t> GetAllCreatedUserIds();
     bool InitAllUserDir(const std::vector<int32_t> userIds);
     bool InitDataMigrationTempDir();
-    void RefreshEventData(const EventData& eventData, const RemoteCallbackPtr& callback);
+    void RefreshEventData(const EventData& eventData);
     std::atomic<bool> isDataMigrationing_ {false};
+    sptr<IDataMigrationCallback> callback_ = nullptr;
 };
 } // namespace FontManager
 } // namespace Global

@@ -42,16 +42,18 @@ DataMigrationManager::~DataMigrationManager()
 {
 }
 
-void DataMigrationManager::DataMigration(const RemoteCallbackPtr& callback)
+void DataMigrationManager::DataMigration(const sptr<IDataMigrationCallback>& callback)
 {
+    callback_ = callback;
     FileUtils::DeleteDir(INSTALL_PATH_APP + TEMP_FILE, true);
     isDataMigrationing_ = true;
-    int32_t ret = DataMigrationInner(callback);
+    int32_t ret = DataMigrationInner();
     isDataMigrationing_ = false;
-    EventDataResultCallback(ret, callback);
+    EventDataResultCallback(ret);
+    callback_ = nullptr;
 }
 
-int32_t DataMigrationManager::DataMigrationInner(const RemoteCallbackPtr& callback)
+int32_t DataMigrationManager::DataMigrationInner()
 {
     if (OHOS::IsEmptyFolder(INSTALL_PATH_APP)) {
         FONT_LOGE("FontManager INSTALL_PATH_APP is empty.");
@@ -66,12 +68,12 @@ int32_t DataMigrationManager::DataMigrationInner(const RemoteCallbackPtr& callba
         FONT_LOGE("FontManager DataMigrationInner InitDir err.");
         return ERR_DATA_MIGRATION_SYSTEM_ERROR;
     }
+    StartHeartBeatTask();
     std::vector<std::string> paths;
     OHOS::GetDirFiles(INSTALL_PATH_APP, paths);
     for (size_t i = 0; i < paths.size(); ++i) {
-        StartHeartBeatTask(callback);
         if (ShouldCallback(i, paths.size())) {
-            EventDataProgressCallback(i, paths.size(), userIds.size(), callback);
+            EventDataProgressCallback(i, paths.size(), userIds.size());
         }
         int ret = StartOneFileCopyTask(paths[i], userIds);
         if (ret != ERR_OK) {
@@ -128,13 +130,13 @@ bool DataMigrationManager::CopyFileForDataMigration(const std::string &srcPath, 
     return true;
 }
 
-void DataMigrationManager::StartHeartBeatTask(const sptr<IDataMigrationCallback>& callback)
+void DataMigrationManager::StartHeartBeatTask()
 {
-    std::thread([this, callback]() {
+    std::thread([this]() {
         FONT_LOGI("DataMigrationManager HeartBeat thread started.");
         while (isDataMigrationing_) {
             FONT_LOGI("DataMigrationManager HeartBeat....");
-            EventDataHeartBeatCallback(callback);
+            EventDataHeartBeatCallback();
             std::this_thread::sleep_for(std::chrono::seconds(HEARTBEAT_INTERVAL));
         }
         FONT_LOGI("DataMigrationManager HeartBeat thread stoped.");
@@ -152,8 +154,7 @@ bool DataMigrationManager::ShouldCallback(int32_t i, int32_t totalCount)
     return std::fabs(i - triggerPos) < EPSILON;
 }
 
-void DataMigrationManager::EventDataProgressCallback(int32_t i, int32_t size, int32_t idsize,
-    const RemoteCallbackPtr& callback)
+void DataMigrationManager::EventDataProgressCallback(int32_t i, int32_t size, int32_t idsize)
 {
     // 以Mb/s计算预估时间
     std::uintmax_t remainSize = (OHOS::GetFolderSize(INSTALL_PATH_APP) * idsize) >> 20;
@@ -168,25 +169,25 @@ void DataMigrationManager::EventDataProgressCallback(int32_t i, int32_t size, in
                            .timeRemaining = timeRemaining,
                            .progressPercentage = progressPercentage,
                            .progressResult = 0};
-    RefreshEventData(eventData, callback);
+    RefreshEventData(eventData);
 }
 
-void DataMigrationManager::EventDataResultCallback(int32_t result, const RemoteCallbackPtr& callback)
+void DataMigrationManager::EventDataResultCallback(int32_t result)
 {
     EventData eventData = {.event = ProgressType::PROGRESS_RESULT,
                            .timeRemaining = 0,
                            .progressPercentage = 0,
                            .progressResult = result};
-    RefreshEventData(eventData, callback);
+    RefreshEventData(eventData);
 }
 
-void DataMigrationManager::EventDataHeartBeatCallback(const RemoteCallbackPtr& callback)
+void DataMigrationManager::EventDataHeartBeatCallback()
 {
     EventData eventData = {.event = ProgressType::HEART_BEAT,
                            .timeRemaining = 0,
                            .progressPercentage = 0,
                            .progressResult = 0};
-    RefreshEventData(eventData, callback);
+    RefreshEventData(eventData);
 }
 
 std::vector<int32_t> DataMigrationManager::GetAllCreatedUserIds()
@@ -231,11 +232,11 @@ bool DataMigrationManager::InitDataMigrationTempDir()
     return true;
 }
 
-void DataMigrationManager::RefreshEventData(const EventData& eventData, const RemoteCallbackPtr& callback)
+void DataMigrationManager::RefreshEventData(const EventData& eventData)
 {
-    sptr<IRemoteObject> object = callback->AsObject();
+    sptr<IRemoteObject> object = callback_->AsObject();
     if (object != nullptr) {
-        callback->Handle(std::move(eventData));
+        callback_->Handle(std::move(eventData));
     }
 }
 } // namespace FontManager
