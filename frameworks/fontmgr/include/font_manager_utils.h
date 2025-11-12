@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2024-2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,20 +13,22 @@
  * limitations under the License.
  */
 
-#ifndef FONT_MANAGER_FILE_UTILS_H
-#define FONT_MANAGER_FILE_UTILS_H
+#ifndef FONT_MANAGER_UTILS_H
+#define FONT_MANAGER_UTILS_H
 
 #include <filesystem>
 #include <string>
+#include <vector>
 
 namespace OHOS {
 namespace Global {
 namespace FontManager {
-class FileUtils {
+class FontManagerUtils {
 public:
+    static bool CheckAndInitInstallPath(const std::string &installPath);
     static bool CheckPathExist(const std::string &pathName);
+    static bool CheckFontConfigPath(const std::string &installPath);
     static bool CreateDirWithPermission(const std::string &fileDir);
-    static bool CreateFileWithPermission(const std::string &filePath, const std::string &defalutStr = "");
     static std::string GetFileName(const std::string &path);
     static bool CopyFile(int32_t sourceFd, const std::string& path);
     static std::string GetFilePathByFd(const int32_t &fd);
@@ -34,11 +36,14 @@ public:
     static std::string GetFileTime();
     static bool RemoveFile(const std::string &path);
     static void DeleteDir(const std::string &rootPath, bool isDeleteRootDir);
+    static std::vector<int32_t> GetAllCreatedUserIds();
+    static void ClearAllTempFileDir();
 private:
+    static bool CreateFileWithPermission(const std::string &filePath, const std::string &defalutStr = "");
     static bool CopyFileByFd(int32_t sourceFd, int32_t targetFd);
     static bool RemoveAll(const std::filesystem::path &path);
 };
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS
-#endif // FONT_MANAGER_FILE_UTILS_H
+#endif // FONT_MANAGER_UTILS_H

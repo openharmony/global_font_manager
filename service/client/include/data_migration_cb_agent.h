@@ -17,19 +17,19 @@
 #define GLOBAL_FONT_MANAGER_FONT_MANAGER_CB_AGENT_H
 
 #include "data_migration_callback_stub.h"
-#include "data_migration_callback.h"
+#include "idata_migration_listener.h"
 
 namespace OHOS {
 namespace Global {
 namespace FontManager {
 class DataMigrationCbAgent : public DataMigrationCallbackStub {
 public:
-    explicit DataMigrationCbAgent(std::unique_ptr<DataMigrationCallback> callback);
+    explicit DataMigrationCbAgent(std::shared_ptr<IDataMigrationListener> listener);
     virtual ~DataMigrationCbAgent() override;
     ErrCode Handle(const EventData& eventData) override;
 
 private:
-    std::unique_ptr<DataMigrationCallback> callback_;
+    std::shared_ptr<IDataMigrationListener> listener_;
 };
 } // namespace FontManager
 } // namespace Global

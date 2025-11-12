@@ -14,14 +14,14 @@
  */
 
 package OHOS.Global.FontManager;
-enum ProgressType {
+enum EventType {
     HEART_BEAT = 0,
     PROGRESS_DOING,
     PROGRESS_RESULT,
 };
 
 struct EventData {
-    ProgressType event;
+    EventType event;
     int timeRemaining;
     int progressPercentage;
     int progressResult;

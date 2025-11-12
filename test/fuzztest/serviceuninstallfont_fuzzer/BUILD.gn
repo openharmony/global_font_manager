@@ -28,7 +28,7 @@ ohos_fuzztest("ServiceUnInstallFontFuzzTest") {
     "-fno-omit-frame-pointer",
   ]
   include_dirs = [
-    "../common",
+    "../../common",
     "../utils",
     "../../../service/client/include",
     "../../../common/include",

@@ -23,7 +23,7 @@
 #include "data_migration_manager.h"
 #undef private
 #undef protected
-#include "file_utils.h"
+#include "font_manager_utils.h"
 #include "font_define.h"
 #include "callback_mock.h"
 #include "directory_ex.h"
@@ -56,11 +56,12 @@ protected:
 };
 
 void DataMigrationManagerTest::SetUpTestCase(void)
-{}
+{
+}
 
 void DataMigrationManagerTest::TearDownTestCase(void)
 {
-    FileUtils::DeleteDir(TEMP_PATH_TEST, true);
+    FontManagerUtils::DeleteDir(TEMP_PATH_TEST, true);
 }
 
 void DataMigrationManagerTest::SetUp(void)
@@ -70,8 +71,9 @@ void DataMigrationManagerTest::SetUp(void)
 
 void DataMigrationManagerTest::TearDown(void)
 {
-    FileUtils::DeleteDir(INSTALL_PATH_TEST, false);
-    FileUtils::DeleteDir(INSTALL_PATH_APP, false);
+    PermissionCommon::ResetTokenAndUid();
+    FontManagerUtils::DeleteDir(INSTALL_PATH_TEST, false);
+    FontManagerUtils::DeleteDir(INSTALL_PATH_APP, false);
 }
 
 bool DataMigrationManagerTest::CopyFile(const string &srcPath, const string &desPath)
@@ -81,7 +83,7 @@ bool DataMigrationManagerTest::CopyFile(const string &srcPath, const string &des
         return false;
     }
 
-    if (!FileUtils::CopyFile(fd, desPath)) {
+    if (!FontManagerUtils::CopyFile(fd, desPath)) {
         close(fd);
         return false;
     }
@@ -107,7 +109,7 @@ HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest001, TestSize.Lev
     EXPECT_EQ(res, true);
     res = manager_->CopyFileForDataMigration(fontPath, TEST_USERID);
     EXPECT_EQ(res, true);
-    EXPECT_EQ(FileUtils::RemoveFile(INSTALL_PATH_TEST + "NotoSansCJK-Regular.ttc"), true);
+    EXPECT_EQ(FontManagerUtils::RemoveFile(INSTALL_PATH_TEST + "NotoSansCJK-Regular.ttc"), true);
 }
 
 /**
@@ -117,18 +119,6 @@ HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest001, TestSize.Lev
  */
 HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest002, TestSize.Level1)
 {
-    ResetTokenAndUid();
-    std::vector<std::string> srcPaths = {
-        "/data/test/NotoSansCJK-Regular.ttc",
-        "/data/test/NotoSerifCJK-Regular.ttc",
-        "/data/test/TestFont_Sans.ttf",
-        "/data/test/emptyTTF.ttf",
-        "/data/test/200install_fontconfig.json"
-    };
-    for (const auto &path : srcPaths) {
-        std::string fileName = FileUtils::GetFileName(path);
-        EXPECT_TRUE(this->CopyFile(path, INSTALL_PATH_APP + fileName));
-    }
     sptr<IDataMigrationCallback> cb = new (std::nothrow) TestCallback();
     if (cb == nullptr) {
         return;
@@ -146,8 +136,46 @@ HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest002, TestSize.Lev
  */
 HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest003, TestSize.Level1)
 {
-    std::string processName = "DataMigrationManagerFuncTest003";
-    SetFontManagerPermission(processName);
+    PermissionCommon::SetFontManagerInitEnv();
+    std::vector<std::string> srcPaths = {
+        "/data/test/NotoSansCJK-Regular.ttc",
+        "/data/test/NotoSerifCJK-Regular.ttc",
+        "/data/test/TestFont_Sans.ttf",
+        "/data/test/emptyTTF.ttf",
+        "/data/test/200install_fontconfig.json"
+    };
+    for (const auto &path : srcPaths) {
+        std::string fileName = FontManagerUtils::GetFileName(path);
+        EXPECT_TRUE(this->CopyFile(path, INSTALL_PATH_APP + fileName));
+    }
+    sptr<IDataMigrationCallback> cb = new (std::nothrow) TestCallback();
+    if (cb == nullptr) {
+        return;
+    }
+    manager_->DataMigration(cb);
+    std::vector<std::string> paths;
+    OHOS::GetDirFiles(INSTALL_PATH_TEST, paths);
+    EXPECT_EQ(paths.size() == srcPaths.size(), true);
+}
+
+/**
+ * @tc.name: DataMigrationManagerFuncTest004
+ * @tc.desc: Test FontManager DataMigration case
+ * @tc.type: FUNC
+ */
+HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest004, TestSize.Level1)
+{
+    std::vector<std::string> srcPaths = {
+        "/data/test/NotoSansCJK-Regular.ttc",
+        "/data/test/NotoSerifCJK-Regular.ttc",
+        "/data/test/TestFont_Sans.ttf",
+        "/data/test/emptyTTF.ttf",
+        "/data/test/200install_fontconfig.json"
+    };
+    for (const auto &path : srcPaths) {
+        std::string fileName = FontManagerUtils::GetFileName(path);
+        EXPECT_TRUE(this->CopyFile(path, INSTALL_PATH_APP + fileName));
+    }
     sptr<IDataMigrationCallback> cb = new (std::nothrow) TestCallback();
     if (cb == nullptr) {
         return;
@@ -158,36 +186,6 @@ HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest003, TestSize.Lev
     EXPECT_EQ(paths.size() == 0, true);
 }
 
-/**
- * @tc.name: DataMigrationManagerFuncTest004
- * @tc.desc: Test FontManager DataMigration case
- * @tc.type: FUNC
- */
-HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest004, TestSize.Level1)
-{
-    std::string processName = "DataMigrationManagerFuncTest004";
-    SetFontManagerPermission(processName);
-    std::vector<std::string> srcPaths = {
-        "/data/test/NotoSansCJK-Regular.ttc",
-        "/data/test/NotoSerifCJK-Regular.ttc",
-        "/data/test/TestFont_Sans.ttf",
-        "/data/test/emptyTTF.ttf",
-        "/data/test/200install_fontconfig.json"
-    };
-    for (const auto &path : srcPaths) {
-        std::string fileName = FileUtils::GetFileName(path);
-        EXPECT_TRUE(this->CopyFile(path, INSTALL_PATH_APP + fileName));
-    }
-    sptr<IDataMigrationCallback> cb = new (std::nothrow) TestCallback();
-    if (cb == nullptr) {
-        return;
-    }
-    manager_->DataMigration(cb);
-    manager_->EventDataHeartBeatCallback(cb);
-    std::vector<std::string> paths;
-    OHOS::GetDirFiles(INSTALL_PATH_TEST, paths);
-    EXPECT_EQ(paths.size() == srcPaths.size(), true);
-}
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS

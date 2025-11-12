@@ -34,7 +34,7 @@ public:
     DISALLOW_COPY_AND_MOVE(FontManagerClient);
     int32_t InstallFont(const std::string &fontPath, int &outValue) override;
     int32_t UninstallFont(const std::string &fontName, int &outValue) override;
-    int32_t DataMigration(std::unique_ptr<DataMigrationCallback> callback) override;
+    int32_t DataMigration(std::shared_ptr<IDataMigrationListener> listener) override;
 
 private:
     bool PathToRealPath(const std::string& path, std::string& realPath);

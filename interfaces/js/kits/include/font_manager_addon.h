@@ -16,8 +16,6 @@
 #ifndef GLOBAL_FONT_MANAGER_FONT_ADDON_H
 #define GLOBAL_FONT_MANAGER_FONT_ADDON_H
 
-#include "napi/native_api.h"
-#include "napi/native_node_api.h"
 #include "font_napi_callback.h"
 #include "js_runtime_utils.h"
 

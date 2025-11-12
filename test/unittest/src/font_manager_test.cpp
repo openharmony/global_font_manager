@@ -28,7 +28,7 @@
 #include "font_manager.h"
 #undef private
 #undef protected
-#include "file_utils.h"
+#include "font_manager_utils.h"
 #include "font_define.h"
 #include "directory_ex.h"
 
@@ -72,22 +72,24 @@ protected:
 };
 
 void FontManagerTest::SetUpTestCase(void)
-{}
+{
+    FontManagerUtils::DeleteDir(INSTALL_PATH_TEST, false);
+}
 
 void FontManagerTest::TearDownTestCase(void)
 {
-    FileUtils::DeleteDir(TEMP_PATH_TEST, true);
 }
 
 void FontManagerTest::SetUp(void)
 {
     manager_ = FontManager::GetInstance();
+    manager_->configMap_.clear();
 }
 
 void FontManagerTest::TearDown(void)
 {
-    FileUtils::DeleteDir(INSTALL_PATH_TEST, false);
-    FileUtils::DeleteDir(INSTALL_PATH_APP, false);
+    FontManagerUtils::DeleteDir(INSTALL_PATH_TEST, false);
+    FontManagerUtils::DeleteDir(INSTALL_PATH_APP, false);
 }
 
 /**
@@ -204,12 +206,12 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest004, TestSize.Level1)
  */
 HWTEST_F(FontManagerTest, FontManagerFuncTest005, TestSize.Level1)
 {
-    int ret = manager_->CheckFontConfigPath(INSTALL_PATH_TEST);
+    int ret = FontManagerUtils::CheckFontConfigPath(INSTALL_PATH_TEST);
     EXPECT_EQ(ret, true);
-    FileUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
-    ret = manager_->CheckFontConfigPath(INSTALL_PATH_TEST);
+    FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
+    ret = FontManagerUtils::CheckFontConfigPath(INSTALL_PATH_TEST);
     EXPECT_EQ(ret, true);
-    ret = manager_->CheckFontConfigPath(INSTALL_PATH_TEST);
+    ret = FontManagerUtils::CheckFontConfigPath(INSTALL_PATH_TEST);
     EXPECT_EQ(ret, true);
 }
 
@@ -221,7 +223,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest005, TestSize.Level1)
 HWTEST_F(FontManagerTest, FontManagerFuncTest006, TestSize.Level1)
 {
     int fd = open("/data/test/200install_fontconfig.json", O_RDONLY);
-    EXPECT_EQ(FileUtils::CopyFile(fd, FONT_CONFIG_FILE_TEST), true);
+    EXPECT_EQ(FontManagerUtils::CopyFile(fd, FONT_CONFIG_FILE_TEST), true);
     fd = open(FONT_PATH.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
     int ret = manager_->InstallFont(fd, TEST_USERID);
@@ -239,7 +241,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest006, TestSize.Level1)
 HWTEST_F(FontManagerTest, FontManagerFuncTest007, TestSize.Level1)
 {
     int fd = open("/data/test/199install_fontconfig.json", O_RDONLY);
-    EXPECT_EQ(FileUtils::CopyFile(fd, FONT_CONFIG_FILE_TEST), true);
+    EXPECT_EQ(FontManagerUtils::CopyFile(fd, FONT_CONFIG_FILE_TEST), true);
     if (fd > 0) {
         close(fd);
     }
@@ -368,7 +370,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest011, TestSize.Level1)
  */
 HWTEST_F(FontManagerTest, FontManagerFuncTest012, TestSize.Level1)
 {
-    FileUtils::CreateDirWithPermission("/data/test/testRepeats/");
+    FontManagerUtils::CreateDirWithPermission("/data/test/testRepeats/");
     const std::string fontPath1 = "/data/test/TestFont_Sans.ttf";
     const std::string fontPath4 = "/data/test/NotoSansVai-Regular.ttf";
     const std::string fontPath5 = "/data/test/testRepeats/TestFont_Sans.ttf";
@@ -380,9 +382,9 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest012, TestSize.Level1)
         close(fd);
     }
     EXPECT_EQ(ret, ERR_OK);
-    ASSERT_TRUE(FileUtils::CheckPathExist("/data/test/testRepeats/"));
+    ASSERT_TRUE(FontManagerUtils::CheckPathExist("/data/test/testRepeats/"));
     fd = open(fontPath4.c_str(), O_RDONLY);
-    FileUtils::CopyFile(fd, fontPath5);
+    FontManagerUtils::CopyFile(fd, fontPath5);
     if (fd > 0) {
         close(fd);
     }
@@ -409,7 +411,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest012, TestSize.Level1)
  */
 HWTEST_F(FontManagerTest, FontManagerFuncTest013, TestSize.Level1)
 {
-    FileUtils::CreateDirWithPermission("/data/test/testRepeats/");
+    FontManagerUtils::CreateDirWithPermission("/data/test/testRepeats/");
     const std::string fontPath2 = "/data/test/NotoSansCJK-Regular.ttc";
     const std::string fontPath3 = "/data/test/NotoSerifCJK-Regular.ttc";
     const std::string fontPath6 = "/data/test/testRepeats/NotoSerifCJK-Regular.ttc";
@@ -421,9 +423,9 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest013, TestSize.Level1)
         close(fd);
     }
     EXPECT_EQ(ret, ERR_OK);
-    ASSERT_TRUE(FileUtils::CheckPathExist("/data/test/testRepeats/"));
+    ASSERT_TRUE(FontManagerUtils::CheckPathExist("/data/test/testRepeats/"));
     fd = open(fontPath3.c_str(), O_RDONLY);
-    FileUtils::CopyFile(fd, fontPath6);
+    FontManagerUtils::CopyFile(fd, fontPath6);
     if (fd > 0) {
         close(fd);
     }

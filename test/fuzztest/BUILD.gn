@@ -14,10 +14,11 @@ import("//build/test.gni")
 
 ohos_source_set("font_manager_fuzz_permission") {
   include_dirs = [
+    "../common",
   ]
 
   sources = [
-    "common/permission_common.cpp",
+    "../common/permission_common.cpp",
   ]
 
   public_external_deps = [

@@ -12,16 +12,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef FONT_MANAGER_UNITTEST_PERMISSION_COMMON_H
-#define FONT_MANAGER_UNITTEST_PERMISSION_COMMON_H
+
+#ifndef GLOBAL_FONT_MANAGER_IDATA_MIGRATION_CALLBACK_H
+#define GLOBAL_FONT_MANAGER_IDATA_MIGRATION_CALLBACK_H
 
 #include <string>
+#include "idata_migration_callback_event.h"
+
 namespace OHOS {
 namespace Global {
 namespace FontManager {
-void SetFontManagerPermission(const std::string& processName);
-void ResetTokenAndUid();
+class IDataMigrationListener {
+public:
+    virtual ~IDataMigrationListener() = default;
+    virtual void OnHandle(const EventData& eventData) = 0;
+};
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS
-#endif // FONT_MANAGER_UNITTEST_PERMISSION_COMMON_H
+#endif // GLOBAL_FONT_MANAGER_IDATA_MIGRATION_CALLBACK_H

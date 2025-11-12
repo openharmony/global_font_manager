@@ -12,15 +12,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef FONT_MANAGER_FUZZ_PERMISSION_COMMON_H
-#define FONT_MANAGER_FUZZ_PERMISSION_COMMON_H
+#ifndef FONT_MANAGER_UNITTEST_PERMISSION_COMMON_H
+#define FONT_MANAGER_UNITTEST_PERMISSION_COMMON_H
 
 #include <string>
 namespace OHOS {
 namespace Global {
 namespace FontManager {
-void SetFontManagerPermission(const std::string& processName);
+class PermissionCommon {
+public:
+    static void SetFontManagerPermission(const std::string &processName);
+    static void ResetTokenAndUid();
+    static void SetUid();
+    static void ResetUid();
+    static bool IsOriginalUTEnv();
+    static void SetFontManagerInitEnv();
+private:
+    static uint64_t selfTokenId_;
+};
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS
-#endif // FONT_MANAGER_FUZZ_PERMISSION_COMMON_H
+#endif // FONT_MANAGER_UNITTEST_PERMISSION_COMMON_H

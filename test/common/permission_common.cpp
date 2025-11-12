@@ -28,10 +28,10 @@ namespace FontManager {
 constexpr int PERMISSION_NUM = 1;
 constexpr int ROOT_UID = 0;
 constexpr int FONT_MANAGER_UID = 7027;
-uint64_t g_selfTokenId = 0;
-void SetFontManagerPermission(const std::string& processName)
+uint64_t PermissionCommon::selfTokenId_ = 0;
+void PermissionCommon::SetFontManagerPermission(const std::string &processName)
 {
-    g_selfTokenId = GetSelfTokenID();
+    selfTokenId_ = GetSelfTokenID();
     uint64_t tokenId;
     const char* perms[PERMISSION_NUM] = {
         "ohos.permission.MANAGE_LOCAL_ACCOUNTS",
@@ -55,10 +55,31 @@ void SetFontManagerPermission(const std::string& processName)
     seteuid(FONT_MANAGER_UID);
 }
 
-void ResetTokenAndUid()
+void PermissionCommon::SetUid()
+{
+    seteuid(FONT_MANAGER_UID);
+}
+
+void PermissionCommon::ResetUid()
 {
     seteuid(ROOT_UID);
-    SetSelfTokenID(g_selfTokenId);
+}
+
+void PermissionCommon::ResetTokenAndUid()
+{
+    seteuid(ROOT_UID);
+    SetSelfTokenID(selfTokenId_);
+}
+
+bool PermissionCommon::IsOriginalUTEnv()
+{
+    return (ROOT_UID == geteuid() && selfTokenId_ == GetSelfTokenID());
+}
+
+void PermissionCommon::SetFontManagerInitEnv()
+{
+    SetFontManagerPermission("font_manager_server");
+    seteuid(FONT_MANAGER_UID);
 }
 } // namespace FontManager
 } // namespace Global

@@ -16,10 +16,11 @@ import("../../frameworks/fontmgr/fontmgr.gni")
 
 ohos_source_set("font_manager_ut_permission") {
   include_dirs = [
+    "../common",
   ]
 
   sources = [
-    "common/permission_common.cpp",
+    "../common/permission_common.cpp",
   ]
 
   public_external_deps = [
@@ -87,7 +88,7 @@ ohos_unittest("font_manager_module_test") {
   sources += fontmgr_src
   include_dirs = [
     "./include",
-    "./common",
+    "../common",
     "../../common/include",
   ]
 

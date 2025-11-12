@@ -66,21 +66,21 @@ int32_t FontManagerClient::UninstallFont(const std::string &fontName, int &outVa
     return service->UninstallFont(fontName, outValue);
 }
 
-int32_t FontManagerClient::DataMigration(std::unique_ptr<DataMigrationCallback> callback)
+int32_t FontManagerClient::DataMigration(std::shared_ptr<IDataMigrationListener> listener)
 {
     sptr<IFontService> service = FontServiceLoadManager::GetInstance()->GetFontServiceAbility(FONT_SA_ID);
     if (service == nullptr) {
         FONT_LOGE("Service is null");
         return ERR_SYSTEM_ERROR;
     }
-    sptr<DataMigrationCbAgent> cbAgent = new (std::nothrow) DataMigrationCbAgent(std::move(callback));
+    sptr<DataMigrationCbAgent> cbAgent = new (std::nothrow) DataMigrationCbAgent(std::move(listener));
     if (cbAgent == nullptr) {
         FONT_LOGE("cbAgent is null");
         return ERR_SYSTEM_ERROR;
     }
     sptr<IRemoteObject> remote = cbAgent->AsObject();
     if (remote == nullptr) {
-        FONT_LOGE("DataMigration callback is not callback");
+        FONT_LOGE("DataMigration listener is not object");
         return ERR_SYSTEM_ERROR;
     }
     return service->DataMigration(cbAgent);

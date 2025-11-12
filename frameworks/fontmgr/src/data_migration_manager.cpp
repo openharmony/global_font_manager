@@ -19,11 +19,9 @@
 #include <fcntl.h>
 #include "font_define.h"
 #include "font_hilog.h"
-#include "file_utils.h"
+#include "font_manager_utils.h"
 #include "directory_ex.h"
-#ifdef ACCOUNT_ENABLE
-#include "os_account_manager.h"
-#endif
+
 namespace OHOS {
 namespace Global {
 namespace FontManager {
@@ -45,7 +43,7 @@ DataMigrationManager::~DataMigrationManager()
 void DataMigrationManager::DataMigration(const sptr<IDataMigrationCallback>& callback)
 {
     callback_ = callback;
-    FileUtils::DeleteDir(INSTALL_PATH_APP + TEMP_FILE, true);
+    FontManagerUtils::DeleteDir(INSTALL_PATH_APP + TEMP_FILE, true);
     isDataMigrationing_ = true;
     int32_t ret = DataMigrationInner();
     isDataMigrationing_ = false;
@@ -59,7 +57,7 @@ int32_t DataMigrationManager::DataMigrationInner()
         FONT_LOGE("FontManager INSTALL_PATH_APP is empty.");
         return ERR_NOT_NEED_DATA_MIGRATION;
     }
-    std::vector<int32_t> userIds = GetAllCreatedUserIds();
+    std::vector<int32_t> userIds = FontManagerUtils::GetAllCreatedUserIds();
     if (userIds.empty()) {
         FONT_LOGE("FontManager userIds empty.");
         return ERR_DATA_MIGRATION_SYSTEM_ERROR;
@@ -79,9 +77,9 @@ int32_t DataMigrationManager::DataMigrationInner()
         if (ret != ERR_OK) {
             return ERR_DATA_MIGRATION_SYSTEM_ERROR;
         }
-        FONT_LOGI("FontManager::FileCopyTask suc.FileName:%{public}s.", FileUtils::GetFileName(paths[i]).c_str());
+        FONT_LOGI("FontManager::FileCopyTask suc.FileName:%{public}s.", FontManagerUtils::GetFileName(paths[i]).c_str());
     }
-    FileUtils::DeleteDir(INSTALL_PATH_PREFIX + TEMP_FILE, true);
+    FontManagerUtils::DeleteDir(INSTALL_PATH_PREFIX + TEMP_FILE, true);
     return ERR_DATA_MIGRATION_FINISH;
 }
 
@@ -89,12 +87,12 @@ int32_t DataMigrationManager::StartOneFileCopyTask(const std::string& path, cons
 {
     for (const auto& userId : userIds) {
         if (!CopyFileForDataMigration(path, userId)) {
-            FONT_LOGE("StartOneFileCopyTask copy file %{public}s error", FileUtils::GetFileName(path).c_str());
+            FONT_LOGE("StartOneFileCopyTask copy file %{public}s error", FontManagerUtils::GetFileName(path).c_str());
             return ERR_SYSTEM_ERROR;
         }
     }
-    if (!FileUtils::RemoveFile(path)) {
-        FONT_LOGE("StartOneFileCopyTask RemoveFile file (%{public}s) error", FileUtils::GetFileName(path).c_str());
+    if (!FontManagerUtils::RemoveFile(path)) {
+        FONT_LOGE("StartOneFileCopyTask RemoveFile file (%{public}s) error", FontManagerUtils::GetFileName(path).c_str());
         return ERR_SYSTEM_ERROR;
     }
     return ERR_OK;
@@ -102,10 +100,10 @@ int32_t DataMigrationManager::StartOneFileCopyTask(const std::string& path, cons
 
 bool DataMigrationManager::CopyFileForDataMigration(const std::string &srcPath, const int32_t userId)
 {
-    std::string fileName = FileUtils::GetFileName(srcPath);
+    std::string fileName = FontManagerUtils::GetFileName(srcPath);
     std::string tempPath = INSTALL_PATH_PREFIX + TEMP_FILE + fileName;
     std::string desPath = INSTALL_PATH_PREFIX + std::to_string(userId) + "/" + fileName;
-    if (FileUtils::CheckPathExist(desPath)) {
+    if (FontManagerUtils::CheckPathExist(desPath)) {
         FONT_LOGI("CopyFileForDataMigration path is exist(%{public}s) ", fileName.c_str());
         return true;
     }
@@ -115,14 +113,14 @@ bool DataMigrationManager::CopyFileForDataMigration(const std::string &srcPath, 
         return false;
     }
 
-    if (!FileUtils::CopyFile(fd, tempPath)) {
+    if (!FontManagerUtils::CopyFile(fd, tempPath)) {
         FONT_LOGE("CopyFileForDataMigration copy file %{public}s error", fileName.c_str());
         close(fd);
         return false;
     }
-    if (!FileUtils::RenameFile(tempPath, desPath)) {
+    if (!FontManagerUtils::RenameFile(tempPath, desPath)) {
         FONT_LOGE("CopyFileForDataMigration rename file %{public}s error", fileName.c_str());
-        FileUtils::RemoveFile(tempPath);
+        FontManagerUtils::RemoveFile(tempPath);
         close(fd);
         return false;
     }
@@ -165,7 +163,7 @@ void DataMigrationManager::EventDataProgressCallback(int32_t i, int32_t size, in
     // 计算百分百，size / 2用于四舍五入
     int32_t progressPercentage =
         i == 0 ? i : static_cast<int32_t>((static_cast<int64_t>(i) * MAX_TRIGGER_COUNT + size / 2) / size);
-    EventData eventData = {.event = ProgressType::PROGRESS_DOING,
+    EventData eventData = {.event = EventType::PROGRESS_DOING,
                            .timeRemaining = timeRemaining,
                            .progressPercentage = progressPercentage,
                            .progressResult = 0};
@@ -174,7 +172,7 @@ void DataMigrationManager::EventDataProgressCallback(int32_t i, int32_t size, in
 
 void DataMigrationManager::EventDataResultCallback(int32_t result)
 {
-    EventData eventData = {.event = ProgressType::PROGRESS_RESULT,
+    EventData eventData = {.event = EventType::PROGRESS_RESULT,
                            .timeRemaining = 0,
                            .progressPercentage = 0,
                            .progressResult = result};
@@ -183,37 +181,18 @@ void DataMigrationManager::EventDataResultCallback(int32_t result)
 
 void DataMigrationManager::EventDataHeartBeatCallback()
 {
-    EventData eventData = {.event = ProgressType::HEART_BEAT,
+    EventData eventData = {.event = EventType::HEART_BEAT,
                            .timeRemaining = 0,
                            .progressPercentage = 0,
                            .progressResult = 0};
     RefreshEventData(eventData);
 }
 
-std::vector<int32_t> DataMigrationManager::GetAllCreatedUserIds()
-{
-    std::vector<int32_t> allUserIds;
-#ifdef ACCOUNT_ENABLE
-    std::vector<AccountSA::OsAccountInfo> osAccountInfos;
-    ErrCode ret = AccountSA::OsAccountManager::QueryAllCreatedOsAccounts(osAccountInfos);
-    if (ret != ERR_OK || osAccountInfos.empty()) {
-        FONT_LOGE("FontManager::GetAllCreatedUserIds failed.err=%{public}d", ret);
-    }
-    for (const auto &info : osAccountInfos) {
-        allUserIds.push_back(info.GetLocalId());
-    }
-    return allUserIds;
-#else
-    FONT_LOGI("FontManager osAccount not support.");
-    return allUserIds;
-#endif
-}
-
 bool DataMigrationManager::InitAllUserDir(const std::vector<int32_t> userIds)
 {
     for (const auto& userId : userIds) {
         std::string path = INSTALL_PATH_PREFIX + std::to_string(userId) + "/";
-        if (!FileUtils::CreateDirWithPermission(path)) {
+        if (!FontManagerUtils::CreateDirWithPermission(path)) {
             FONT_LOGE("InitAllUserDir CreateDirWithPermission err. userid = %{public}d.", userId);
             return false;
         }
@@ -224,8 +203,8 @@ bool DataMigrationManager::InitAllUserDir(const std::vector<int32_t> userIds)
 bool DataMigrationManager::InitDataMigrationTempDir()
 {
     std::string tempPath = INSTALL_PATH_PREFIX + TEMP_FILE;
-    if (!FileUtils::CheckPathExist(tempPath)) {
-        if (!FileUtils::CreateDirWithPermission(tempPath)) {
+    if (!FontManagerUtils::CheckPathExist(tempPath)) {
+        if (!FontManagerUtils::CreateDirWithPermission(tempPath)) {
             return false;
         }
     }

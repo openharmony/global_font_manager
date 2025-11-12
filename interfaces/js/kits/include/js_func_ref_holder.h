@@ -13,21 +13,26 @@
  * limitations under the License.
  */
 
-#ifndef GLOBAL_FONT_MANAGER_IDATA_MIGRATION_CALLBACK_H
-#define GLOBAL_FONT_MANAGER_IDATA_MIGRATION_CALLBACK_H
+#ifndef FONT_MANAGER_JS_FUNC_REF_HOLDER_H
+#define FONT_MANAGER_JS_FUNC_REF_HOLDER_H
 
-#include <string>
-#include "idata_migration_callback_event.h"
+#include "nocopyable.h"
+#include "js_runtime_utils.h"
 
 namespace OHOS {
 namespace Global {
 namespace FontManager {
-class DataMigrationCallback {
+class JsFuncRefHolder : public NoCopyable {
 public:
-    virtual ~DataMigrationCallback() = default;
-    virtual void OnHandle(const EventData& eventData) = 0;
+    JsFuncRefHolder(napi_env env, napi_value value);
+    ~JsFuncRefHolder() override;
+    bool IsValid() const;
+    napi_ref Get() const;
+private:
+    napi_env env_ {nullptr};
+    napi_ref ref_ {nullptr};
 };
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS
-#endif // GLOBAL_FONT_MANAGER_IDATA_MIGRATION_CALLBACK_H
+#endif // FONT_MANAGER_JS_FUNC_REF_HOLDER_H

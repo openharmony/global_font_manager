@@ -15,13 +15,12 @@
 
 #include "font_define.h"
 #include "data_migration_cb_agent.h"
-#include "data_migration_callback.h"
 
 namespace OHOS {
 namespace Global {
 namespace FontManager {
-DataMigrationCbAgent::DataMigrationCbAgent(std::unique_ptr<DataMigrationCallback> callback)
-    : DataMigrationCallbackStub(), callback_(std::move(callback))
+DataMigrationCbAgent::DataMigrationCbAgent(std::shared_ptr<IDataMigrationListener> listener)
+    : DataMigrationCallbackStub(), listener_(std::move(listener))
 {}
 
 DataMigrationCbAgent::~DataMigrationCbAgent()
@@ -29,8 +28,8 @@ DataMigrationCbAgent::~DataMigrationCbAgent()
 
 ErrCode DataMigrationCbAgent::Handle(const EventData& eventData)
 {
-    if (callback_ != nullptr) {
-        callback_->OnHandle(eventData);
+    if (listener_ != nullptr) {
+        listener_->OnHandle(eventData);
         return ERR_OK;
     }
     return ERR_SYSTEM_ERROR;

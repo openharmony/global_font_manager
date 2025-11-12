@@ -17,7 +17,7 @@
 
 #include <chrono>
 #include "accesstoken_kit.h"
-#include "file_utils.h"
+#include "font_manager_utils.h"
 #include "font_define.h"
 #include "font_hilog.h"
 #include "font_manager.h"
@@ -37,7 +37,6 @@ namespace {
 static const std::string UNLOAD_TASK = "font_service_unload";
 static const std::string PERMISSION_UPDATE_FONT = "ohos.permission.UPDATE_FONT";
 static constexpr uint32_t DELAY_MILLISECONDS_FOR_UNLOAD_SA = 10000;
-static constexpr uint32_t ONE_CALLING = 1;
 static constexpr int32_t INVALID_USERID = -1;
 }
 FontManagerServer::FontManagerServer(int32_t saId, bool runOnCreate) : SystemAbility(saId, runOnCreate)
@@ -74,10 +73,6 @@ void FontManagerServer::InstallFontInner(const int32_t fd, int32_t &outValue)
     return;
 #endif
     outValue = FontManager::GetInstance()->InstallFont(fd, userId);
-    if (callingCount_ == ONE_CALLING) {
-        std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + "/";
-        FileUtils::DeleteDir(installPath + TEMP_FILE, true);
-    }
 }
 
 int32_t FontManagerServer::UninstallFont(const std::string &fontName, int32_t &outValue)
@@ -162,6 +157,7 @@ void FontManagerServer::AddUnloadFontServiceTask()
             auto fontSaLoadManager = DelayedSingleton<FontServiceLoadManager>::GetInstance();
             if (fontSaLoadManager != nullptr) {
                 FONT_LOGI("FontManagerServer start to unload fontManager SA.");
+                FontManagerUtils::ClearAllTempFileDir();
                 fontSaLoadManager->UnloadFontService(FONT_SA_ID);
             }
         }
@@ -191,12 +187,12 @@ void FontManagerServer::OnStart(const SystemAbilityOnDemandReason &startReason)
     if (reasonName == EventFwk::CommonEventSupport::COMMON_EVENT_USER_ADDED) {
         std::string userId = startReason.GetValue();
         std::string installPath = INSTALL_PATH_PREFIX + userId + "/";
-        FontManager::GetInstance()->CheckAndInitInstallPath(installPath);
+        FontManagerUtils::CheckAndInitInstallPath(installPath);
     }
     if (reasonName == EventFwk::CommonEventSupport::COMMON_EVENT_USER_REMOVED) {
         std::string userId = startReason.GetValue();
         std::string installPath = INSTALL_PATH_PREFIX + userId + "/";
-        FileUtils::DeleteDir(installPath, true);
+        FontManagerUtils::DeleteDir(installPath, true);
         FONT_LOGI("FontManagerServer DeleteUserInstallDir finish.");
     }
 
@@ -217,6 +213,7 @@ int32_t FontManagerServer::CheckPermission()
         FONT_LOGE("FontManagerServer caller process doesn't have UPDATE_FONT permission.");
         return ERR_NO_PERMISSION;
     }
+    FONT_LOGI("FontManagerServer CheckPermission success.");
     return ERR_OK;
 }
 } // namespace FontManager

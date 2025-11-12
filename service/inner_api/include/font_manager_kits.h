@@ -18,7 +18,7 @@
 
 #include <string>
 #include "singleton.h"
-#include "data_migration_callback.h"
+#include "idata_migration_listener.h"
 
 namespace OHOS {
 namespace Global {
@@ -31,7 +31,7 @@ public:
 
     virtual int32_t InstallFont(const std::string &fontPath, int &outValue) = 0;
     virtual int32_t UninstallFont(const std::string &fontName, int &outValue) = 0;
-    virtual int32_t DataMigration(std::unique_ptr<DataMigrationCallback> callback) = 0;
+    virtual int32_t DataMigration(std::shared_ptr<IDataMigrationListener> listener) = 0;
 
 protected:
     FontManagerKits() = default;

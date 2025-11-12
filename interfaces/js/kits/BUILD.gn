@@ -27,7 +27,8 @@ ohos_shared_library("fontmanager") {
   sources = [
     "src/font_manager_addon.cpp",
     "src/font_manager_napi.cpp",
-    "src/js_data_migration_callback.cpp",
+    "src/js_data_migration_listener.cpp",
+    "src/js_func_ref_holder.cpp",
   ]
 
   deps = [
@@ -39,6 +40,14 @@ ohos_shared_library("fontmanager") {
     "hilog:libhilog",
     "ipc:ipc_core",
     "napi:ace_napi",
+  ]
+
+  cflags_cc = [
+    "-fdata-sections",
+    "-ffunction-sections",
+    "-fno-asynchronous-unwind-tables",
+    "-fno-unwind-tables",
+    "-Os",
   ]
 
   branch_protector_ret = "pac_ret"

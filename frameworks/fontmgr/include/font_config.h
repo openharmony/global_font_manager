@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2024-2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,13 +20,27 @@
 #include <vector>
 
 #include "cJSON.h"
+#include "nocopyable.h"
 
 namespace OHOS {
 namespace Global {
 namespace FontManager {
 class FontConfig {
 public:
-    explicit FontConfig(const std::string &fontPath) : ConfigPath_(fontPath){};
+    DISALLOW_COPY(FontConfig);
+    // 构造函数
+    FontConfig(const std::string &configPath) : ConfigPath_(configPath){};
+    // 移动构造函数
+    FontConfig(FontConfig&& other) noexcept : fontsMap_(std::move(other.fontsMap_)),
+        ConfigPath_(std::move(other.ConfigPath_)) {};
+    // 移动赋值操作符
+    FontConfig& operator = (FontConfig&& other) noexcept {
+        if (this != &other) {
+            fontsMap_ = std::move(other.fontsMap_);
+            ConfigPath_ = std::move(other.ConfigPath_);
+        }
+        return *this;
+    };
     ~FontConfig() = default;
     bool InsertFontRecord(const std::string &fontPath, const std::vector<std::string> &fullNames);
     bool DeleteFontRecord(const std::string &fontPath);

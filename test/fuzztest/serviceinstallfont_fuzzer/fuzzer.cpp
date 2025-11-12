@@ -26,7 +26,7 @@ namespace FontManager {
 void ServiceInstallFuzz(const int32_t fd)
 {
     std::string processName = "ServiceInstallFuzz";
-    SetFontManagerPermission(processName);
+    PermissionCommon::SetFontManagerPermission(processName);
     OHOS::sptr<OHOS::Global::FontManager::IFontService> service = OHOS::Global::FontManager::FontServiceLoadManager::
         GetInstance()->GetFontServiceAbility(OHOS::Global::FontManager::FONT_SA_ID);
     if ((service) == nullptr) {

@@ -18,7 +18,7 @@
 #include "font_define.h"
 #include "font_hilog.h"
 #include "font_manager_kits.h"
-#include "js_data_migration_callback.h"
+#include "js_data_migration_listener.h"
 
 namespace OHOS {
 namespace Global {
@@ -306,17 +306,16 @@ napi_value FontManagerAddon::DataMigrationInner(napi_env env, AbilityRuntime::Na
     }
     napi_value onHeartBeatValue;
     NAPI_CALL(env, napi_get_named_property(env, value, "onHeartBeat", &onHeartBeatValue));
-    auto heartBeatCallback = std::make_shared<JsRefHolder>(env, onHeartBeatValue);
+    auto heartBeatCallback = std::make_shared<JsFuncRefHolder>(env, onHeartBeatValue);
     napi_value onProgressValue;
     NAPI_CALL(env, napi_get_named_property(env, value, "onProgress", &onProgressValue));
-    auto progressCallback = std::make_shared<JsRefHolder>(env, onProgressValue);
+    auto progressCallback = std::make_shared<JsFuncRefHolder>(env, onProgressValue);
     napi_value onResultValue;
     NAPI_CALL(env, napi_get_named_property(env, value, "onResult", &onResultValue));
-    auto resultCallback = std::make_shared<JsRefHolder>(env, onResultValue);
-    auto listener = std::make_unique<JsDataMigrationCallback>(env, heartBeatCallback, progressCallback,
+    auto resultCallback = std::make_shared<JsFuncRefHolder>(env, onResultValue);
+    auto listener = std::make_shared<JsDataMigrationListener>(env, heartBeatCallback, progressCallback,
         resultCallback);
     int32_t result = FontManagerKits::GetInstance().DataMigration(std::move(listener));
-    FONT_LOGI("FontManagerAddon::DataMigration result is %{public}d", result);
     if (result != ERR_OK) {
         napi_throw(env, CreateJsError(env, result, GetDataMigrationErrMsg(result)));
         return CreateJsUndefined(env);

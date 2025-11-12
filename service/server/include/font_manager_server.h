@@ -26,7 +26,6 @@
 namespace OHOS {
 namespace Global {
 namespace FontManager {
-using RemoteCallbackPtr = sptr<IDataMigrationCallback>;
 class FontManagerServer : public SystemAbility, public FontServiceStub {
     DECLARE_SYSTEM_ABILITY(FontManagerServer);
 public:
@@ -40,7 +39,7 @@ public:
 
     int32_t UninstallFont(const std::string &fontName, int32_t &outValue) override;
 
-    int32_t DataMigration(const RemoteCallbackPtr& callback) override;
+    int32_t DataMigration(const sptr<IDataMigrationCallback>& callback) override;
 
 protected:
     void OnStart(const SystemAbilityOnDemandReason &startReason) override;
@@ -50,13 +49,13 @@ protected:
 private:
     void InstallFontInner(const int32_t fd, int32_t &outValue);
     void UninstallFontInner(const std::string &fontName, int32_t &outValue);
-    int32_t DataMigrationInner(const RemoteCallbackPtr& callback);
+    int32_t DataMigrationInner(const sptr<IDataMigrationCallback>& callback);
     void AddUnloadFontServiceTask();
     void RemoveUnloadFontServiceTask();
     int32_t CheckPermission();
     // font service unload event handler.
     std::shared_ptr <AppExecFwk::EventHandler> handler_;
-    void StartDataMigrationTask(const RemoteCallbackPtr& callback);
+    void StartDataMigrationTask(const sptr<IDataMigrationCallback>& callback);
     std::atomic_uint callingCount_ {0};
     std::atomic<bool> isDataMigrationing_ {false};
 };

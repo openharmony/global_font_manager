@@ -40,7 +40,6 @@ private:
     void EventDataHeartBeatCallback();
     void EventDataProgressCallback(int32_t i, int32_t size, int32_t idsize);
     void EventDataResultCallback(int32_t result);
-    std::vector<int32_t> GetAllCreatedUserIds();
     bool InitAllUserDir(const std::vector<int32_t> userIds);
     bool InitDataMigrationTempDir();
     void RefreshEventData(const EventData& eventData);

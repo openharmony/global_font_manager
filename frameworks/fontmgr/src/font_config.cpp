@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2024-2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -219,9 +219,9 @@ cJSON *FontConfig::ConstructCJSON(const std::string &fontFullPath, const std::ve
     return jsonData;
 }
 
-std::unordered_map<std::string, std::vector<std::string>> FontConfig::GetFontsMap(const std::string &fontPath)
+std::unordered_map<std::string, std::vector<std::string>> FontConfig::GetFontsMap(const std::string &configPath)
 {
-    cJSON *jsonData = cJSON_Parse(CheckConfigFile(fontPath).c_str());
+    cJSON *jsonData = cJSON_Parse(CheckConfigFile(configPath).c_str());
     if (jsonData == nullptr) {
         FONT_LOGE("heck config file failed");
         return std::unordered_map<std::string, std::vector<std::string>>();

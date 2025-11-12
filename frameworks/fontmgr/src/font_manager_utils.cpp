@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2024-2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include "file_utils.h"
+#include "font_manager_utils.h"
 
 #include <fcntl.h>
 #include <fstream>
@@ -22,7 +22,11 @@
 #include <unistd.h>
 
 #include "font_hilog.h"
+#include "font_define.h"
 #include "securec.h"
+#ifdef ACCOUNT_ENABLE
+#include "os_account_manager.h"
+#endif
 
 namespace OHOS {
 namespace Global {
@@ -31,7 +35,66 @@ static constexpr int32_t MAX_SIZE = 1024 * 20;
 static constexpr uint32_t TIME_STRING_LENGTH = 20;
 static constexpr uint32_t BEGIN_YEAR = 1900;
 
-bool FileUtils::CheckPathExist(const std::string &pathName)
+bool FontManagerUtils::CheckAndInitInstallPath(const std::string &installPath)
+{
+    // 若不存在当前用户的字体文件夹，新建对应文件夹
+    if (!CheckPathExist(installPath)) {
+        if (!CreateDirWithPermission(installPath)) {
+            return false;
+        }
+    }
+    std::string installTempPath = installPath + TEMP_FILE;
+    if (!CheckPathExist(installTempPath)) {
+        if (!CreateDirWithPermission(installTempPath)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void FontManagerUtils::ClearAllTempFileDir()
+{
+    FONT_LOGI("FontManagerUtils::ClearAllTempFileDir begin.");
+    auto userIds = GetAllCreatedUserIds();
+    for (const auto &userId : userIds) {
+        std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + "/";
+        if (CheckPathExist(installPath)) {
+            DeleteDir(installPath + TEMP_FILE, true);
+        }
+    }
+}
+
+bool FontManagerUtils::CheckFontConfigPath(const std::string &installPath)
+{
+    if (FontManagerUtils::CheckPathExist(installPath + FONT_CONFIG_FILE)) {
+        return true;
+    }
+    std::string font_list = R"({
+        "fontlist": []
+    })";
+    return CreateFileWithPermission(installPath + FONT_CONFIG_FILE, font_list);
+}
+
+std::vector<int32_t> FontManagerUtils::GetAllCreatedUserIds()
+{
+    std::vector<int32_t> allUserIds;
+#ifdef ACCOUNT_ENABLE
+    std::vector<AccountSA::OsAccountInfo> osAccountInfos;
+    ErrCode ret = AccountSA::OsAccountManager::QueryAllCreatedOsAccounts(osAccountInfos);
+    if (ret != ERR_OK || osAccountInfos.empty()) {
+        FONT_LOGE("FontManagerUtils::GetAllCreatedUserIds failed.err=%{public}d", ret);
+    }
+    for (const auto &info : osAccountInfos) {
+        allUserIds.push_back(info.GetLocalId());
+    }
+    return allUserIds;
+#else
+    FONT_LOGI("FontManagerUtils osAccount not support.");
+    return allUserIds;
+#endif
+}
+
+bool FontManagerUtils::CheckPathExist(const std::string &pathName)
 {
     if (pathName.empty()) {
         FONT_LOGE("CheckPathExsit pathName is empty.");
@@ -47,7 +110,7 @@ bool FileUtils::CheckPathExist(const std::string &pathName)
     return ret;
 }
 
-bool FileUtils::CreateFileWithPermission(const std::string &filePath, const std::string &defalutStr)
+bool FontManagerUtils::CreateFileWithPermission(const std::string &filePath, const std::string &defalutStr)
 {
     if (filePath.empty() || strstr(filePath.c_str(), "/.") != NULL || strstr(filePath.c_str(), "./") != NULL) {
         FONT_LOGE("filePath %{public}s is invalid", filePath.c_str());
@@ -75,7 +138,7 @@ bool FileUtils::CreateFileWithPermission(const std::string &filePath, const std:
     return true;
 }
 
-bool FileUtils::CreateDirWithPermission(const std::string &fileDir)
+bool FontManagerUtils::CreateDirWithPermission(const std::string &fileDir)
 {
     if (fileDir.empty() || strstr(fileDir.c_str(), "/.") != NULL || strstr(fileDir.c_str(), "./") != NULL) {
         FONT_LOGE("dirName %{public}s is invalid", fileDir.c_str());
@@ -98,7 +161,7 @@ bool FileUtils::CreateDirWithPermission(const std::string &fileDir)
     return true;
 }
 
-std::string FileUtils::GetFilePathByFd(const int32_t &fd)
+std::string FontManagerUtils::GetFilePathByFd(const int32_t &fd)
 {
     auto filePath = std::make_unique<char[]>(PATH_MAX);
     if (filePath == nullptr) {
@@ -115,7 +178,7 @@ std::string FileUtils::GetFilePathByFd(const int32_t &fd)
     return std::string(filePath.get());
 }
 
-std::string FileUtils::GetFileName(const std::string &path)
+std::string FontManagerUtils::GetFileName(const std::string &path)
 {
     std::string split = "/";
     size_t pos = path.find_last_of(split);
@@ -125,7 +188,7 @@ std::string FileUtils::GetFileName(const std::string &path)
     return path.substr(pos + 1);
 }
 
-bool FileUtils::CopyFile(int32_t sourceFd, const std::string& path)
+bool FontManagerUtils::CopyFile(int32_t sourceFd, const std::string& path)
 {
     constexpr int32_t filePermission = 0644;
     int32_t targetFd = open(path.c_str(), O_WRONLY | O_CREAT | O_SYNC, filePermission);
@@ -136,7 +199,7 @@ bool FileUtils::CopyFile(int32_t sourceFd, const std::string& path)
     return ret;
 }
 
-bool FileUtils::CopyFileByFd(int32_t sourceFd, int32_t targetFd)
+bool FontManagerUtils::CopyFileByFd(int32_t sourceFd, int32_t targetFd)
 {
     if (sourceFd < 0) {
         FONT_LOGE("Failed to open source file");
@@ -167,7 +230,7 @@ bool FileUtils::CopyFileByFd(int32_t sourceFd, int32_t targetFd)
     return true;
 }
 
-std::string FileUtils::GetFileTime()
+std::string FontManagerUtils::GetFileTime()
 {
     struct timeval time;
     gettimeofday(&time, nullptr);
@@ -189,7 +252,7 @@ std::string FileUtils::GetFileTime()
     return timeBuf;
 }
 
-bool FileUtils::RenameFile(const std::string& src, const std::string& dest)
+bool FontManagerUtils::RenameFile(const std::string& src, const std::string& dest)
 {
     if (!CheckPathExist(src)) {
         FONT_LOGI("file %{public}s is not exist", src.c_str());
@@ -204,7 +267,7 @@ bool FileUtils::RenameFile(const std::string& src, const std::string& dest)
     return true;
 }
 
-bool FileUtils::RemoveFile(const std::string &fileName)
+bool FontManagerUtils::RemoveFile(const std::string &fileName)
 {
     if (!CheckPathExist(fileName)) {
         FONT_LOGI("file %{public}s is not exist", fileName.c_str());
@@ -213,7 +276,7 @@ bool FileUtils::RemoveFile(const std::string &fileName)
     return RemoveAll(fileName);
 }
 
-void FileUtils::DeleteDir(const std::string &rootPath, bool isDeleteRootDir)
+void FontManagerUtils::DeleteDir(const std::string &rootPath, bool isDeleteRootDir)
 {
     if (!CheckPathExist(rootPath)) {
         FONT_LOGI("dir %{public}s is not exist", rootPath.c_str());
@@ -230,7 +293,7 @@ void FileUtils::DeleteDir(const std::string &rootPath, bool isDeleteRootDir)
     }
 }
 
-bool FileUtils::RemoveAll(const std::filesystem::path &path)
+bool FontManagerUtils::RemoveAll(const std::filesystem::path &path)
 {
     std::error_code errorCode;
     std::filesystem::remove_all(path, errorCode);
