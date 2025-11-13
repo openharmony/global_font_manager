@@ -56,7 +56,6 @@ JsFuncRefHolder::~JsFuncRefHolder()
         FONT_LOGI("JsFuncRefHolder Invalid.");
         return;
     }
-    FONT_LOGI("JsFuncRefHolder delete reference.");
     uv_loop_s *loop = nullptr;
     napi_status napiStatus = napi_get_uv_event_loop(env_, &loop);
     if (napiStatus != napi_ok || loop == nullptr) {

@@ -26,7 +26,7 @@ namespace OHOS {
 namespace Global {
 namespace FontManager {
 namespace {
-constexpr int32_t COPY_SPEED = 5 * 1024 / 60; // Mb/s
+constexpr int32_t COPY_SPEED = 10 * 1024 / 60; // Mb/s
 constexpr int32_t MAX_TRIGGER_COUNT = 100;
 constexpr double EPSILON = 0.5;
 static constexpr uint32_t HEARTBEAT_INTERVAL = 60;
@@ -46,6 +46,10 @@ void DataMigrationManager::DataMigration(const sptr<IDataMigrationCallback>& cal
     FontManagerUtils::DeleteDir(INSTALL_PATH_APP + TEMP_FILE, true);
     isDataMigrationing_ = true;
     int32_t ret = DataMigrationInner();
+    if (ret != ERR_OK) {
+        FONT_LOGE("FontManager DataMigrationInner err.ErrCode:%{public}d", ret);
+    }
+
     isDataMigrationing_ = false;
     EventDataResultCallback(ret);
     callback_ = nullptr;
@@ -59,12 +63,12 @@ int32_t DataMigrationManager::DataMigrationInner()
     }
     std::vector<int32_t> userIds = FontManagerUtils::GetAllCreatedUserIds();
     if (userIds.empty()) {
-        FONT_LOGE("FontManager userIds empty.");
-        return ERR_DATA_MIGRATION_SYSTEM_ERROR;
+        FONT_LOGE("FontManager get all userIds err.");
+        return ERR_GET_ALL_USERIDS;
     }
     if (!InitAllUserDir(userIds) || !InitDataMigrationTempDir()) {
         FONT_LOGE("FontManager DataMigrationInner InitDir err.");
-        return ERR_DATA_MIGRATION_SYSTEM_ERROR;
+        return ERR_INIT_INSTALL_DIR;
     }
     StartHeartBeatTask();
     std::vector<std::string> paths;
@@ -75,57 +79,58 @@ int32_t DataMigrationManager::DataMigrationInner()
         }
         int ret = StartOneFileCopyTask(paths[i], userIds);
         if (ret != ERR_OK) {
-            return ERR_DATA_MIGRATION_SYSTEM_ERROR;
+            return ret;
         }
         FONT_LOGI("FontManager::FileCopyTask suc.FileName:%{public}s.", FontManagerUtils::GetFileName(paths[i]).c_str());
     }
     FontManagerUtils::DeleteDir(INSTALL_PATH_PREFIX + TEMP_FILE, true);
-    return ERR_DATA_MIGRATION_FINISH;
+    return ERR_OK;
 }
 
 int32_t DataMigrationManager::StartOneFileCopyTask(const std::string& path, const std::vector<int32_t>& userIds)
 {
     for (const auto& userId : userIds) {
-        if (!CopyFileForDataMigration(path, userId)) {
+        int32_t ret = CopyFileForDataMigration(path, userId);
+        if (ret != ERR_OK) {
             FONT_LOGE("StartOneFileCopyTask copy file %{public}s error", FontManagerUtils::GetFileName(path).c_str());
-            return ERR_SYSTEM_ERROR;
+            return ret;
         }
     }
     if (!FontManagerUtils::RemoveFile(path)) {
         FONT_LOGE("StartOneFileCopyTask RemoveFile file (%{public}s) error", FontManagerUtils::GetFileName(path).c_str());
-        return ERR_SYSTEM_ERROR;
+        return ERR_REMOVE_SRC_FILE;
     }
     return ERR_OK;
 }
 
-bool DataMigrationManager::CopyFileForDataMigration(const std::string &srcPath, const int32_t userId)
+int32_t DataMigrationManager::CopyFileForDataMigration(const std::string &srcPath, const int32_t userId)
 {
     std::string fileName = FontManagerUtils::GetFileName(srcPath);
     std::string tempPath = INSTALL_PATH_PREFIX + TEMP_FILE + fileName;
     std::string desPath = INSTALL_PATH_PREFIX + std::to_string(userId) + "/" + fileName;
     if (FontManagerUtils::CheckPathExist(desPath)) {
         FONT_LOGI("CopyFileForDataMigration path is exist(%{public}s) ", fileName.c_str());
-        return true;
+        return ERR_OK;
     }
     int fd = open(srcPath.c_str(), O_RDONLY);
     if (fd < 0) {
         FONT_LOGE("CopyFileForDataMigration pen font file failed, errno: %{public}d", errno);
-        return false;
+        return ERR_OPEN_SRC_FILE;
     }
 
     if (!FontManagerUtils::CopyFile(fd, tempPath)) {
         FONT_LOGE("CopyFileForDataMigration copy file %{public}s error", fileName.c_str());
         close(fd);
-        return false;
+        return ERR_COPY_FILE;
     }
     if (!FontManagerUtils::RenameFile(tempPath, desPath)) {
         FONT_LOGE("CopyFileForDataMigration rename file %{public}s error", fileName.c_str());
         FontManagerUtils::RemoveFile(tempPath);
         close(fd);
-        return false;
+        return ERR_RENAME_FILE;
     }
     close(fd);
-    return true;
+    return ERR_OK;
 }
 
 void DataMigrationManager::StartHeartBeatTask()
@@ -165,26 +170,20 @@ void DataMigrationManager::EventDataProgressCallback(int32_t i, int32_t size, in
         i == 0 ? i : static_cast<int32_t>((static_cast<int64_t>(i) * MAX_TRIGGER_COUNT + size / 2) / size);
     EventData eventData = {.event = EventType::PROGRESS_DOING,
                            .timeRemaining = timeRemaining,
-                           .progressPercentage = progressPercentage,
-                           .progressResult = 0};
+                           .progressPercentage = progressPercentage};
     RefreshEventData(eventData);
 }
 
 void DataMigrationManager::EventDataResultCallback(int32_t result)
 {
     EventData eventData = {.event = EventType::PROGRESS_RESULT,
-                           .timeRemaining = 0,
-                           .progressPercentage = 0,
                            .progressResult = result};
     RefreshEventData(eventData);
 }
 
 void DataMigrationManager::EventDataHeartBeatCallback()
 {
-    EventData eventData = {.event = EventType::HEART_BEAT,
-                           .timeRemaining = 0,
-                           .progressPercentage = 0,
-                           .progressResult = 0};
+    EventData eventData = {.event = EventType::HEART_BEAT};
     RefreshEventData(eventData);
 }
 

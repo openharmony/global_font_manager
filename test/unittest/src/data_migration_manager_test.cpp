@@ -105,10 +105,10 @@ HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest001, TestSize.Lev
     ASSERT_TRUE(res);
     res = manager_->InitDataMigrationTempDir();
     ASSERT_TRUE(res);
-    res = manager_->CopyFileForDataMigration(fontPath, TEST_USERID);
-    EXPECT_EQ(res, true);
-    res = manager_->CopyFileForDataMigration(fontPath, TEST_USERID);
-    EXPECT_EQ(res, true);
+    int32_t ret = manager_->CopyFileForDataMigration(fontPath, TEST_USERID);
+    EXPECT_EQ(ret, ERR_OK);
+    ret = manager_->CopyFileForDataMigration(fontPath, TEST_USERID);
+    EXPECT_EQ(ret, ERR_OK);
     EXPECT_EQ(FontManagerUtils::RemoveFile(INSTALL_PATH_TEST + "NotoSansCJK-Regular.ttc"), true);
 }
 

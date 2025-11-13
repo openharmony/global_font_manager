@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef GLOBAL_FONT_MANAGER_FONT_ERROR_H
-#define GLOBAL_FONT_MANAGER_FONT_ERROR_H
+#ifndef GLOBAL_FONT_MANAGER_FONT_DEFINE_H
+#define GLOBAL_FONT_MANAGER_FONT_DEFINE_H
 
 #include <string>
 
@@ -43,13 +43,16 @@ enum FontErrorCode {
 };
 
 enum DataMigrationResultCode {
-    ERR_DATA_MIGRATION_FINISH = 0,
-    ERR_NOT_NEED_DATA_MIGRATION,
-    ERR_DATA_MIGRATION_SYSTEM_ERROR,
+    ERR_NOT_NEED_DATA_MIGRATION = 1,
+    ERR_GET_ALL_USERIDS,
+    ERR_INIT_INSTALL_DIR,
+    ERR_OPEN_SRC_FILE,
+    ERR_COPY_FILE,
+    ERR_RENAME_FILE,
+    ERR_REMOVE_SRC_FILE,
 };
 
 const int FONT_SA_ID = 66262;
-
 const std::string INSTALL_PATH_APP = "/data/service/el1/public/for-all-app/fonts/";
 const std::string INSTALL_PATH_PREFIX = "/data/service/el1/public/fonts/";
 const std::string FONT_CONFIG_FILE = "install_fontconfig.json";
@@ -57,4 +60,4 @@ const std::string TEMP_FILE = "temp/";
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS
-#endif // GLOBAL_FONT_MANAGER_FONT_ERROR_H
+#endif // GLOBAL_FONT_MANAGER_FONT_DEFINE_H

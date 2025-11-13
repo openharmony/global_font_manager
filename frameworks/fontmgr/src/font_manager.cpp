@@ -58,7 +58,7 @@ int32_t FontManager::InstallFont(const int32_t &fd, const int32_t userId)
         std::string path = fontConfig.GetFontFileByName(fullName);
         if (!path.empty() && !FontManagerUtils::CheckPathExist(GetRealPath(installPath, path))) {
             if (!fontConfig.DeleteFontRecord(path)) {
-                FONT_LOGE("update install_fontconfig fail");
+                FONT_LOGE("fix install_fontconfig fail");
                 return ERR_INSTALL_FAIL;
             }
             break;
@@ -84,12 +84,12 @@ int32_t FontManager::InstallFont(const int32_t &fd, const int32_t userId)
     // 写入至json内的文件路径为应用沙箱路径
     std::string realFileName = FontManagerUtils::GetFileName(destPath);
     std::string jsonPath = INSTALL_PATH_APP + realFileName;
-    HisyseventAdapter::GetInstance()->CollectUserDataSize();
     if (!fontConfig.InsertFontRecord(jsonPath, fullNameVector)) {
         FontManagerUtils::DeleteDir(destPath, true);
         FONT_LOGE("update install_fontconfig fail, fileName = %{public}s", realFileName.c_str());
         return ERR_INSTALL_FAIL;
     }
+    HisyseventAdapter::GetInstance()->CollectUserDataSize(installPath);
     FontEventPublish::PublishFontUpdate(FontEventType::INSTALL, GetFormatFullName(fullNameVector), userId);
     FONT_LOGI("Install font success, fileName:%{public}s, userId:%{public}d", realFileName.c_str(), userId);
     return ERR_OK;
@@ -182,7 +182,6 @@ int32_t FontManager::UninstallFont(const std::string &fontFullName, const int32_
         FONT_LOGE("Can't find fontFullName = %{public}s", fontFullName.c_str());
         return ERR_UNINSTALL_FILE_NOT_EXISTS;
     }
-    HisyseventAdapter::GetInstance()->CollectUserDataSize();
     std::string realPath = GetRealPath(installPath, path);
     if (!FontManagerUtils::RemoveFile(realPath)) {
         return ERR_UNINSTALL_REMOVE_FAIL;
@@ -191,6 +190,7 @@ int32_t FontManager::UninstallFont(const std::string &fontFullName, const int32_
         FONT_LOGE("update install_fontconfig fail, path = %{public}s", path.c_str());
         return ERR_UNINSTALL_FAIL;
     }
+    HisyseventAdapter::GetInstance()->CollectUserDataSize(installPath);
     FontEventPublish::PublishFontUpdate(FontEventType::UNINSTALL, fontFullName, userId);
     FONT_LOGI("Uninstall font success, fontFullName:%{public}s, userId:%{public}d", fontFullName.c_str(), userId);
     return ERR_OK;

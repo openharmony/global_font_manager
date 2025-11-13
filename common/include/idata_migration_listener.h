@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef GLOBAL_FONT_MANAGER_IDATA_MIGRATION_CALLBACK_H
-#define GLOBAL_FONT_MANAGER_IDATA_MIGRATION_CALLBACK_H
+#ifndef GLOBAL_FONT_MANAGER_IDATA_MIGRATION_LISTENER_H
+#define GLOBAL_FONT_MANAGER_IDATA_MIGRATION_LISTENER_H
 
 #include <string>
 #include "idata_migration_callback_event.h"
@@ -30,4 +30,4 @@ public:
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS
-#endif // GLOBAL_FONT_MANAGER_IDATA_MIGRATION_CALLBACK_H
+#endif // GLOBAL_FONT_MANAGER_IDATA_MIGRATION_LISTENER_H

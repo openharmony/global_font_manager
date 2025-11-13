@@ -44,6 +44,7 @@ bool FontConfig::InsertFontRecord(const std::string &fontPath, const std::vector
     cJSON_AddItemToArray(fontList, insertValue);
     char *fileData = cJSON_Print(jsonValue);
     cJSON_Delete(jsonValue);
+    fontsMap_.insert(std::make_pair(fontPath, fullNames));
     return WriteToFile(fileData);
 }
 
@@ -231,7 +232,7 @@ std::unordered_map<std::string, std::vector<std::string>> FontConfig::GetFontsMa
         cJSON_Delete(jsonData);
         return std::unordered_map<std::string, std::vector<std::string>>();
     }
-    std::unordered_map<std::string, std::vector<std::string>> fontMap;
+    std::unordered_map<std::string, std::vector<std::string>> fontsMap;
     int fontSize = cJSON_GetArraySize(fontList);
     for (int i = 0; i < fontSize; i++) {
         cJSON *arrItem = cJSON_GetArrayItem(fontList, i);
@@ -246,11 +247,11 @@ std::unordered_map<std::string, std::vector<std::string>> FontConfig::GetFontsMa
         }
         cJSON *fontFullPathValue = cJSON_GetObjectItem(arrItem, FONT_PATH);
         if (fontFullPathValue != nullptr && fontFullPathValue->valuestring != nullptr) {
-            fontMap.insert(std::make_pair(fontFullPathValue->valuestring, fullNames));
+            fontsMap.insert(std::make_pair(fontFullPathValue->valuestring, fullNames));
         }
     }
     cJSON_Delete(jsonData);
-    return fontMap;
+    return fontsMap;
 }
 }  // namespace FontManager
 }  // namespace Global

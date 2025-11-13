@@ -20,6 +20,7 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <sys/sendfile.h>
 
 #include "font_hilog.h"
 #include "font_define.h"
@@ -31,7 +32,6 @@
 namespace OHOS {
 namespace Global {
 namespace FontManager {
-static constexpr int32_t MAX_SIZE = 1024 * 20;
 static constexpr uint32_t TIME_STRING_LENGTH = 20;
 static constexpr uint32_t BEGIN_YEAR = 1900;
 
@@ -58,7 +58,7 @@ void FontManagerUtils::ClearAllTempFileDir()
     auto userIds = GetAllCreatedUserIds();
     for (const auto &userId : userIds) {
         std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + "/";
-        if (CheckPathExist(installPath)) {
+        if (CheckPathExist(installPath + TEMP_FILE)) {
             DeleteDir(installPath + TEMP_FILE, true);
         }
     }
@@ -202,30 +202,34 @@ bool FontManagerUtils::CopyFile(int32_t sourceFd, const std::string& path)
 bool FontManagerUtils::CopyFileByFd(int32_t sourceFd, int32_t targetFd)
 {
     if (sourceFd < 0) {
-        FONT_LOGE("Failed to open source file");
+        FONT_LOGE("Failed to open source file fd");
         return false;
     }
+    if (targetFd < 0) {
+        FONT_LOGE("Failed to open target file fd");
+        return false;
+    }
+    lseek(sourceFd, 0, SEEK_SET);
+    lseek(targetFd, 0, SEEK_SET);
+    // 获取文件的大小
     struct stat sourceStat;
     if (fstat(sourceFd, &sourceStat) < 0) {
         FONT_LOGE("Failed to get source file stat");
         return false;
     }
-    if (targetFd < 0) {
-        FONT_LOGE("targetFd check err(< 0)");
-        return false;
-    }
-    lseek(sourceFd, 0, SEEK_SET);
-    lseek(targetFd, 0, SEEK_SET);
-    constexpr int32_t bufferSize = MAX_SIZE;
-    char buffer[bufferSize];
-    int32_t bytesRead = 0;
-    int32_t bytesWritten = 0;
-    while ((bytesRead = read(sourceFd, buffer, sizeof(buffer))) > 0) {
-        bytesWritten = write(targetFd, buffer, bytesRead);
-        if (bytesWritten != bytesRead) {
-            FONT_LOGE("Failed to write to target file");
+
+    off_t offset = 0;
+    ssize_t bytesSent = 0;
+    size_t fileSize = static_cast<size_t>(sourceStat.st_size);
+
+    while (bytesSent < fileSize) {
+        // 使用 sendfile 实现零拷贝
+        ssize_t ret = sendfile(targetFd, sourceFd, &offset, fileSize - bytesSent);
+        if (ret < 0) {
+            FONT_LOGE("Failed to send file data: %s", strerror(errno));
             return false;
         }
+        bytesSent += ret;
     }
     return true;
 }

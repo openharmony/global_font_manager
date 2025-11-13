@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef FONT_MANAGER_DATA_MIGRATION_UTILS_H
-#define FONT_MANAGER_DATA_MIGRATION_UTILS_H
+#ifndef FONT_MANAGER_DATA_MIGRATION_MANAGER_H
+#define FONT_MANAGER_DATA_MIGRATION_MANAGER_H
 
 #include <atomic>
 #include <string>
@@ -35,7 +35,7 @@ private:
     void StartHeartBeatTask();
     int32_t DataMigrationInner();
     int32_t StartOneFileCopyTask(const std::string& path, const std::vector<int32_t>& userIds);
-    bool CopyFileForDataMigration(const std::string &srcPath, const int32_t userId);
+    int32_t CopyFileForDataMigration(const std::string &srcPath, const int32_t userId);
     bool ShouldCallback(int32_t i, int32_t totalCount);
     void EventDataHeartBeatCallback();
     void EventDataProgressCallback(int32_t i, int32_t size, int32_t idsize);
@@ -49,4 +49,4 @@ private:
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS
-#endif // FONT_MANAGER_DATA_MIGRATION_UTILS_H
+#endif // FONT_MANAGER_DATA_MIGRATION_MANAGER_H

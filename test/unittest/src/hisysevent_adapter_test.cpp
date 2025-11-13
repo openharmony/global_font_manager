@@ -19,8 +19,11 @@
 #include "hisysevent_adapter_test.h"
 
 #include <gtest/gtest.h>
-
+#define private public
+#define protected public
 #include "hisysevent_adapter.h"
+#undef private
+#undef protected
 #include "singleton.h"
 
 using testing::ext::TestSize;
@@ -28,7 +31,7 @@ using testing::ext::TestSize;
 namespace OHOS {
 namespace Global {
 namespace FontManager {
-static const std::string INSTALL_PATH = "/data/service/el1/public/fonts/";
+static const std::string INSTALL_PATH = "/data/service/el1/public/fonts/100/";
 void HisyseventAdapterTest::SetUpTestCase(void) {}
 void HisyseventAdapterTest::TearDownTestCase(void) {}
 void HisyseventAdapterTest::SetUp(void) {}
@@ -42,7 +45,7 @@ void HisyseventAdapterTest::TearDown(void) {}
 HWTEST_F(HisyseventAdapterTest, CollectUserDataSize, TestSize.Level1)
 {
     std::shared_ptr<HisyseventAdapter> adapter = HisyseventAdapter::GetInstance();
-    EXPECT_EQ(adapter->CollectUserDataSize(), 0);
+    EXPECT_EQ(adapter->CollectUserDataSize(INSTALL_PATH), 0);
 }
 
 /* *
@@ -65,7 +68,7 @@ HWTEST_F(HisyseventAdapterTest, GetDataPartitionRemainSize, TestSize.Level1)
 HWTEST_F(HisyseventAdapterTest, GetFileOrFolderPath, TestSize.Level1)
 {
     std::shared_ptr<HisyseventAdapter> adapter = HisyseventAdapter::GetInstance();
-    std::vector<std::string> result = adapter->GetFileOrFolderPath();
+    std::vector<std::string> result = adapter->GetFileOrFolderPath(INSTALL_PATH);
     EXPECT_EQ(result.size(), 1);
     EXPECT_EQ(result[0], INSTALL_PATH);
 }
@@ -78,7 +81,7 @@ HWTEST_F(HisyseventAdapterTest, GetFileOrFolderPath, TestSize.Level1)
 HWTEST_F(HisyseventAdapterTest, GetFileOrFolderSize, TestSize.Level1)
 {
     std::shared_ptr<HisyseventAdapter> adapter = HisyseventAdapter::GetInstance();
-    std::vector<std::uint64_t> result = adapter->GetFileOrFolderSize();
+    std::vector<std::uint64_t> result = adapter->GetFileOrFolderSize(INSTALL_PATH);
     EXPECT_EQ(result.size(), 1);
     EXPECT_GE(result[0], 0);
 }

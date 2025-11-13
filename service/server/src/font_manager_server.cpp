@@ -121,7 +121,6 @@ int32_t FontManagerServer::DataMigrationInner(const sptr<IDataMigrationCallback>
 {
     int32_t ret = CheckPermission();
     if (ret != ERR_OK) {
-        FONT_LOGI("FontManagerServer no permission.");
         return ret;
     }
     if (handler_ == nullptr) {
@@ -210,7 +209,7 @@ int32_t FontManagerServer::CheckPermission()
     uint32_t callerToken = IPCSkeleton::GetCallingTokenID();
     int result = Security::AccessToken::AccessTokenKit::VerifyAccessToken(callerToken, PERMISSION_UPDATE_FONT);
     if (result != Security::AccessToken::PermissionState::PERMISSION_GRANTED) {
-        FONT_LOGE("FontManagerServer caller process doesn't have UPDATE_FONT permission.");
+        FONT_LOGE("FontManagerServer caller process doesn't have permission.");
         return ERR_NO_PERMISSION;
     }
     FONT_LOGI("FontManagerServer CheckPermission success.");

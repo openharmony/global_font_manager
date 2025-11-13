@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef FONT_MANAGER_DATA_MIGRATION_LISTENER_H
-#define FONT_MANAGER_DATA_MIGRATION_LISTENER_H
+#ifndef FONT_MANAGER_JS_DATA_MIGRATION_LISTENER_H
+#define FONT_MANAGER_JS_DATA_MIGRATION_LISTENER_H
 
 #include "idata_migration_listener.h"
 #include "js_func_ref_holder.h"
@@ -46,4 +46,4 @@ private:
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS
-#endif // FONT_MANAGER_DATA_MIGRATION_LISTENER_H
+#endif // FONT_MANAGER_JS_DATA_MIGRATION_LISTENER_H
