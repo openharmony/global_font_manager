@@ -99,7 +99,8 @@ bool DataMigrationManagerTest::CopyFile(const string &srcPath, const string &des
 HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest001, TestSize.Level1)
 {
     const std::string fontPath = "/data/test/NotoSansCJK-Regular.ttc";
-    bool res = manager_->InitAllUserDir({TEST_USERID});
+    manager_->userIds_ = {TEST_USERID};
+    bool res = manager_->InitAllUserDir();
     ASSERT_TRUE(res);
     res = manager_->InitDataMigrationTempDir();
     ASSERT_TRUE(res);

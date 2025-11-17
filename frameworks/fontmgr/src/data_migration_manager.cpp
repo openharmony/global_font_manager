@@ -43,53 +43,66 @@ DataMigrationManager::~DataMigrationManager()
 void DataMigrationManager::DataMigration(const sptr<IDataMigrationCallback>& callback)
 {
     callback_ = callback;
-    FontManagerUtils::DeleteDir(INSTALL_PATH_APP + TEMP_FILE, true);
     isDataMigrationing_ = true;
     int32_t ret = DataMigrationInner();
     if (ret != ERR_OK) {
-        FONT_LOGE("FontManager DataMigrationInner err.ErrCode:%{public}d", ret);
+        FONT_LOGE("FontManager DataMigration err.ErrCode:%{public}d", ret);
     }
-
     isDataMigrationing_ = false;
-    EventDataResultCallback(ret);
+    EventDataResult(ret);
     callback_ = nullptr;
 }
 
 int32_t DataMigrationManager::DataMigrationInner()
 {
+    int32_t ret = InitDataMigrationEnv();
+    if (ret != ERR_OK) {
+        return ret;
+    }
+    StartHeartBeatTask();
+    return StartDataMigration();
+}
+
+int32_t DataMigrationManager::InitDataMigrationEnv()
+{
+    userIds_ = FontManagerUtils::GetAllCreatedUserIds();
+    if (userIds_.empty()) {
+        FONT_LOGE("FontManager get all userIds err.");
+        return ERR_GET_ALL_USERIDS;
+    }
+    FontManagerUtils::DeleteDir(INSTALL_PATH_APP + TEMP_FILE, true);
     if (OHOS::IsEmptyFolder(INSTALL_PATH_APP)) {
         FONT_LOGE("FontManager INSTALL_PATH_APP is empty.");
         return ERR_NOT_NEED_DATA_MIGRATION;
     }
-    std::vector<int32_t> userIds = FontManagerUtils::GetAllCreatedUserIds();
-    if (userIds.empty()) {
-        FONT_LOGE("FontManager get all userIds err.");
-        return ERR_GET_ALL_USERIDS;
-    }
-    if (!InitAllUserDir(userIds) || !InitDataMigrationTempDir()) {
+    if (!InitAllUserDir() || !InitDataMigrationTempDir()) {
         FONT_LOGE("FontManager DataMigrationInner InitDir err.");
         return ERR_INIT_INSTALL_DIR;
     }
-    StartHeartBeatTask();
+    return ERR_OK;
+}
+
+int32_t DataMigrationManager::StartDataMigration()
+{
     std::vector<std::string> paths;
     OHOS::GetDirFiles(INSTALL_PATH_APP, paths);
     for (size_t i = 0; i < paths.size(); ++i) {
-        if (ShouldCallback(i, paths.size())) {
-            EventDataProgressCallback(i, paths.size(), userIds.size());
+        if (IsShouldUpdateProgress(i, paths.size())) {
+            EventDataProgress(i, paths.size(), userIds_.size());
         }
-        int ret = StartOneFileCopyTask(paths[i], userIds);
+        int ret = StartOneFileCopyTask(paths[i]);
         if (ret != ERR_OK) {
             return ret;
         }
-        FONT_LOGI("FontManager::FileCopyTask suc.FileName:%{public}s.", FontManagerUtils::GetFileName(paths[i]).c_str());
+        FONT_LOGI("FontManager::FileCopyTask suc.FileName:%{public}s", FontManagerUtils::GetFileName(paths[i]).c_str());
     }
     FontManagerUtils::DeleteDir(INSTALL_PATH_PREFIX + TEMP_FILE, true);
     return ERR_OK;
 }
 
-int32_t DataMigrationManager::StartOneFileCopyTask(const std::string& path, const std::vector<int32_t>& userIds)
+int32_t DataMigrationManager::StartOneFileCopyTask(const std::string& path)
 {
-    for (const auto& userId : userIds) {
+    for (const auto& userId : userIds_) {
         int32_t ret = CopyFileForDataMigration(path, userId);
         if (ret != ERR_OK) {
             FONT_LOGE("StartOneFileCopyTask copy file %{public}s error", FontManagerUtils::GetFileName(path).c_str());
@@ -97,7 +110,7 @@ int32_t DataMigrationManager::StartOneFileCopyTask(const std::string& path, cons
         }
     }
     if (!FontManagerUtils::RemoveFile(path)) {
-        FONT_LOGE("StartOneFileCopyTask RemoveFile file (%{public}s) error", FontManagerUtils::GetFileName(path).c_str());
+        FONT_LOGE("StartOneFileCopyTask RemoveFile file (%{public}s) err", FontManagerUtils::GetFileName(path).c_str());
         return ERR_REMOVE_SRC_FILE;
     }
     return ERR_OK;
@@ -139,14 +152,14 @@ void DataMigrationManager::StartHeartBeatTask()
         FONT_LOGI("DataMigrationManager HeartBeat thread started.");
         while (isDataMigrationing_) {
             FONT_LOGI("DataMigrationManager HeartBeat....");
-            EventDataHeartBeatCallback();
+            EventDataHeartBeat();
             std::this_thread::sleep_for(std::chrono::seconds(HEARTBEAT_INTERVAL));
         }
         FONT_LOGI("DataMigrationManager HeartBeat thread stoped.");
     }).detach();
 }
 
-bool DataMigrationManager::ShouldCallback(int32_t i, int32_t totalCount)
+bool DataMigrationManager::IsShouldUpdateProgress(int32_t i, int32_t totalCount)
 {
     if (totalCount <= MAX_TRIGGER_COUNT) {
         return true;
@@ -157,7 +170,7 @@ bool DataMigrationManager::ShouldCallback(int32_t i, int32_t totalCount)
     return std::fabs(i - triggerPos) < EPSILON;
 }
 
-void DataMigrationManager::EventDataProgressCallback(int32_t i, int32_t size, int32_t idsize)
+void DataMigrationManager::EventDataProgress(int32_t i, int32_t size, int32_t idsize)
 {
     // 以Mb/s计算预估时间
     std::uintmax_t remainSize = (OHOS::GetFolderSize(INSTALL_PATH_APP) * idsize) >> 20;
@@ -174,22 +187,22 @@ void DataMigrationManager::EventDataProgressCallback(int32_t i, int32_t size, in
     RefreshEventData(eventData);
 }
 
-void DataMigrationManager::EventDataResultCallback(int32_t result)
+void DataMigrationManager::EventDataResult(int32_t result)
 {
     EventData eventData = {.event = EventType::PROGRESS_RESULT,
                            .progressResult = result};
     RefreshEventData(eventData);
 }
 
-void DataMigrationManager::EventDataHeartBeatCallback()
+void DataMigrationManager::EventDataHeartBeat()
 {
     EventData eventData = {.event = EventType::HEART_BEAT};
     RefreshEventData(eventData);
 }
 
-bool DataMigrationManager::InitAllUserDir(const std::vector<int32_t> userIds)
+bool DataMigrationManager::InitAllUserDir()
 {
-    for (const auto& userId : userIds) {
+    for (const auto& userId : userIds_) {
         std::string path = INSTALL_PATH_PREFIX + std::to_string(userId) + "/";
         if (!FontManagerUtils::CreateDirWithPermission(path)) {
             FONT_LOGE("InitAllUserDir CreateDirWithPermission err. userid = %{public}d.", userId);

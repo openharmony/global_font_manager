@@ -45,7 +45,6 @@ int32_t FontManager::InstallFont(const int32_t &fd, const int32_t userId)
 
     std::vector<std::string> fullNameVector = GetFontFullName(fd);
     if (fullNameVector.size() == 0) {
-        FONT_LOGE("get fontFullName failed, font file verified failed");
         return ERR_FILE_VERIFY_FAIL;
     }
 
@@ -64,13 +63,11 @@ int32_t FontManager::InstallFont(const int32_t &fd, const int32_t userId)
             break;
         }
         if (!path.empty()) {
-            FONT_LOGI("Font already installed");
             return ERR_INSTALLED_ALRADY;
         }
     }
     // 判断是否超过最大安装数量
     if (fontConfig.GetInstalledFontsNum() >= MAX_INSTALL_NUM) {
-        FONT_LOGI("installed files reach 200, not allowed to install more");
         return ERR_MAX_FILE_COUNT;
     }
     // 将字体文件拷贝到目标目录

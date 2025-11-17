@@ -32,19 +32,22 @@ public:
     void DataMigration(const sptr<IDataMigrationCallback>& callback);
 
 private:
-    void StartHeartBeatTask();
     int32_t DataMigrationInner();
-    int32_t StartOneFileCopyTask(const std::string& path, const std::vector<int32_t>& userIds);
+    int32_t InitDataMigrationEnv();
+    int32_t StartDataMigration();
+    void StartHeartBeatTask();
+    int32_t StartOneFileCopyTask(const std::string& path);
     int32_t CopyFileForDataMigration(const std::string &srcPath, const int32_t userId);
-    bool ShouldCallback(int32_t i, int32_t totalCount);
-    void EventDataHeartBeatCallback();
-    void EventDataProgressCallback(int32_t i, int32_t size, int32_t idsize);
-    void EventDataResultCallback(int32_t result);
-    bool InitAllUserDir(const std::vector<int32_t> userIds);
+    bool IsShouldUpdateProgress(int32_t i, int32_t totalCount);
+    void EventDataHeartBeat();
+    void EventDataProgress(int32_t i, int32_t size, int32_t idsize);
+    void EventDataResult(int32_t result);
+    bool InitAllUserDir();
     bool InitDataMigrationTempDir();
     void RefreshEventData(const EventData& eventData);
     std::atomic<bool> isDataMigrationing_ {false};
     sptr<IDataMigrationCallback> callback_ = nullptr;
+    std::vector<int32_t> userIds_;
 };
 } // namespace FontManager
 } // namespace Global

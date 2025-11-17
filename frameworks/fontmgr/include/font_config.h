@@ -34,7 +34,8 @@ public:
     FontConfig(FontConfig&& other) noexcept : fontsMap_(std::move(other.fontsMap_)),
         ConfigPath_(std::move(other.ConfigPath_)) {};
     // 移动赋值操作符
-    FontConfig& operator = (FontConfig&& other) noexcept {
+    FontConfig& operator = (FontConfig&& other) noexcept
+    {
         if (this != &other) {
             fontsMap_ = std::move(other.fontsMap_);
             ConfigPath_ = std::move(other.ConfigPath_);

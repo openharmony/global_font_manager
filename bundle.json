@@ -73,8 +73,7 @@
             "//base/global/font_manager/service:font_service_ability"
           ],
           "test": [
-            "//base/global/font_manager/test/unittest:font_config_test",
-            "//base/global/font_manager/test/unittest:font_manager_module_test",
+            "//base/global/font_manager/test/unittest:unittest",
             "//base/global/font_manager/test/fuzztest:fuzztest"
           ]
       }

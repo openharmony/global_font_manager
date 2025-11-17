@@ -73,6 +73,9 @@ void FontManagerServer::InstallFontInner(const int32_t fd, int32_t &outValue)
     return;
 #endif
     outValue = FontManager::GetInstance()->InstallFont(fd, userId);
+    if (outValue != ERR_OK) {
+        FONT_LOGE("FontManagerServer:InstallFont failed.ErrCode:%{public}d", outValue);
+    }
 }
 
 int32_t FontManagerServer::UninstallFont(const std::string &fontName, int32_t &outValue)

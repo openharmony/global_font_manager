@@ -27,8 +27,10 @@ constexpr int32_t ARGS_ZERO = 0;
 constexpr int32_t ARGS_ONE = 1;
 }
 
-JsDataMigrationListener::JsDataMigrationListener(napi_env env, const std::shared_ptr<JsFuncRefHolder> &heartBeatCallback,
-    const std::shared_ptr<JsFuncRefHolder> &progressCallback, const std::shared_ptr<JsFuncRefHolder> &resultCallback)
+JsDataMigrationListener::JsDataMigrationListener(napi_env env,
+    const std::shared_ptr<JsFuncRefHolder> &heartBeatCallback,
+    const std::shared_ptr<JsFuncRefHolder> &progressCallback,
+    const std::shared_ptr<JsFuncRefHolder> &resultCallback)
     : env_(env), heartBeatCallback_(heartBeatCallback), progressCallback_(progressCallback),
     resultCallback_(resultCallback)
 {
