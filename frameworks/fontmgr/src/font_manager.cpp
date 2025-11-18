@@ -48,7 +48,6 @@ int32_t FontManager::InstallFont(const int32_t &fd, const int32_t userId)
         return ERR_FILE_VERIFY_FAIL;
     }
 
-    // 判断字体文件是否已安装
     if (configMap_.find(userId) == configMap_.end()) {
         configMap_.emplace(userId, FontConfig(installPath + FONT_CONFIG_FILE));
     }
@@ -66,11 +65,9 @@ int32_t FontManager::InstallFont(const int32_t &fd, const int32_t userId)
             return ERR_INSTALLED_ALRADY;
         }
     }
-    // 判断是否超过最大安装数量
     if (fontConfig.GetInstalledFontsNum() >= MAX_INSTALL_NUM) {
         return ERR_MAX_FILE_COUNT;
     }
-    // 将字体文件拷贝到目标目录
     std::string sourcePath = FontManagerUtils::GetFilePathByFd(fd);
     std::string fileName = FontManagerUtils::GetFileName(sourcePath);
     std::string destPath = CopyFileForInstall(installPath, fileName, fd);
@@ -78,7 +75,6 @@ int32_t FontManager::InstallFont(const int32_t &fd, const int32_t userId)
         FONT_LOGE("copy file %{public}s error", sourcePath.c_str());
         return ERR_COPY_FAIL;
     }
-    // 写入至json内的文件路径为应用沙箱路径
     std::string realFileName = FontManagerUtils::GetFileName(destPath);
     std::string jsonPath = INSTALL_PATH_APP + realFileName;
     if (!fontConfig.InsertFontRecord(jsonPath, fullNameVector)) {
@@ -104,7 +100,6 @@ std::string FontManager::GetFormatFullName(const std::vector<std::string> &fullN
 
 std::vector<std::string> FontManager::GetFontFullName(const int32_t &fd)
 {
-    // 调用字体引擎接口校验字体格式
     std::vector<std::string> fullNameVector;
     std::vector<FontByteArray> fullNameVec;
     std::shared_ptr<FontMgr> fontMgr = FontMgr::CreateDefaultFontMgr();

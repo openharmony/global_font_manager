@@ -172,13 +172,11 @@ bool DataMigrationManager::IsShouldUpdateProgress(int32_t i, int32_t totalCount)
 
 void DataMigrationManager::EventDataProgress(int32_t i, int32_t size, int32_t idsize)
 {
-    // 以Mb/s计算预估时间
     std::uintmax_t remainSize = (OHOS::GetFolderSize(INSTALL_PATH_APP) * idsize) >> 20;
     int32_t timeRemaining = remainSize / COPY_SPEED;
     if (timeRemaining < 1) {
         timeRemaining = 1;
     }
-    // 计算百分百，size / 2用于四舍五入
     int32_t progressPercentage =
         i == 0 ? i : static_cast<int32_t>((static_cast<int64_t>(i) * MAX_TRIGGER_COUNT + size / 2) / size);
     EventData eventData = {.event = EventType::PROGRESS_DOING,

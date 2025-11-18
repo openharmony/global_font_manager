@@ -37,7 +37,6 @@ static constexpr uint32_t BEGIN_YEAR = 1900;
 
 bool FontManagerUtils::CheckAndInitInstallPath(const std::string &installPath)
 {
-    // 若不存在当前用户的字体文件夹，新建对应文件夹
     if (!CheckPathExist(installPath)) {
         if (!CreateDirWithPermission(installPath)) {
             return false;
@@ -211,7 +210,6 @@ bool FontManagerUtils::CopyFileByFd(int32_t sourceFd, int32_t targetFd)
     }
     lseek(sourceFd, 0, SEEK_SET);
     lseek(targetFd, 0, SEEK_SET);
-    // 获取文件的大小
     struct stat sourceStat;
     if (fstat(sourceFd, &sourceStat) < 0) {
         FONT_LOGE("Failed to get source file stat");
@@ -223,7 +221,6 @@ bool FontManagerUtils::CopyFileByFd(int32_t sourceFd, int32_t targetFd)
     size_t fileSize = static_cast<size_t>(sourceStat.st_size);
 
     while (bytesSent < fileSize) {
-        // 使用 sendfile 实现零拷贝
         ssize_t ret = sendfile(targetFd, sourceFd, &offset, fileSize - bytesSent);
         if (ret < 0) {
             FONT_LOGE("Failed to send file data: %s", strerror(errno));
