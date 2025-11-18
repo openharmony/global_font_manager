@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2024-2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -21,17 +21,12 @@
 namespace OHOS {
 namespace Global {
 namespace FontManager {
-napi_value Init(napi_env env, napi_value exports)
-{
-    napi_value val = FontManagerAddon::Init(env, exports);
-    return val;
-}
 
 static napi_module g_FontResourceModule = {
     .nm_version = 1,
     .nm_flags = 0,
     .nm_filename = nullptr,
-    .nm_register_func = Init,
+    .nm_register_func = FontManagerAddonInit,
     .nm_modname = "fontmanager",
     .nm_priv = nullptr,
     .reserved = { 0 }

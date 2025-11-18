@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2024-2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,20 +16,21 @@
 #ifndef GLOBAL_FONT_MANAGER_FONT_ADDON_H
 #define GLOBAL_FONT_MANAGER_FONT_ADDON_H
 
-#include "napi/native_api.h"
-#include "napi/native_node_api.h"
 #include "font_napi_callback.h"
+#include "js_runtime_utils.h"
 
 namespace OHOS {
 namespace Global {
 namespace FontManager {
+napi_value FontManagerAddonInit(napi_env env, napi_value exports);
 class FontManagerAddon {
 public:
     FontManagerAddon();
     ~FontManagerAddon();
-    static napi_value Init(napi_env env, napi_value exports);
+    static void Finalizer(napi_env env, void* data, void* hint);
     static napi_value InstallFont(napi_env env, napi_callback_info info);
     static napi_value UninstallFont(napi_env env, napi_callback_info info);
+    static napi_value DataMigration(napi_env env, napi_callback_info info);
 
 private:
     static napi_value ProcessFontByValue(
@@ -40,6 +41,8 @@ private:
     static void ProcessCallbackResult(napi_env env, FontNapiCallback *callback, napi_value (&result)[2]);
     static napi_value GetResult(napi_env env, std::unique_ptr<FontNapiCallback> &callback,
         const std::string &name, napi_async_execute_callback execute);
+    napi_value DataMigrationInner(napi_env env, AbilityRuntime::NapiCallbackInfo& info);
+    std::string GetDataMigrationErrMsg(int32_t errCode);
 };
 } // namespace FontManager
 } // namespace Global

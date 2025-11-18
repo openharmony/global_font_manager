@@ -31,19 +31,18 @@ namespace FontManager {
 using HiSysEventNameSpace = OHOS::HiviewDFX::HiSysEvent;
 
 static const std::string DATA_PARTITION_NAME = "/data";
-static const std::string INSTALL_PATH = "/data/service/el1/public/for-all-app/fonts/";
 static const std::string COMPONENT_NAME = "font_manager";
 
 HisyseventAdapter::HisyseventAdapter() {}
 HisyseventAdapter::~HisyseventAdapter() {}
 
-int HisyseventAdapter::CollectUserDataSize()
+int HisyseventAdapter::CollectUserDataSize(const std::string &path)
 {
     std::string componentName = COMPONENT_NAME;
     std::string partitionName = DATA_PARTITION_NAME;
     std::uint64_t remainPartitionSize = this->GetDataPartitionRemainSize();
-    std::vector<std::string> fileOrFolderPath = this->GetFileOrFolderPath();
-    std::vector<std::uint64_t> fileOrFolderSize = this->GetFileOrFolderSize();
+    std::vector<std::string> fileOrFolderPath = this->GetFileOrFolderPath(path);
+    std::vector<std::uint64_t> fileOrFolderSize = this->GetFileOrFolderSize(path);
     int ret = HiSysEventWrite(HiSysEventNameSpace::Domain::FILEMANAGEMENT, "USER_DATA_SIZE",
         HiSysEventNameSpace::EventType::STATISTIC, "COMPONENT_NAME", componentName, "PARTITION_NAME", partitionName,
         "REMAIN_PARTITION_SIZE", remainPartitionSize, "FILE_OR_FOLDER_PATH", fileOrFolderPath, "FILE_OR_FOLDER_SIZE",
@@ -56,26 +55,26 @@ std::uint64_t HisyseventAdapter::GetDataPartitionRemainSize()
     std::string partitionName = DATA_PARTITION_NAME;
     struct statfs stat;
     if (statfs(partitionName.c_str(), &stat) != 0) {
-        return -1;
+        return std::numeric_limits<uint64_t>::max();
     }
-    std::uint64_t blockSize = stat.f_bsize;
-    std::uint64_t freeSize = stat.f_bfree * blockSize;
-    constexpr double units = 1024.0;
-    std::uint64_t freeSizeMb = freeSize / (units * units);
-    return freeSizeMb;
+    const std::uint64_t blockSize = stat.f_bsize;
+    const std::uint64_t freeBlocks = stat.f_bavail;
+    const std::uint64_t freeSize = freeBlocks * blockSize;
+    constexpr std::uint64_t mb = 1024ull * 1024ull;
+    return freeSize / mb;
 }
 
-std::vector<std::string> HisyseventAdapter::GetFileOrFolderPath()
+std::vector<std::string> HisyseventAdapter::GetFileOrFolderPath(const std::string &path)
 {
     std::vector<std::string> vec;
-    vec.push_back(INSTALL_PATH);
+    vec.push_back(path);
     return vec;
 }
 
-std::vector<std::uint64_t> HisyseventAdapter::GetFileOrFolderSize()
+std::vector<std::uint64_t> HisyseventAdapter::GetFileOrFolderSize(const std::string &path)
 {
     std::vector<std::uint64_t> vec;
-    vec.push_back(OHOS::GetFolderSize(INSTALL_PATH));
+    vec.push_back(OHOS::GetFolderSize(path));
     return vec;
 }
 } // namespace FontManager

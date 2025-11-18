@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2024-2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,6 +17,7 @@
 #define GLOBAL_FONT_MANAGER_FONT_MANAGER_H
 
 #include "singleton.h"
+#include "font_config.h"
 
 namespace OHOS {
 namespace Global {
@@ -28,13 +29,12 @@ public:
     int32_t UninstallFont(const std::string &fontFullName, const int32_t userId);
 
 private:
-    bool CheckFontConfigPath(const std::string &installPath);
-    bool CheckAndInitInstallPath(const std::string &installPath);
     std::string Utf16BEToUtf8(const uint8_t* data, size_t byteLen);
     std::vector<std::string> GetFontFullName(const int32_t &fd);
     std::string GetFormatFullName(const std::vector<std::string> &fullNameVector);
     std::string CopyFileForInstall(const std::string &installPath, const std::string &fileName, const int32_t &fd);
     std::string GetRealPath(const std::string &installPath, const std::string &path);
+    std::unordered_map<int32_t, FontConfig> configMap_;
 };
 } // namespace FontManager
 } // namespace Global

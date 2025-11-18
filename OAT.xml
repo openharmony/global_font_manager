@@ -49,24 +49,24 @@
     <oatconfig>
         <policylist>
             <policy name="projectPolicy" desc="">
-			</policy>
+            </policy>
         </policylist>
-		<filefilterlist>
-			<filefilter name="binaryFileTypePolicyFilter" desc="Filters for binary file policies">
-				<filteritem type="filepath" name="frameworks/fontmgr/test/unittest/data/.*.ttf" desc="self test ttf"/>
-				<filteritem type="filepath" name="frameworks/fontmgr/test/unittest/data/.*.ttc" desc="self test ttc"/>
-			</filefilter>
+        <filefilterlist>
+            <filefilter name="binaryFileTypePolicyFilter" desc="Filters for binary file policies">
+                <filteritem type="filepath" name="test/unittest/data/.*.ttf" desc="self test ttf"/>
+                <filteritem type="filepath" name="test/unittest/data/.*.ttc" desc="self test ttc"/>
+                <filteritem type="filepath" name="figures/.*.png" desc="self developed image"/>
+            </filefilter>
             <filefilter name="defaultPolicyFilter" desc="license文件头校验策略的过滤条件">
-                <filteritem type="filename" name="emptyTTC.ttc"/>
+                <filteritem type="filepath" name="test/unittest/data/.*.ttf" desc="self test ttf"/>
+                <filteritem type="filepath" name="test/unittest/data/.*.ttc" desc="self test ttc"/>
                 <filteritem type="filename" name="README"/>
             </filefilter>
             <filefilter name="copyrightPolicyFilter" desc="copyright文件头校验策略的过滤条件" >
-                <filteritem type="filename" name="emptyTTC.ttc"/>
+                <filteritem type="filepath" name="test/unittest/data/.*.ttf" desc="self test ttf"/>
+                <filteritem type="filepath" name="test/unittest/data/.*.ttc" desc="self test ttc"/>
                 <filteritem type="filename" name="README"/>
             </filefilter>
-            <filefilter name="binaryFileTypePolicyFilter" desc="Filters for binary file policies">
-				<filteritem type="filepath" name="figures/.*.png" desc="self developed image"/>
-			</filefilter>
-		</filefilterlist>
+        </filefilterlist>
     </oatconfig>
 </configuration>

@@ -28,10 +28,12 @@ class HisyseventAdapter : public DelayedSingleton<HisyseventAdapter> {
     DECLARE_DELAYED_SINGLETON(HisyseventAdapter);
 
 public:
-    int CollectUserDataSize();
+    int CollectUserDataSize(const std::string &path);
+
+private:
     uint64_t GetDataPartitionRemainSize();
-    std::vector<std::string> GetFileOrFolderPath();
-    std::vector<uint64_t> GetFileOrFolderSize();
+    std::vector<std::string> GetFileOrFolderPath(const std::string &path);
+    std::vector<uint64_t> GetFileOrFolderSize(const std::string &path);
 };
 } // namespace FontManager
 } // namespace Global

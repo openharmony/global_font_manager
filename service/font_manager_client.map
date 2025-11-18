@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Huawei Device Co., Ltd.
+# Copyright (c) 2024-2025 Huawei Device Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,10 +14,10 @@
 1.0 {
   global:
     extern "C++" {
-      "OHOS::Global::FontManager::FontManagerClient::InstallFont(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, int&)";
-      "OHOS::Global::FontManager::FontManagerClient::UninstallFont(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, int&)";
+      "OHOS::Global::FontManager::FontManagerKits::GetInstance()";
       "vtable for OHOS::Global::FontManager::FontServiceLoadManager";
       "OHOS::Global::FontManager::FontServiceLoadManager::FontServiceLoadManager()";
+      "OHOS::Global::FontManager::FontServiceLoadManager::GetFontServiceAbility(int)";
       "OHOS::Global::FontManager::FontServiceLoadManager::UnloadFontService(int)";
     };
   local:

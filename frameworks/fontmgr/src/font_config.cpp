@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2024-2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -44,6 +44,7 @@ bool FontConfig::InsertFontRecord(const std::string &fontPath, const std::vector
     cJSON_AddItemToArray(fontList, insertValue);
     char *fileData = cJSON_Print(jsonValue);
     cJSON_Delete(jsonValue);
+    fontsMap_.insert(std::make_pair(fontPath, fullNames));
     return WriteToFile(fileData);
 }
 
@@ -219,9 +220,9 @@ cJSON *FontConfig::ConstructCJSON(const std::string &fontFullPath, const std::ve
     return jsonData;
 }
 
-std::unordered_map<std::string, std::vector<std::string>> FontConfig::GetFontsMap(const std::string &fontPath)
+std::unordered_map<std::string, std::vector<std::string>> FontConfig::GetFontsMap(const std::string &configPath)
 {
-    cJSON *jsonData = cJSON_Parse(CheckConfigFile(fontPath).c_str());
+    cJSON *jsonData = cJSON_Parse(CheckConfigFile(configPath).c_str());
     if (jsonData == nullptr) {
         FONT_LOGE("heck config file failed");
         return std::unordered_map<std::string, std::vector<std::string>>();
@@ -231,7 +232,7 @@ std::unordered_map<std::string, std::vector<std::string>> FontConfig::GetFontsMa
         cJSON_Delete(jsonData);
         return std::unordered_map<std::string, std::vector<std::string>>();
     }
-    std::unordered_map<std::string, std::vector<std::string>> fontMap;
+    std::unordered_map<std::string, std::vector<std::string>> fontsMap;
     int fontSize = cJSON_GetArraySize(fontList);
     for (int i = 0; i < fontSize; i++) {
         cJSON *arrItem = cJSON_GetArrayItem(fontList, i);
@@ -246,11 +247,11 @@ std::unordered_map<std::string, std::vector<std::string>> FontConfig::GetFontsMa
         }
         cJSON *fontFullPathValue = cJSON_GetObjectItem(arrItem, FONT_PATH);
         if (fontFullPathValue != nullptr && fontFullPathValue->valuestring != nullptr) {
-            fontMap.insert(std::make_pair(fontFullPathValue->valuestring, fullNames));
+            fontsMap.insert(std::make_pair(fontFullPathValue->valuestring, fullNames));
         }
     }
     cJSON_Delete(jsonData);
-    return fontMap;
+    return fontsMap;
 }
 }  // namespace FontManager
 }  // namespace Global

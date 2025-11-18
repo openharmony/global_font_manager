@@ -17,7 +17,7 @@ import("//build/ohos.gni")
 config("fontmgr_ani_config") {
   include_dirs = [
     "include",
-    "../../frameworks/fontmgr/include",
+    "../../common/include",
   ]
 }
 
@@ -49,6 +49,14 @@ ohos_shared_library("fontManager_ani") {
     "hilog:libhilog",
     "ipc:ipc_core",
     "runtime_core:ani",
+  ]
+
+  cflags_cc = [
+    "-fdata-sections",
+    "-ffunction-sections",
+    "-fno-asynchronous-unwind-tables",
+    "-fno-unwind-tables",
+    "-Os",
   ]
 
   branch_protector_ret = "pac_ret"

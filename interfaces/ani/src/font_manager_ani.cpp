@@ -18,7 +18,7 @@
 #include "ani.h"
 #include "font_hilog.h"
 #include "font_define.h"
-#include "font_manager_client.h"
+#include "font_manager_kits.h"
 #include <unordered_map>
 
 namespace OHOS {
@@ -43,7 +43,7 @@ ani_int FontManagerAni::InstallFont(ani_env* env, ani_string ani_path)
 {
     std::string path = ANIStringToStdString(env, ani_path);
     int errorCode = 0;
-    int ret = FontManagerClient::InstallFont(path, errorCode);
+    int ret = FontManagerKits::GetInstance().InstallFont(path, errorCode);
     if (ret) {
         ThrowError(env, ret);
         return ret;
@@ -58,7 +58,7 @@ ani_int FontManagerAni::UninstallFont(ani_env* env, ani_string ani_fullName)
 {
     std::string fullName = ANIStringToStdString(env, ani_fullName);
     int errorCode = 0;
-    int ret = FontManagerClient::UninstallFont(fullName, errorCode);
+    int ret = FontManagerKits::GetInstance().UninstallFont(fullName, errorCode);
     if (ret) {
         ThrowError(env, ret);
         return ret;

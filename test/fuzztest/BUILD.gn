@@ -10,6 +10,27 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import("//build/test.gni")
+
+ohos_source_set("font_manager_fuzz_permission") {
+  include_dirs = [
+    "../common",
+  ]
+
+  sources = [
+    "../common/permission_common.cpp",
+  ]
+
+  public_external_deps = [
+    "access_token:libaccesstoken_sdk",
+    "access_token:libtokenid_sdk",
+    "access_token:libnativetoken_shared",
+    "access_token:libtoken_setproc",
+  ]
+
+  part_name = "font_manager"
+  subsystem_name = "global"
+}
 
 group("fuzztest") {
   testonly = true
@@ -19,5 +40,6 @@ group("fuzztest") {
     # deps file
     "serviceinstallfont_fuzzer:ServiceInstallFontFuzzTest",
     "serviceuninstallfont_fuzzer:ServiceUnInstallFontFuzzTest",
+    "servicedatamigration_fuzzer:ServiceDataMigrationFuzzTest",
   ]
 }
