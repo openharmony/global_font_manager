@@ -166,6 +166,8 @@ void FontManagerServer::AddUnloadFontServiceTask()
     };
     if (handler_ != nullptr) {
         handler_->PostTask(task, UNLOAD_TASK, DELAY_MILLISECONDS_FOR_UNLOAD_SA);
+    } else {
+        FONT_LOGI("FontManagerServer add task failed, handler is nullptr");
     }
 }
 
@@ -173,6 +175,8 @@ void FontManagerServer::RemoveUnloadFontServiceTask()
 {
     if (handler_ != nullptr) {
         handler_->RemoveTask(UNLOAD_TASK);
+    } else {
+        FONT_LOGI("FontManagerServer remove task failed, handler is nullptr");
     }
 }
 
@@ -180,12 +184,6 @@ void FontManagerServer::OnStart(const SystemAbilityOnDemandReason &startReason)
 {
     std::string reasonName = startReason.GetName();
     FONT_LOGI("FontManagerServer OnStart, startReason name %{public}s", reasonName.c_str());
-    bool status = Publish(this);
-    if (status) {
-        FONT_LOGI("FontManagerServer Publish success.");
-    } else {
-        FONT_LOGI("FontManagerServer Publish failed.");
-    }
     if (reasonName == EventFwk::CommonEventSupport::COMMON_EVENT_USER_ADDED) {
         std::string userId = startReason.GetValue();
         std::string installPath = INSTALL_PATH_PREFIX + userId + "/";
@@ -200,6 +198,12 @@ void FontManagerServer::OnStart(const SystemAbilityOnDemandReason &startReason)
 
     handler_ = std::make_shared<AppExecFwk::EventHandler>(AppExecFwk::EventRunner::Create(true));
     AddUnloadFontServiceTask();
+    bool status = Publish(this);
+    if (status) {
+        FONT_LOGI("FontManagerServer Publish success.");
+    } else {
+        FONT_LOGI("FontManagerServer Publish failed.");
+    }
 }
 
 void FontManagerServer::OnStop(const SystemAbilityOnDemandReason &stopReason)
