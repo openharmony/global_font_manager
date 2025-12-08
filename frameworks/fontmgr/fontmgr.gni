@@ -16,17 +16,17 @@ import("//build/ohos.gni")
 root_path = "//base/global/font_manager/frameworks/fontmgr"
 
 fontmgr_include = [
-        "$root_path/include"
-    ]
+    "$root_path/include"
+]
 
 fontmgr_src = [
-        "$root_path/src/font_manager_utils.cpp",
-        "$root_path/src/font_config.cpp",
-        "$root_path/src/font_manager.cpp",
-        "$root_path/src/font_event_publish.cpp",
-        "$root_path/src/hisysevent_adapter.cpp",
-        "$root_path/src/data_migration_manager.cpp"
-    ]
+    "$root_path/src/font_manager_utils.cpp",
+    "$root_path/src/font_config.cpp",
+    "$root_path/src/font_manager.cpp",
+    "$root_path/src/font_event_publish.cpp",
+    "$root_path/src/hisysevent_adapter.cpp",
+    "$root_path/src/data_migration_manager.cpp"
+]
 
 fontmgr_external_deps = [
     "ability_base:want",
@@ -35,4 +35,5 @@ fontmgr_external_deps = [
     "common_event_service:cesfwk_innerkits",
     "hilog:libhilog",
     "graphic_2d:2d_graphics",
+    "graphic_2d:rosen_text",
 ]

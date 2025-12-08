@@ -25,14 +25,13 @@ namespace FontManager {
 class FontManager : public DelayedSingleton<FontManager> {
     DECLARE_DELAYED_SINGLETON(FontManager);
 public:
-    int32_t InstallFont(const int32_t &fd, const int32_t userId);
+    int32_t InstallFont(const std::string &path, const int32_t userId);
     int32_t UninstallFont(const std::string &fontFullName, const int32_t userId);
 
 private:
-    std::string Utf16BEToUtf8(const uint8_t* data, size_t byteLen);
-    std::vector<std::string> GetFontFullName(const int32_t &fd);
     std::string GetFormatFullName(const std::vector<std::string> &fullNameVector);
-    std::string CopyFileForInstall(const std::string &installPath, const std::string &fileName, const int32_t &fd);
+    std::string CopyFileForInstall(const std::string &installPath, const std::string &fileName,
+        const std::string &srcPath);
     std::string GetRealPath(const std::string &installPath, const std::string &path);
     std::unordered_map<int32_t, FontConfig> configMap_;
 };

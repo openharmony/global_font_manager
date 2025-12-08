@@ -43,17 +43,17 @@ FontManagerServer::FontManagerServer(int32_t saId, bool runOnCreate) : SystemAbi
 {
 }
 
-int32_t FontManagerServer::InstallFont(const int32_t fd, int32_t &outValue)
+int32_t FontManagerServer::InstallFont(const std::string &path, int32_t &outValue)
 {
     RemoveUnloadFontServiceTask();
     callingCount_++;
-    InstallFontInner(fd, outValue);
+    InstallFontInner(path, outValue);
     callingCount_--;
     AddUnloadFontServiceTask();
     return ERR_OK;
 }
 
-void FontManagerServer::InstallFontInner(const int32_t fd, int32_t &outValue)
+void FontManagerServer::InstallFontInner(const std::string &path, int32_t &outValue)
 {
     int32_t userId = INVALID_USERID;
     int32_t ret = CheckPermission();
@@ -72,7 +72,7 @@ void FontManagerServer::InstallFontInner(const int32_t fd, int32_t &outValue)
     outValue = ERR_INSTALL_FAIL;
     return;
 #endif
-    outValue = FontManager::GetInstance()->InstallFont(fd, userId);
+    outValue = FontManager::GetInstance()->InstallFont(path, userId);
     if (outValue != ERR_OK) {
         FONT_LOGE("FontManagerServer:InstallFont failed.ErrCode:%{public}d", outValue);
     }
@@ -167,7 +167,7 @@ void FontManagerServer::AddUnloadFontServiceTask()
     if (handler_ != nullptr) {
         handler_->PostTask(task, UNLOAD_TASK, DELAY_MILLISECONDS_FOR_UNLOAD_SA);
     } else {
-        FONT_LOGI("FontManagerServer add task failed, handler is nullptr");
+        FONT_LOGE("FontManagerServer add task failed, handler is nullptr");
     }
 }
 
@@ -176,7 +176,7 @@ void FontManagerServer::RemoveUnloadFontServiceTask()
     if (handler_ != nullptr) {
         handler_->RemoveTask(UNLOAD_TASK);
     } else {
-        FONT_LOGI("FontManagerServer remove task failed, handler is nullptr");
+        FONT_LOGE("FontManagerServer remove task failed, handler is nullptr");
     }
 }
 
@@ -184,18 +184,6 @@ void FontManagerServer::OnStart(const SystemAbilityOnDemandReason &startReason)
 {
     std::string reasonName = startReason.GetName();
     FONT_LOGI("FontManagerServer OnStart, startReason name %{public}s", reasonName.c_str());
-    if (reasonName == EventFwk::CommonEventSupport::COMMON_EVENT_USER_ADDED) {
-        std::string userId = startReason.GetValue();
-        std::string installPath = INSTALL_PATH_PREFIX + userId + "/";
-        FontManagerUtils::CheckAndInitInstallPath(installPath);
-    }
-    if (reasonName == EventFwk::CommonEventSupport::COMMON_EVENT_USER_REMOVED) {
-        std::string userId = startReason.GetValue();
-        std::string installPath = INSTALL_PATH_PREFIX + userId + "/";
-        FontManagerUtils::DeleteDir(installPath, true);
-        FONT_LOGI("FontManagerServer DeleteUserInstallDir finish.");
-    }
-
     handler_ = std::make_shared<AppExecFwk::EventHandler>(AppExecFwk::EventRunner::Create(true));
     AddUnloadFontServiceTask();
     bool status = Publish(this);

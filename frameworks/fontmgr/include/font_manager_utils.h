@@ -38,8 +38,9 @@ public:
     static void DeleteDir(const std::string &rootPath, bool isDeleteRootDir);
     static std::vector<int32_t> GetAllCreatedUserIds();
     static void ClearAllTempFileDir();
+    static std::vector<std::string> GetFullNamesByPath(const std::string &path);
 private:
-    static bool CreateFileWithPermission(const std::string &filePath, const std::string &defalutStr = "");
+    static bool CreateFileWithPermission(const std::string &filePath, const std::string &defaultStr = "");
     static bool CopyFileByFd(int32_t sourceFd, int32_t targetFd);
     static bool RemoveAll(const std::filesystem::path &path);
 };

@@ -26,7 +26,8 @@
 namespace OHOS {
 namespace Global {
 namespace FontManager {
-class DataMigrationManager : public DelayedSingleton<DataMigrationManager> {
+class DataMigrationManager : public DelayedSingleton<DataMigrationManager>,
+    public std::enable_shared_from_this<DataMigrationManager> {
     DECLARE_DELAYED_SINGLETON(DataMigrationManager);
 public:
     void DataMigration(const sptr<IDataMigrationCallback>& callback);
@@ -42,7 +43,7 @@ private:
     void EventDataHeartBeat();
     void EventDataProgress(int32_t i, int32_t size, int32_t idsize);
     void EventDataResult(int32_t result);
-    bool InitAllUserDir();
+    bool CheckAllUserDir();
     bool InitDataMigrationTempDir();
     void RefreshEventData(const EventData& eventData);
     std::atomic<bool> isDataMigrationing_ {false};

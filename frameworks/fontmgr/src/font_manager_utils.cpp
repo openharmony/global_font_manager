@@ -28,6 +28,7 @@
 #ifdef ACCOUNT_ENABLE
 #include "os_account_manager.h"
 #endif
+#include "rosen_text/font_tool_set.h"
 
 namespace OHOS {
 namespace Global {
@@ -56,7 +57,7 @@ void FontManagerUtils::ClearAllTempFileDir()
     FONT_LOGI("FontManagerUtils::ClearAllTempFileDir begin.");
     auto userIds = GetAllCreatedUserIds();
     for (const auto &userId : userIds) {
-        std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + "/";
+        std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX;
         if (CheckPathExist(installPath + TEMP_FILE)) {
             DeleteDir(installPath + TEMP_FILE, true);
         }
@@ -69,7 +70,8 @@ bool FontManagerUtils::CheckFontConfigPath(const std::string &installPath)
         return true;
     }
     std::string font_list = R"({
-        "fontlist": []
+        "fontlist": [],
+        "version": 1
     })";
     return CreateFileWithPermission(installPath + FONT_CONFIG_FILE, font_list);
 }
@@ -109,7 +111,7 @@ bool FontManagerUtils::CheckPathExist(const std::string &pathName)
     return ret;
 }
 
-bool FontManagerUtils::CreateFileWithPermission(const std::string &filePath, const std::string &defalutStr)
+bool FontManagerUtils::CreateFileWithPermission(const std::string &filePath, const std::string &defaultStr)
 {
     if (filePath.empty() || strstr(filePath.c_str(), "/.") != NULL || strstr(filePath.c_str(), "./") != NULL) {
         FONT_LOGE("filePath %{public}s is invalid", filePath.c_str());
@@ -122,8 +124,8 @@ bool FontManagerUtils::CreateFileWithPermission(const std::string &filePath, con
         FONT_LOGE("Create File path %{public}s failed", filePath.c_str());
         return false;
     }
-    if (!defalutStr.empty()) {
-        file << defalutStr;
+    if (!defaultStr.empty()) {
+        file << defaultStr;
     }
     file.close();
 
@@ -304,6 +306,17 @@ bool FontManagerUtils::RemoveAll(const std::filesystem::path &path)
         return false;
     }
     return true;
+}
+
+std::vector<std::string> FontManagerUtils::GetFullNamesByPath(const std::string &path)
+{
+    std::vector<std::string> fullNames;
+    auto& fontToolSet = OHOS::Rosen::FontToolSet::GetInstance();
+    fullNames = fontToolSet.GetFontFullName(path);
+    if (fullNames.empty()) {
+        FONT_LOGW("GetFullNamesByPath FullNameList is empty.");
+    }
+    return fullNames;
 }
 } // namespace FontManager
 } // namespace Global

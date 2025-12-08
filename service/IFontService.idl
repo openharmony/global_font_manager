@@ -18,7 +18,7 @@
  import IDataMigrationCallback;
 
  interface OHOS.Global.FontManager.IFontService {
-    void InstallFont([in] FileDescriptor fd, [out] int outValue);
+    void InstallFont([in] String path, [out] int outValue);
     void UninstallFont([in] String fontName, [out] int outValue);
     void DataMigration([in] IDataMigrationCallback callbackInfo);
  }

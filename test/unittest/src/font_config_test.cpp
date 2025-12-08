@@ -25,7 +25,7 @@
 #include <vector>
 
 namespace {
-const std::string INSTALL_PATH_TEST = "/data/service/el1/public/fonts/100/";
+const std::string INSTALL_PATH_TEST = "/data/service/el1/100/for-all-app/fonts/";
 const std::string FONT_CONFIG_FILE_TEST = INSTALL_PATH_TEST + "install_fontconfig.json";
 }
 

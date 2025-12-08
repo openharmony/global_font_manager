@@ -16,12 +16,94 @@
 #include "font_config.h"
 #include "font_hilog.h"
 #include "securec.h"
+#include "font_manager_utils.h"
 
 namespace OHOS {
 namespace Global {
 namespace FontManager {
 static const char *FONT_PATH = "fontfullpath";
 static const char *FONT_FULL_NAME = "fullname";
+static const int32_t VERSION = 1;
+
+bool FontConfig::CheckAndUpdateFontRecord()
+{
+    std::lock_guard<std::mutex> lock(fontsMapLock_);
+    cJSON *jsonValue = cJSON_Parse(CheckConfigFile(ConfigPath_).c_str());
+    if (jsonValue == nullptr) {
+        FONT_LOGE("Parse config file failed");
+        return false;
+    }
+    cJSON *versionJson = cJSON_GetObjectItem(jsonValue, "version");
+    if (cJSON_IsNumber(versionJson)) {
+        cJSON_Delete(jsonValue);
+        return true;
+    }
+    cJSON *fontList = cJSON_GetObjectItem(jsonValue, "fontlist");
+    if (!cJSON_IsArray(fontList)) {
+        FONT_LOGE("Font Config file format incorrect: fontlist missing/invalid");
+        cJSON_Delete(jsonValue);
+        return false;
+    }
+    std::unordered_map<std::string, std::vector<std::string>> fontsMap;
+    int fontSize = cJSON_GetArraySize(fontList);
+    for (int i = 0; i < fontSize; i++) {
+        cJSON *fontFullPath = cJSON_GetObjectItem(cJSON_GetArrayItem(fontList, i), FONT_PATH);
+        if (fontFullPath && fontFullPath->valuestring) {
+            std::string path = fontFullPath->valuestring;
+            fontsMap.emplace(path, FontManagerUtils::GetFullNamesByPath(path));
+        }
+    }
+    cJSON *cJsonData = cJSON_CreateObject();
+    if (!cJsonData) {
+        cJSON_Delete(jsonValue);
+        return false;
+    }
+    cJSON *fontData = CovertFontMapToJsonArray(fontsMap);
+    if (!fontData) {
+        cJSON_Delete(jsonValue);
+        cJSON_Delete(cJsonData);
+        return false;
+    }
+    cJSON_AddItemToObject(cJsonData, "fontlist", fontData);
+    cJSON_AddNumberToObject(cJsonData, "version", VERSION);
+    char *fileData = cJSON_Print(cJsonData);
+    if (!fileData) {
+        cJSON_Delete(jsonValue);
+        cJSON_Delete(cJsonData);
+        return false;
+    }
+    cJSON_Delete(jsonValue);
+    cJSON_Delete(cJsonData);
+    fontsMap_ = std::move(fontsMap);
+    return WriteToFile(fileData);
+}
+
+cJSON* FontConfig::CovertFontMapToJsonArray(const std::unordered_map<std::string, std::vector<std::string>>& fontsMap)
+{
+    cJSON *fontData = cJSON_CreateArray();
+    if (fontData == nullptr) {
+        return nullptr;
+    }
+
+    for (const auto &info : fontsMap) {
+        cJSON *item = cJSON_CreateObject();
+        if (item == nullptr) {
+            continue;
+        }
+        cJSON_AddStringToObject(item, FONT_PATH, info.first.c_str());
+        cJSON *arrData = cJSON_CreateArray();
+        if (arrData == nullptr) {
+            cJSON_Delete(item);
+            continue;
+        }
+        for (const auto &name : info.second) {
+            cJSON_AddItemToArray(arrData, cJSON_CreateString(name.c_str()));
+        }
+        cJSON_AddItemToObject(item, FONT_FULL_NAME, arrData);
+        cJSON_AddItemToArray(fontData, item);
+    }
+    return fontData;
+}
 
 bool FontConfig::InsertFontRecord(const std::string &fontPath, const std::vector<std::string> &fullNames)
 {
@@ -58,36 +140,17 @@ bool FontConfig::DeleteFontRecord(const std::string &fontPath)
         return false;
     }
     fontsMap_.erase(fontPath);
+    cJSON *fontData = CovertFontMapToJsonArray(fontsMap_);
 
-    cJSON *rootData = cJSON_CreateArray();
-    if (rootData == nullptr) {
+    cJSON *jsonValue = cJSON_Parse(CheckConfigFile(ConfigPath_).c_str());
+    if (jsonValue == nullptr) {
+        FONT_LOGE("Parse config file failed");
         return false;
     }
-    for (const auto &info : fontsMap_) {
-        cJSON *item = cJSON_CreateObject();
-        if (item == nullptr) {
-            continue;
-        }
-        cJSON_AddItemToObject(item, FONT_PATH, cJSON_CreateString(info.first.c_str()));
-        cJSON *arrData = cJSON_CreateArray();
-        if (arrData == nullptr) {
-            cJSON_Delete(item);
-            continue;
-        }
-        for (const auto &name : info.second) {
-            cJSON_AddItemToArray(arrData, cJSON_CreateString(name.c_str()));
-        }
-        cJSON_AddItemToObject(item, FONT_FULL_NAME, arrData);
-        cJSON_AddItemToArray(rootData, item);
-    }
-    cJSON *cJsonData = cJSON_CreateObject();
-    if (cJsonData == nullptr) {
-        cJSON_Delete(rootData);
-        return false;
-    }
-    cJSON_AddItemToObject(cJsonData, "fontlist", rootData);
-    char *fileData = cJSON_Print(cJsonData);
-    cJSON_Delete(cJsonData);
+
+    cJSON_ReplaceItemInObject(jsonValue, "fontlist", fontData);
+    char *fileData = cJSON_Print(jsonValue);
+    cJSON_Delete(jsonValue);
     return WriteToFile(fileData);
 }
 

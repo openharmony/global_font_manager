@@ -21,6 +21,7 @@
 #include "font_hilog.h"
 #include "font_manager_utils.h"
 #include "directory_ex.h"
+#include "hisysevent_adapter.h"
 
 namespace OHOS {
 namespace Global {
@@ -50,6 +51,10 @@ void DataMigrationManager::DataMigration(const sptr<IDataMigrationCallback>& cal
     }
     isDataMigrationing_ = false;
     EventDataResult(ret);
+    ret = HisyseventAdapter::GetInstance()->CollectDataMigrationState(userIds_, ret);
+    if (ret != ERR_OK) {
+        FONT_LOGE("FontManager CollectDataMigrationState err.ErrCode:%{public}d", ret);
+    }
     callback_ = nullptr;
 }
 
@@ -75,9 +80,13 @@ int32_t DataMigrationManager::InitDataMigrationEnv()
         FONT_LOGE("FontManager INSTALL_PATH_APP is empty.");
         return ERR_NOT_NEED_DATA_MIGRATION;
     }
-    if (!InitAllUserDir() || !InitDataMigrationTempDir()) {
-        FONT_LOGE("FontManager DataMigrationInner InitDir err.");
-        return ERR_INIT_INSTALL_DIR;
+    if (!CheckAllUserDir()) {
+        FONT_LOGE("FontManager CheckAllUserDir err.");
+        return ERR_CHECK_INSTALL_DIR;
+    }
+    if (!InitDataMigrationTempDir()) {
+        FONT_LOGE("FontManager InitDataMigrationTempDir  err.");
+        return ERR_INIT_TEMP_DIR;
     }
     return ERR_OK;
 }
@@ -96,7 +105,6 @@ int32_t DataMigrationManager::StartDataMigration()
         }
         FONT_LOGI("FontManager::FileCopyTask suc.FileName:%{public}s", FontManagerUtils::GetFileName(paths[i]).c_str());
     }
-    FontManagerUtils::DeleteDir(INSTALL_PATH_PREFIX + TEMP_FILE, true);
     return ERR_OK;
 }
 
@@ -119,8 +127,8 @@ int32_t DataMigrationManager::StartOneFileCopyTask(const std::string& path)
 int32_t DataMigrationManager::CopyFileForDataMigration(const std::string &srcPath, const int32_t userId)
 {
     std::string fileName = FontManagerUtils::GetFileName(srcPath);
-    std::string tempPath = INSTALL_PATH_PREFIX + TEMP_FILE + fileName;
-    std::string desPath = INSTALL_PATH_PREFIX + std::to_string(userId) + "/" + fileName;
+    std::string tempPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX + TEMP_FILE + fileName;
+    std::string desPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX + fileName;
     if (FontManagerUtils::CheckPathExist(desPath)) {
         FONT_LOGI("CopyFileForDataMigration path is exist(%{public}s) ", fileName.c_str());
         return ERR_OK;
@@ -148,11 +156,11 @@ int32_t DataMigrationManager::CopyFileForDataMigration(const std::string &srcPat
 
 void DataMigrationManager::StartHeartBeatTask()
 {
-    std::thread([this]() {
+    std::thread([self = shared_from_this()]() {
         FONT_LOGI("DataMigrationManager HeartBeat thread started.");
-        while (isDataMigrationing_) {
+        while (self->isDataMigrationing_) {
             FONT_LOGI("DataMigrationManager HeartBeat....");
-            EventDataHeartBeat();
+            self->EventDataHeartBeat();
             std::this_thread::sleep_for(std::chrono::seconds(HEARTBEAT_INTERVAL));
         }
         FONT_LOGI("DataMigrationManager HeartBeat thread stoped.");
@@ -198,12 +206,12 @@ void DataMigrationManager::EventDataHeartBeat()
     RefreshEventData(eventData);
 }
 
-bool DataMigrationManager::InitAllUserDir()
+bool DataMigrationManager::CheckAllUserDir()
 {
     for (const auto& userId : userIds_) {
-        std::string path = INSTALL_PATH_PREFIX + std::to_string(userId) + "/";
-        if (!FontManagerUtils::CreateDirWithPermission(path)) {
-            FONT_LOGE("InitAllUserDir CreateDirWithPermission err. userid = %{public}d.", userId);
+        std::string path = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX;
+        if (!FontManagerUtils::CheckPathExist(path)) {
+            FONT_LOGE("CheckAllUserDir CheckUserDir err. userid = %{public}d.", userId);
             return false;
         }
     }
@@ -212,10 +220,12 @@ bool DataMigrationManager::InitAllUserDir()
 
 bool DataMigrationManager::InitDataMigrationTempDir()
 {
-    std::string tempPath = INSTALL_PATH_PREFIX + TEMP_FILE;
-    if (!FontManagerUtils::CheckPathExist(tempPath)) {
-        if (!FontManagerUtils::CreateDirWithPermission(tempPath)) {
-            return false;
+    for (const auto& userId : userIds_) {
+        std::string tempPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX + TEMP_FILE;
+        if (!FontManagerUtils::CheckPathExist(tempPath)) {
+            if (!FontManagerUtils::CreateDirWithPermission(tempPath)) {
+                return false;
+            }
         }
     }
     return true;
@@ -223,8 +233,7 @@ bool DataMigrationManager::InitDataMigrationTempDir()
 
 void DataMigrationManager::RefreshEventData(const EventData& eventData)
 {
-    sptr<IRemoteObject> object = callback_->AsObject();
-    if (object != nullptr) {
+    if (callback_ && callback_->AsObject() != nullptr) {
         callback_->Handle(std::move(eventData));
     }
 }

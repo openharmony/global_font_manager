@@ -15,18 +15,19 @@
 
 #include "font_manager.h"
 
+#include <unistd.h>
 #include <string_ex.h>
+#include <fcntl.h>
 #include "font_hilog.h"
 #include "font_event_publish.h"
 #include "font_manager_utils.h"
 #include "hisysevent_adapter.h"
-#include "text/font_mgr.h"
+#include "font_define.h"
+
 namespace OHOS {
 namespace Global {
 namespace FontManager {
-using namespace Rosen::Drawing;
 static constexpr int32_t MAX_INSTALL_NUM = 200;
-static constexpr int32_t NUM_TWO = 2;
 FontManager::FontManager()
 {
 }
@@ -35,44 +36,45 @@ FontManager::~FontManager()
 {
 }
 
-int32_t FontManager::InstallFont(const int32_t &fd, const int32_t userId)
+int32_t FontManager::InstallFont(const std::string &path, const int32_t userId)
 {
-    std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + "/";
+    std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX;
     if (!(FontManagerUtils::CheckAndInitInstallPath(installPath) &&
         FontManagerUtils::CheckFontConfigPath(installPath))) {
         return ERR_FILE_NOT_EXISTS;
     }
-
-    std::vector<std::string> fullNameVector = GetFontFullName(fd);
-    if (fullNameVector.size() == 0) {
-        return ERR_FILE_VERIFY_FAIL;
-    }
-
     if (configMap_.find(userId) == configMap_.end()) {
         configMap_.emplace(userId, FontConfig(installPath + FONT_CONFIG_FILE));
     }
     auto& fontConfig = configMap_.at(userId);
+    if (!fontConfig.CheckAndUpdateFontRecord()) {
+        FONT_LOGE("CheckAndUpdateFontRecord fail");
+        return ERR_INSTALL_FAIL;
+    }
+    std::vector<std::string> fullNameVector = FontManagerUtils::GetFullNamesByPath(path);
+    if (fullNameVector.size() == 0) {
+        return ERR_FILE_VERIFY_FAIL;
+    }
     for (const auto &fullName : fullNameVector) {
-        std::string path = fontConfig.GetFontFileByName(fullName);
-        if (!path.empty() && !FontManagerUtils::CheckPathExist(GetRealPath(installPath, path))) {
-            if (!fontConfig.DeleteFontRecord(path)) {
+        std::string findPath = fontConfig.GetFontFileByName(fullName);
+        if (!findPath.empty() && !FontManagerUtils::CheckPathExist(GetRealPath(installPath, findPath))) {
+            if (!fontConfig.DeleteFontRecord(findPath)) {
                 FONT_LOGE("fix install_fontconfig fail");
                 return ERR_INSTALL_FAIL;
             }
             break;
         }
-        if (!path.empty()) {
+        if (!findPath.empty()) {
             return ERR_INSTALLED_ALRADY;
         }
     }
     if (fontConfig.GetInstalledFontsNum() >= MAX_INSTALL_NUM) {
         return ERR_MAX_FILE_COUNT;
     }
-    std::string sourcePath = FontManagerUtils::GetFilePathByFd(fd);
-    std::string fileName = FontManagerUtils::GetFileName(sourcePath);
-    std::string destPath = CopyFileForInstall(installPath, fileName, fd);
+    std::string fileName = FontManagerUtils::GetFileName(path);
+    std::string destPath = CopyFileForInstall(installPath, fileName, path);
     if (destPath.empty()) {
-        FONT_LOGE("copy file %{public}s error", sourcePath.c_str());
+        FONT_LOGE("copy file %{public}s error", path.c_str());
         return ERR_COPY_FAIL;
     }
     std::string realFileName = FontManagerUtils::GetFileName(destPath);
@@ -98,52 +100,22 @@ std::string FontManager::GetFormatFullName(const std::vector<std::string> &fullN
     return FormatFullName.substr(0, FormatFullName.size() - split.size());
 }
 
-std::vector<std::string> FontManager::GetFontFullName(const int32_t &fd)
-{
-    std::vector<std::string> fullNameVector;
-    std::vector<FontByteArray> fullNameVec;
-    std::shared_ptr<FontMgr> fontMgr = FontMgr::CreateDefaultFontMgr();
-    if (fontMgr == nullptr) {
-        FONT_LOGE("fontMgr is null");
-        return fullNameVector;
-    }
-
-    int ret = fontMgr->GetFontFullName(fd, fullNameVec);
-    if (ret != ERR_OK) {
-        FONT_LOGE("GetFontFullName failed, err:%{public}d", ret);
-        return fullNameVector;
-    }
-
-    for (const auto &name : fullNameVec) {
-        if (name.strData && name.strLen > 0) {
-            std::string fullnameStr = Utf16BEToUtf8(name.strData.get(), name.strLen);
-            FONT_LOGI("GetFontFullname, fullnameStr:%{public}s", fullnameStr.c_str());
-            fullNameVector.emplace_back(std::move(fullnameStr));
-        }
-    }
-    return fullNameVector;
-}
-
-std::string FontManager::Utf16BEToUtf8(const uint8_t* data, size_t byteLen)
-{
-    std::u16string utf16Str;
-    for (size_t i = 0; i + 1 < byteLen; i += NUM_TWO) {
-        uint16_t ch = (data[i] << 8) | data[i + 1];
-        utf16Str.push_back(static_cast<char16_t>(ch));
-    }
-    // Convert to UTF-8
-    return Str16ToStr8(utf16Str);
-}
-
 std::string FontManager::CopyFileForInstall(const std::string &installPath, const std::string &fileName,
-    const int32_t &fd)
+    const std::string &srcPath)
 {
     std::string tempPath = installPath + TEMP_FILE + fileName;
+    int fd = open(srcPath.c_str(), O_RDONLY);
+    if (fd < 0) {
+        FONT_LOGE("open font file failed, errno: %{public}d", errno);
+        return "";
+    }
     if (!FontManagerUtils::CopyFile(fd, tempPath)) {
         FONT_LOGE("copy file %{public}s error", tempPath.c_str());
         return "";
     }
-
+    if (fd >= 0) {
+        close(fd);
+    }
     std::string destPath = installPath + fileName;
     if (FontManagerUtils::CheckPathExist(destPath)) {
         std::string split = "_";
@@ -160,7 +132,7 @@ std::string FontManager::CopyFileForInstall(const std::string &installPath, cons
 
 int32_t FontManager::UninstallFont(const std::string &fontFullName, const int32_t userId)
 {
-    std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + "/";
+    std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX;
     if (fontFullName.empty()) {
         FONT_LOGE("FontManager::UninstallFont, fontName is empty");
         return ERR_UNINSTALL_FILE_NOT_EXISTS;
@@ -169,6 +141,10 @@ int32_t FontManager::UninstallFont(const std::string &fontFullName, const int32_
         configMap_.emplace(userId, FontConfig(installPath + FONT_CONFIG_FILE));
     }
     auto& fontConfig = configMap_.at(userId);
+    if (!fontConfig.CheckAndUpdateFontRecord()) {
+        FONT_LOGE("CheckAndUpdateFontRecord fail");
+        return ERR_UNINSTALL_FAIL;
+    }
     std::string path = fontConfig.GetFontFileByName(fontFullName);
     if (path.empty()) {
         FONT_LOGE("Can't find fontFullName = %{public}s", fontFullName.c_str());

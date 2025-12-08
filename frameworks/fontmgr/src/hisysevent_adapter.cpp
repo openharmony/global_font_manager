@@ -24,6 +24,7 @@
 #include "directory_ex.h"
 #include "font_hilog.h"
 #include "hisysevent.h"
+#include "font_define.h"
 
 namespace OHOS {
 namespace Global {
@@ -32,7 +33,7 @@ using HiSysEventNameSpace = OHOS::HiviewDFX::HiSysEvent;
 
 static const std::string DATA_PARTITION_NAME = "/data";
 static const std::string COMPONENT_NAME = "font_manager";
-
+static constexpr char FONT_MANAGER[] = "FONT_MANAGER";
 HisyseventAdapter::HisyseventAdapter() {}
 HisyseventAdapter::~HisyseventAdapter() {}
 
@@ -48,6 +49,29 @@ int HisyseventAdapter::CollectUserDataSize(const std::string &path)
         "REMAIN_PARTITION_SIZE", remainPartitionSize, "FILE_OR_FOLDER_PATH", fileOrFolderPath, "FILE_OR_FOLDER_SIZE",
         fileOrFolderSize);
     return ret;
+}
+
+int HisyseventAdapter::CollectDataMigrationState(const std::vector<int32_t> &userIds, int32_t result)
+{
+    int32_t count = 0;
+    int64_t size = 0;
+    int32_t userCount = 0;
+    if (!userIds.empty()) {
+        std::vector<std::string> sucPaths;
+        OHOS::GetDirFiles(INSTALL_PATH_PREFIX + std::to_string(userIds.back()) + INSTALL_PATH_SUFFIX, sucPaths);
+        count = sucPaths.size();
+        size = OHOS::GetFolderSize(INSTALL_PATH_PREFIX + std::to_string(userIds.back()) + INSTALL_PATH_SUFFIX);
+        userCount = userIds.size();
+    }
+    std::vector<std::string> errPaths;
+    OHOS::GetDirFiles(INSTALL_PATH_APP, errPaths);
+    int32_t errCount = errPaths.size();
+    int64_t errSize = OHOS::GetFolderSize(INSTALL_PATH_APP);
+    int64_t freeRom = static_cast<int64_t>(GetDataPartitionRemainSize());
+    return HiSysEventWrite(FONT_MANAGER, "FONT_DATA_MIGRATION",
+        HiSysEventNameSpace::EventType::STATISTIC, "COUNT", count, "SIZE", size,
+        "COUNT_ERR", errCount, "SIZE_ERR", errSize, "USER_COUNT",
+        userCount, "FREE_ROM", freeRom, "STATE", result);
 }
 
 std::uint64_t HisyseventAdapter::GetDataPartitionRemainSize()
