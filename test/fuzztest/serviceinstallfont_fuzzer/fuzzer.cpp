@@ -23,7 +23,7 @@
 namespace OHOS {
 namespace Global {
 namespace FontManager {
-void ServiceInstallFuzz(const std::string &path)
+void ServiceInstallFuzz(const int32_t fd)
 {
     std::string processName = "ServiceInstallFuzz";
     PermissionCommon::SetFontManagerPermission(processName);
@@ -34,15 +34,15 @@ void ServiceInstallFuzz(const std::string &path)
         return;
     }
     int32_t result;
-    (void)service->InstallFont(path, result);
+    (void)service->InstallFont(fd, result);
 }
 
 /* Fuzzer entry point */
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* input, size_t size)
 {
-    std::string path = NewString(input, size);
+    int32_t fd = NewInt32(input, size);
 
-    ServiceInstallFuzz(path);
+    ServiceInstallFuzz(fd);
 
     return 0;
 }

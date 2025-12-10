@@ -28,6 +28,7 @@ static const int32_t VERSION = 1;
 bool FontConfig::CheckAndUpdateFontRecord()
 {
     std::lock_guard<std::mutex> lock(fontsMapLock_);
+    FONT_LOGI("CheckAndUpdateFontRecord start");
     cJSON *jsonValue = cJSON_Parse(CheckConfigFile(ConfigPath_).c_str());
     if (jsonValue == nullptr) {
         FONT_LOGE("Parse config file failed");
@@ -50,7 +51,7 @@ bool FontConfig::CheckAndUpdateFontRecord()
         cJSON *fontFullPath = cJSON_GetObjectItem(cJSON_GetArrayItem(fontList, i), FONT_PATH);
         if (fontFullPath && fontFullPath->valuestring) {
             std::string path = fontFullPath->valuestring;
-            fontsMap.emplace(path, FontManagerUtils::GetFullNamesByPath(path));
+            fontsMap.emplace(path, FontManagerUtils::GetFullNamesByPath(SandBoxPathToRealPath(path)));
         }
     }
     cJSON *cJsonData = cJSON_CreateObject();
@@ -103,6 +104,13 @@ cJSON* FontConfig::CovertFontMapToJsonArray(const std::unordered_map<std::string
         cJSON_AddItemToArray(fontData, item);
     }
     return fontData;
+}
+
+std::string FontConfig::SandBoxPathToRealPath(const std::string &path)
+{
+    std::string fileName = FontManagerUtils::GetFileName(path);
+    std::string directory = FontManagerUtils::GetFileDirectory(ConfigPath_);
+    return directory + fileName;
 }
 
 bool FontConfig::InsertFontRecord(const std::string &fontPath, const std::vector<std::string> &fullNames)

@@ -30,6 +30,7 @@ public:
     static bool CheckFontConfigPath(const std::string &installPath);
     static bool CreateDirWithPermission(const std::string &fileDir);
     static std::string GetFileName(const std::string &path);
+    static std::string GetFileDirectory(const std::string &path);
     static bool CopyFile(int32_t sourceFd, const std::string& path);
     static std::string GetFilePathByFd(const int32_t &fd);
     static bool RenameFile(const std::string& src, const std::string& dest);
@@ -38,6 +39,7 @@ public:
     static void DeleteDir(const std::string &rootPath, bool isDeleteRootDir);
     static std::vector<int32_t> GetAllCreatedUserIds();
     static void ClearAllTempFileDir();
+    static std::vector<std::string> GetFullNamesByFd(const int32_t &fd);
     static std::vector<std::string> GetFullNamesByPath(const std::string &path);
 private:
     static bool CreateFileWithPermission(const std::string &filePath, const std::string &defaultStr = "");

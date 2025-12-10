@@ -189,6 +189,16 @@ std::string FontManagerUtils::GetFileName(const std::string &path)
     return path.substr(pos + 1);
 }
 
+std::string FontManagerUtils::GetFileDirectory(const std::string &path)
+{
+    std::string split = "/";
+    size_t pos = path.find_last_of(split);
+    if (pos == std::string::npos) {
+        return "";
+    }
+    return path.substr(0, pos + 1);
+}
+
 bool FontManagerUtils::CopyFile(int32_t sourceFd, const std::string& path)
 {
     constexpr int32_t filePermission = 0644;
@@ -308,13 +318,33 @@ bool FontManagerUtils::RemoveAll(const std::filesystem::path &path)
     return true;
 }
 
-std::vector<std::string> FontManagerUtils::GetFullNamesByPath(const std::string &path)
+std::vector<std::string> FontManagerUtils::GetFullNamesByFd(const int32_t &fd)
 {
     std::vector<std::string> fullNames;
     auto& fontToolSet = OHOS::Rosen::FontToolSet::GetInstance();
-    fullNames = fontToolSet.GetFontFullName(path);
+    fullNames = fontToolSet.GetFontFullName(fd);
     if (fullNames.empty()) {
-        FONT_LOGW("GetFullNamesByPath FullNameList is empty.");
+        FONT_LOGE("GetFullNamesByPath FullNameList is empty.");
+    }
+    return fullNames;
+}
+
+std::vector<std::string> FontManagerUtils::GetFullNamesByPath(const std::string &path)
+{
+    FONT_LOGI("GetFullNamesByPath FullNameList path:%{public}s", path.c_str());
+    std::vector<std::string> fullNames;
+    int fd = open(path.c_str(), O_RDONLY);
+    if (fd < 0) {
+        FONT_LOGE("open font file failed, errno: %{public}d", errno);
+        return fullNames;
+    }
+    auto& fontToolSet = OHOS::Rosen::FontToolSet::GetInstance();
+    fullNames = fontToolSet.GetFontFullName(fd);
+    if (fullNames.empty()) {
+        FONT_LOGE("GetFullNamesByPath FullNameList is empty.");
+    }
+    if (fd >= 0) {
+        close(fd);
     }
     return fullNames;
 }

@@ -55,6 +55,7 @@ private:
     std::unordered_map<std::string, std::vector<std::string>> GetFontsMap(const std::string &filePath);
     bool WriteToFile(char *jsonData);
     cJSON* CovertFontMapToJsonArray(const std::unordered_map<std::string, std::vector<std::string>>& fontsMap);
+    std::string SandBoxPathToRealPath(const std::string &path);
 private:
     std::unordered_map<std::string, std::vector<std::string>> fontsMap_;
     std::string ConfigPath_;

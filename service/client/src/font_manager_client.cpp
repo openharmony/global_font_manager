@@ -41,7 +41,18 @@ int32_t FontManagerClient::InstallFont(const std::string &fontPath, int &outValu
         outValue = ERR_FILE_NOT_EXISTS;
         return ERR_OK;
     }
-    return service->InstallFont(realPath, outValue);
+    int fd = open(realPath.c_str(), O_RDONLY);
+    if (fd < 0) {
+        FONT_LOGE("open font file failed, errno: %{public}d", errno);
+        outValue = ERR_FILE_NOT_EXISTS;
+        return ERR_OK;
+    }
+
+    int32_t ret = service->InstallFont(fd, outValue);
+    if (fd >= 0) {
+        close(fd);
+    }
+    return ret;
 }
 
 int32_t FontManagerClient::UninstallFont(const std::string &fontName, int &outValue)

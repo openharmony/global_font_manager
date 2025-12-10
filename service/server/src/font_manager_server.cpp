@@ -43,17 +43,17 @@ FontManagerServer::FontManagerServer(int32_t saId, bool runOnCreate) : SystemAbi
 {
 }
 
-int32_t FontManagerServer::InstallFont(const std::string &path, int32_t &outValue)
+int32_t FontManagerServer::InstallFont(const int32_t fd, int32_t &outValue)
 {
     RemoveUnloadFontServiceTask();
     callingCount_++;
-    InstallFontInner(path, outValue);
+    InstallFontInner(fd, outValue);
     callingCount_--;
     AddUnloadFontServiceTask();
     return ERR_OK;
 }
 
-void FontManagerServer::InstallFontInner(const std::string &path, int32_t &outValue)
+void FontManagerServer::InstallFontInner(const int32_t fd, int32_t &outValue)
 {
     int32_t userId = INVALID_USERID;
     int32_t ret = CheckPermission();
@@ -72,7 +72,7 @@ void FontManagerServer::InstallFontInner(const std::string &path, int32_t &outVa
     outValue = ERR_INSTALL_FAIL;
     return;
 #endif
-    outValue = FontManager::GetInstance()->InstallFont(path, userId);
+    outValue = FontManager::GetInstance()->InstallFont(fd, userId);
     if (outValue != ERR_OK) {
         FONT_LOGE("FontManagerServer:InstallFont failed.ErrCode:%{public}d", outValue);
     }

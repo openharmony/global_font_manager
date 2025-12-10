@@ -35,7 +35,7 @@ public:
 
     ~FontManagerServer() override = default;
 
-    int32_t InstallFont(const std::string &path, int32_t &outValue) override;
+    int32_t InstallFont(const int32_t fd, int32_t &outValue) override;
 
     int32_t UninstallFont(const std::string &fontName, int32_t &outValue) override;
 
@@ -47,7 +47,7 @@ protected:
     void OnStop(const SystemAbilityOnDemandReason &startReason) override;
 
 private:
-    void InstallFontInner(const std::string &path, int32_t &outValue);
+    void InstallFontInner(const int32_t fd, int32_t &outValue);
     void UninstallFontInner(const std::string &fontName, int32_t &outValue);
     int32_t DataMigrationInner(const sptr<IDataMigrationCallback>& callback);
     void AddUnloadFontServiceTask();
