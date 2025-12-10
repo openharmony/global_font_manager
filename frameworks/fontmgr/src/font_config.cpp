@@ -28,10 +28,9 @@ static const int32_t VERSION = 1;
 bool FontConfig::CheckAndUpdateFontRecord()
 {
     std::lock_guard<std::mutex> lock(fontsMapLock_);
-    FONT_LOGI("CheckAndUpdateFontRecord start");
     cJSON *jsonValue = cJSON_Parse(CheckConfigFile(ConfigPath_).c_str());
     if (jsonValue == nullptr) {
-        FONT_LOGE("Parse config file failed");
+        FONT_LOGE("CheckAndUpdateFontRecord Parse config file failed");
         return false;
     }
     cJSON *versionJson = cJSON_GetObjectItem(jsonValue, "version");
@@ -41,7 +40,6 @@ bool FontConfig::CheckAndUpdateFontRecord()
     }
     cJSON *fontList = cJSON_GetObjectItem(jsonValue, "fontlist");
     if (!cJSON_IsArray(fontList)) {
-        FONT_LOGE("Font Config file format incorrect: fontlist missing/invalid");
         cJSON_Delete(jsonValue);
         return false;
     }

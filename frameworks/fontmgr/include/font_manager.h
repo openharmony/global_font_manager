@@ -25,7 +25,7 @@ namespace FontManager {
 class FontManager : public DelayedSingleton<FontManager> {
     DECLARE_DELAYED_SINGLETON(FontManager);
 public:
-    int32_t InstallFont(const int32_t fd, const int32_t userId);
+    int32_t InstallFont(const int32_t &fd, const int32_t userId);
     int32_t UninstallFont(const std::string &fontFullName, const int32_t userId);
 
 private:

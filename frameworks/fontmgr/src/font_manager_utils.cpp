@@ -49,7 +49,7 @@ bool FontManagerUtils::CheckAndInitInstallPath(const std::string &installPath)
             return false;
         }
     }
-    return true;
+    return CheckFontConfigPath(installPath);
 }
 
 void FontManagerUtils::ClearAllTempFileDir()

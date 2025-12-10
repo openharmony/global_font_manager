@@ -36,11 +36,10 @@ FontManager::~FontManager()
 {
 }
 
-int32_t FontManager::InstallFont(const int32_t fd, const int32_t userId)
+int32_t FontManager::InstallFont(const int32_t &fd, const int32_t userId)
 {
     std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX;
-    if (!(FontManagerUtils::CheckAndInitInstallPath(installPath) &&
-        FontManagerUtils::CheckFontConfigPath(installPath))) {
+    if (!(FontManagerUtils::CheckAndInitInstallPath(installPath))) {
         return ERR_FILE_NOT_EXISTS;
     }
     if (configMap_.find(userId) == configMap_.end()) {
