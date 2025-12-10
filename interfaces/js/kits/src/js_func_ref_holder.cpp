@@ -71,7 +71,9 @@ JsFuncRefHolder::~JsFuncRefHolder()
         napi_delete_reference(handler->env, handler->ref);
     };
     if (napi_send_event(env_, task, napi_eprio_immediate) != napi_status::napi_ok) {
-        napi_delete_reference(env_, ref_);
+        if (env_ != nullptr) {
+            napi_delete_reference(env_, ref_);
+        }
     }
 }
 

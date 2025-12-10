@@ -42,10 +42,7 @@ int32_t FontManager::InstallFont(const int32_t &fd, const int32_t userId)
     if (!(FontManagerUtils::CheckAndInitInstallPath(installPath))) {
         return ERR_FILE_NOT_EXISTS;
     }
-    if (configMap_.find(userId) == configMap_.end()) {
-        configMap_.emplace(userId, FontConfig(installPath + FONT_CONFIG_FILE));
-    }
-    auto& fontConfig = configMap_.at(userId);
+    auto& fontConfig = configMap_.try_emplace(userId, FontConfig(installPath + FONT_CONFIG_FILE)).first->second;
     if (!fontConfig.CheckAndUpdateFontRecord()) {
         FONT_LOGE("CheckAndUpdateFontRecord fail");
         return ERR_INSTALL_FAIL;
@@ -56,30 +53,27 @@ int32_t FontManager::InstallFont(const int32_t &fd, const int32_t userId)
     }
     for (const auto &fullName : fullNameVector) {
         std::string findPath = fontConfig.GetFontFileByName(fullName);
-        if (!findPath.empty() && !FontManagerUtils::CheckPathExist(SandBoxPathToRealPath(installPath, findPath))) {
-            if (!fontConfig.DeleteFontRecord(findPath)) {
-                FONT_LOGE("fix install_fontconfig fail");
-                return ERR_INSTALL_FAIL;
-            }
-            break;
+        if (findPath.empty()) {
+            continue;
         }
-        if (!findPath.empty()) {
+        if (FontManagerUtils::CheckPathExist(SandBoxPathToRealPath(installPath, findPath))) {
             return ERR_INSTALLED_ALRADY;
+        }
+        if (!fontConfig.DeleteFontRecord(findPath)) {
+            FONT_LOGE("fix install_fontconfig fail");
+            return ERR_INSTALL_FAIL;
         }
     }
     if (fontConfig.GetInstalledFontsNum() >= MAX_INSTALL_NUM) {
         return ERR_MAX_FILE_COUNT;
     }
-    std::string sourcePath = FontManagerUtils::GetFilePathByFd(fd);
-    std::string fileName = FontManagerUtils::GetFileName(sourcePath);
+    std::string fileName = FontManagerUtils::GetFileName(FontManagerUtils::GetFilePathByFd(fd));
     std::string destPath = CopyFileForInstall(installPath, fileName, fd);
     if (destPath.empty()) {
-        FONT_LOGE("copy file %{public}s error", sourcePath.c_str());
         return ERR_COPY_FAIL;
     }
     std::string realFileName = FontManagerUtils::GetFileName(destPath);
-    std::string jsonPath = INSTALL_PATH_APP + realFileName;
-    if (!fontConfig.InsertFontRecord(jsonPath, fullNameVector)) {
+    if (!fontConfig.InsertFontRecord(INSTALL_PATH_APP + realFileName, fullNameVector)) {
         FontManagerUtils::DeleteDir(destPath, true);
         FONT_LOGE("update install_fontconfig fail, fileName = %{public}s", realFileName.c_str());
         return ERR_INSTALL_FAIL;
@@ -130,10 +124,7 @@ int32_t FontManager::UninstallFont(const std::string &fontFullName, const int32_
         FONT_LOGE("FontManager::UninstallFont, fontName is empty");
         return ERR_UNINSTALL_FILE_NOT_EXISTS;
     }
-    if (configMap_.find(userId) == configMap_.end()) {
-        configMap_.emplace(userId, FontConfig(installPath + FONT_CONFIG_FILE));
-    }
-    auto& fontConfig = configMap_.at(userId);
+    auto& fontConfig = configMap_.try_emplace(userId, FontConfig(installPath + FONT_CONFIG_FILE)).first->second;
     if (!fontConfig.CheckAndUpdateFontRecord()) {
         FONT_LOGE("CheckAndUpdateFontRecord fail");
         return ERR_UNINSTALL_FAIL;

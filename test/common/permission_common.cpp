@@ -36,7 +36,7 @@ void PermissionCommon::SetFontManagerPermission(const std::string &processName)
     const char* perms[PERMISSION_NUM] = {
         "ohos.permission.MANAGE_LOCAL_ACCOUNTS",
     };
-
+    std::string process = processName;
     NativeTokenInfoParams infoInstance = {
         .dcapsNum = 0,
         .permsNum = PERMISSION_NUM,
@@ -44,7 +44,7 @@ void PermissionCommon::SetFontManagerPermission(const std::string &processName)
         .dcaps = nullptr,
         .perms = perms,
         .acls = nullptr,
-        .processName = processName.c_str(),
+        .processName = process.c_str(),
         .aplStr = "system_basic",
     };
 
