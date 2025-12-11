@@ -45,7 +45,8 @@ enum FontErrorCode {
 enum DataMigrationResultCode {
     ERR_NOT_NEED_DATA_MIGRATION = 1,
     ERR_GET_ALL_USERIDS,
-    ERR_INIT_INSTALL_DIR,
+    ERR_CHECK_INSTALL_DIR,
+    ERR_INIT_TEMP_DIR,
     ERR_OPEN_SRC_FILE,
     ERR_COPY_FILE,
     ERR_RENAME_FILE,
@@ -54,7 +55,8 @@ enum DataMigrationResultCode {
 
 const int FONT_SA_ID = 66262;
 const std::string INSTALL_PATH_APP = "/data/service/el1/public/for-all-app/fonts/";
-const std::string INSTALL_PATH_PREFIX = "/data/service/el1/public/fonts/";
+const std::string INSTALL_PATH_PREFIX = "/data/service/el1/";
+const std::string INSTALL_PATH_SUFFIX = "/for-all-app/fonts/";
 const std::string FONT_CONFIG_FILE = "install_fontconfig.json";
 const std::string TEMP_FILE = "temp/";
 } // namespace FontManager

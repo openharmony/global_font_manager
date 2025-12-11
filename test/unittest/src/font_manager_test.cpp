@@ -33,8 +33,8 @@
 #include "directory_ex.h"
 
 namespace {
-const std::string INSTALL_PATH_TEST = "/data/service/el1/public/fonts/100/";
-const std::string TEMP_PATH_TEST = "/data/service/el1/public/fonts/100/temp/";
+const std::string INSTALL_PATH_TEST = "/data/service/el1/100/for-all-app/fonts/";
+const std::string TEMP_PATH_TEST = "/data/service/el1/100/for-all-app/fonts/temp/";
 const std::string FONT_CONFIG_FILE_TEST = INSTALL_PATH_TEST + "install_fontconfig.json";
 const std::string FONT_PATH = "/data/test/TestFont_Sans.ttf";
 const std::string FONT_FULL_NAME = "HarmonyOS Sans";
@@ -140,14 +140,9 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest002, TestSize.Level1)
  */
 HWTEST_F(FontManagerTest, FontManagerFuncTest003, TestSize.Level1)
 {
-    int fd = open(FONT_PATH.c_str(), O_RDONLY);
-    EXPECT_EQ(fd >= 0, true);
-    auto fullNameVector = manager_->GetFontFullName(fd);
+    auto fullNameVector = FontManagerUtils::GetFullNamesByPath(FONT_PATH);
     std::vector<std::string> fullName{FONT_FULL_NAME};
     EXPECT_EQ(fullName, fullNameVector);
-    if (fd >= 0) {
-        close(fd);
-    }
 }
 
 /**
@@ -162,41 +157,21 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest004, TestSize.Level1)
     const std::string errorType = "/data/test/errorType.txt";
     const std::string errorTTCPath = "/data/test/errorTTC.ttc";
     const std::string emptyTTCPath = "/data/test/emptyTTC.ttc";
-    int fd = open(errTTFPath.c_str(), O_RDONLY);
-    EXPECT_EQ(fd >= 0, true);
-    auto fullNameVector = manager_->GetFontFullName(fd);
+
+    auto fullNameVector = FontManagerUtils::GetFullNamesByPath(errTTFPath);
     EXPECT_EQ(fullNameVector.size(), 0);
-    if (fd >= 0) {
-        close(fd);
-    }
-    fd = open(emptyTTFPath.c_str(), O_RDONLY);
-    EXPECT_EQ(fd >= 0, true);
-    fullNameVector = manager_->GetFontFullName(fd);
+
+    fullNameVector = FontManagerUtils::GetFullNamesByPath(emptyTTFPath);
     EXPECT_EQ(fullNameVector.size(), 0);
-    if (fd >= 0) {
-        close(fd);
-    }
-    fd = open(errorType.c_str(), O_RDONLY);
-    EXPECT_EQ(fd >= 0, true);
-    fullNameVector = manager_->GetFontFullName(fd);
+
+    fullNameVector = FontManagerUtils::GetFullNamesByPath(errorType);
     EXPECT_EQ(fullNameVector.size(), 0);
-    if (fd >= 0) {
-        close(fd);
-    }
-    fd = open(errorTTCPath.c_str(), O_RDONLY);
-    EXPECT_EQ(fd >= 0, true);
-    fullNameVector = manager_->GetFontFullName(fd);
+
+    fullNameVector = FontManagerUtils::GetFullNamesByPath(errorTTCPath);
     EXPECT_EQ(fullNameVector.size(), 0);
-    if (fd >= 0) {
-        close(fd);
-    }
-    fd = open(emptyTTCPath.c_str(), O_RDONLY);
-    EXPECT_EQ(fd >= 0, true);
-    fullNameVector = manager_->GetFontFullName(fd);
+
+    fullNameVector = FontManagerUtils::GetFullNamesByPath(emptyTTCPath);
     EXPECT_EQ(fullNameVector.size(), 0);
-    if (fd >= 0) {
-        close(fd);
-    }
 }
 
 /**
@@ -302,16 +277,11 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest009, TestSize.Level1)
  */
 HWTEST_F(FontManagerTest, FontManagerFuncTest010, TestSize.Level1)
 {
-    int fd = open(TTC_FONT_PATH.c_str(), O_RDONLY);
-    EXPECT_EQ(fd >= 0, true);
-    auto fullNameVector = manager_->GetFontFullName(fd);
+    auto fullNameVector = FontManagerUtils::GetFullNamesByPath(TTC_FONT_PATH);
     std::sort(fullNameVector.begin(), fullNameVector.end());
     auto ttcFullName = TTC_FONT_FULL_NAME;
     std::sort(ttcFullName.begin(), ttcFullName.end());
     EXPECT_EQ(fullNameVector, ttcFullName);
-    if (fd >= 0) {
-        close(fd);
-    }
 }
 
 /**

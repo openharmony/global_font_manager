@@ -47,13 +47,15 @@ public:
     bool DeleteFontRecord(const std::string &fontPath);
     int GetInstalledFontsNum();
     std::string GetFontFileByName(const std::string &fullName);
- 
+    bool CheckAndUpdateFontRecord();
 private:
     char *GetFileData(const std::string &filePath, long &size);
     std::string CheckConfigFile(const std::string &fontPath);
     cJSON *ConstructCJSON(const std::string &fontFullPath, const std::vector<std::string> &fullName);
     std::unordered_map<std::string, std::vector<std::string>> GetFontsMap(const std::string &filePath);
     bool WriteToFile(char *jsonData);
+    cJSON* CovertFontMapToJsonArray(const std::unordered_map<std::string, std::vector<std::string>>& fontsMap);
+    std::string SandBoxPathToRealPath(const std::string &path);
 private:
     std::unordered_map<std::string, std::vector<std::string>> fontsMap_;
     std::string ConfigPath_;

@@ -49,6 +49,28 @@ HWTEST_F(HisyseventAdapterTest, CollectUserDataSize, TestSize.Level1)
 }
 
 /* *
+ * @tc.name: CollectDataMigrationState01
+ * @tc.desc: Normal
+ * @tc.type FUNC
+ */
+HWTEST_F(HisyseventAdapterTest, CollectDataMigrationState01, TestSize.Level1)
+{
+    std::shared_ptr<HisyseventAdapter> adapter = HisyseventAdapter::GetInstance();
+    EXPECT_EQ(adapter->CollectDataMigrationState({}, 0), 0);
+}
+
+/* *
+ * @tc.name: CollectDataMigrationState02
+ * @tc.desc: Normal
+ * @tc.type FUNC
+ */
+HWTEST_F(HisyseventAdapterTest, CollectDataMigrationState02, TestSize.Level1)
+{
+    std::shared_ptr<HisyseventAdapter> adapter = HisyseventAdapter::GetInstance();
+    EXPECT_EQ(adapter->CollectDataMigrationState({100}, 0), 0);
+}
+
+/* *
  * @tc.name: GetDataPartitionRemainSize
  * @tc.desc: Test GetDataPartitionRemainSize
  * @tc.type FUNC

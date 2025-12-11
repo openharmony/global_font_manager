@@ -28,6 +28,7 @@
 #ifdef ACCOUNT_ENABLE
 #include "os_account_manager.h"
 #endif
+#include "rosen_text/font_tool_set.h"
 
 namespace OHOS {
 namespace Global {
@@ -48,7 +49,7 @@ bool FontManagerUtils::CheckAndInitInstallPath(const std::string &installPath)
             return false;
         }
     }
-    return true;
+    return CheckFontConfigPath(installPath);
 }
 
 void FontManagerUtils::ClearAllTempFileDir()
@@ -56,7 +57,7 @@ void FontManagerUtils::ClearAllTempFileDir()
     FONT_LOGI("FontManagerUtils::ClearAllTempFileDir begin.");
     auto userIds = GetAllCreatedUserIds();
     for (const auto &userId : userIds) {
-        std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + "/";
+        std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX;
         if (CheckPathExist(installPath + TEMP_FILE)) {
             DeleteDir(installPath + TEMP_FILE, true);
         }
@@ -69,7 +70,8 @@ bool FontManagerUtils::CheckFontConfigPath(const std::string &installPath)
         return true;
     }
     std::string font_list = R"({
-        "fontlist": []
+        "fontlist": [],
+        "version": 1
     })";
     return CreateFileWithPermission(installPath + FONT_CONFIG_FILE, font_list);
 }
@@ -109,7 +111,7 @@ bool FontManagerUtils::CheckPathExist(const std::string &pathName)
     return ret;
 }
 
-bool FontManagerUtils::CreateFileWithPermission(const std::string &filePath, const std::string &defalutStr)
+bool FontManagerUtils::CreateFileWithPermission(const std::string &filePath, const std::string &defaultStr)
 {
     if (filePath.empty() || strstr(filePath.c_str(), "/.") != NULL || strstr(filePath.c_str(), "./") != NULL) {
         FONT_LOGE("filePath %{public}s is invalid", filePath.c_str());
@@ -122,8 +124,8 @@ bool FontManagerUtils::CreateFileWithPermission(const std::string &filePath, con
         FONT_LOGE("Create File path %{public}s failed", filePath.c_str());
         return false;
     }
-    if (!defalutStr.empty()) {
-        file << defalutStr;
+    if (!defaultStr.empty()) {
+        file << defaultStr;
     }
     file.close();
 
@@ -185,6 +187,16 @@ std::string FontManagerUtils::GetFileName(const std::string &path)
         return path;
     }
     return path.substr(pos + 1);
+}
+
+std::string FontManagerUtils::GetFileDirectory(const std::string &path)
+{
+    std::string split = "/";
+    size_t pos = path.find_last_of(split);
+    if (pos == std::string::npos) {
+        return "";
+    }
+    return path.substr(0, pos + 1);
 }
 
 bool FontManagerUtils::CopyFile(int32_t sourceFd, const std::string& path)
@@ -304,6 +316,37 @@ bool FontManagerUtils::RemoveAll(const std::filesystem::path &path)
         return false;
     }
     return true;
+}
+
+std::vector<std::string> FontManagerUtils::GetFullNamesByFd(const int32_t &fd)
+{
+    std::vector<std::string> fullNames;
+    auto& fontToolSet = OHOS::Rosen::FontToolSet::GetInstance();
+    fullNames = fontToolSet.GetFontFullName(fd);
+    if (fullNames.empty()) {
+        FONT_LOGE("GetFullNamesByPath FullNameList is empty.");
+    }
+    return fullNames;
+}
+
+std::vector<std::string> FontManagerUtils::GetFullNamesByPath(const std::string &path)
+{
+    FONT_LOGI("GetFullNamesByPath FullNameList path:%{public}s", path.c_str());
+    std::vector<std::string> fullNames;
+    int fd = open(path.c_str(), O_RDONLY);
+    if (fd < 0) {
+        FONT_LOGE("open font file failed, errno: %{public}d", errno);
+        return fullNames;
+    }
+    auto& fontToolSet = OHOS::Rosen::FontToolSet::GetInstance();
+    fullNames = fontToolSet.GetFontFullName(fd);
+    if (fullNames.empty()) {
+        FONT_LOGE("GetFullNamesByPath FullNameList is empty.");
+    }
+    if (fd >= 0) {
+        close(fd);
+    }
+    return fullNames;
 }
 } // namespace FontManager
 } // namespace Global

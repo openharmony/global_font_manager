@@ -29,7 +29,7 @@ struct DeleteRefHolder {
 };
 }
 
-JsFuncRefHolder::JsFuncRefHolder(napi_env env, napi_value value)
+JsFuncRefHolder::JsFuncRefHolder(napi_env env, napi_value value) : env_(nullptr), ref_(nullptr)
 {
     if (env == nullptr || value == nullptr) {
         FONT_LOGE("JsFuncRefHolder env or value is null.");
@@ -59,30 +59,21 @@ JsFuncRefHolder::~JsFuncRefHolder()
     uv_loop_s *loop = nullptr;
     napi_status napiStatus = napi_get_uv_event_loop(env_, &loop);
     if (napiStatus != napi_ok || loop == nullptr) {
+        napi_delete_reference(env_, ref_);
         FONT_LOGE("JsFuncRefHolder napi_get_uv_event_loop fail.");
         return;
     }
-    std::shared_ptr<DeleteRefHolder> deleteRefHolder = std::make_shared<DeleteRefHolder>();
-    if (deleteRefHolder == nullptr) {
-        FONT_LOGE("JsFuncRefHolder deleteRefHolder is nullptr.");
-        return;
-    }
+    std::shared_ptr<DeleteRefHolder> deleteRefHolder = std::make_unique<DeleteRefHolder>();
     deleteRefHolder->env = env_;
     deleteRefHolder->ref = ref_;
-    auto task = [deleteRefHolder] () {
-        FONT_LOGI("JsFuncRefHolder deleteRefHolder start.");
-        if (deleteRefHolder == nullptr) {
-            FONT_LOGE("JsFuncRefHolder deleteRefHolder is nullptr.");
-            return;
-        }
-        napi_status ret = napi_delete_reference(deleteRefHolder->env, deleteRefHolder->ref);
-        if (ret != napi_ok) {
-            FONT_LOGE("JsFuncRefHolder napi_delete_reference fail %{public}d.", ret);
-            return;
-        }
+    auto task = [handler = std::move(deleteRefHolder)] () {
+        FONT_LOGI("JsFuncRefHolder deleteRefHoldertask start.");
+        napi_delete_reference(handler->env, handler->ref);
     };
-    if (napi_status::napi_ok != napi_send_event(env_, task, napi_eprio_immediate)) {
-        FONT_LOGE("JsFuncRefHolder napi_send_event faid.");
+    if (napi_send_event(env_, task, napi_eprio_immediate) != napi_status::napi_ok) {
+        if (env_ != nullptr) {
+            napi_delete_reference(env_, ref_);
+        }
     }
 }
 

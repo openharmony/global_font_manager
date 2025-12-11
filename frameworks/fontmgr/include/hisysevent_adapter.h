@@ -29,6 +29,7 @@ class HisyseventAdapter : public DelayedSingleton<HisyseventAdapter> {
 
 public:
     int CollectUserDataSize(const std::string &path);
+    int CollectDataMigrationState(const std::vector<int32_t> &userIds, int32_t result);
 
 private:
     uint64_t GetDataPartitionRemainSize();

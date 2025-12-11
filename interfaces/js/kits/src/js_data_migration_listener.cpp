@@ -117,7 +117,7 @@ void JsDataMigrationListener::DoProgressCallback(const EventData& eventData)
 void JsDataMigrationListener::DoResultCallback(const EventData& eventData)
 {
     if (resultCallback_ == nullptr) {
-        FONT_LOGE("DoProgressCallback progressCallback_ is nullptr.");
+        FONT_LOGE("DoResultCallback resultCallback_ is nullptr.");
         return;
     }
     napi_value value;
