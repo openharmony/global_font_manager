@@ -39,6 +39,7 @@ private:
     void StartHeartBeatTask();
     int32_t StartOneFileCopyTask(const std::string& path);
     int32_t CopyFileForDataMigration(const std::string &srcPath, const int32_t userId);
+    void CheckAndUpdateAllFontRecord();
     bool IsShouldUpdateProgress(int32_t i, int32_t totalCount);
     void EventDataHeartBeat();
     void EventDataProgress(int32_t i, int32_t size, int32_t idsize);

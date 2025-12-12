@@ -13,6 +13,29 @@
 
 import("//build/test.gni")
 import("../../frameworks/fontmgr/fontmgr.gni")
+copy("font_manager_test_data") {
+  sources = [
+    "data/199install_fontconfig.json",
+    "data/200install_fontconfig.json",
+    "data/emptyTTC.ttc",
+    "data/emptyTTF.ttf",
+    "data/errorTTC.ttc",
+    "data/errorTTF.ttf",
+    "data/errorType.txt",
+    "data/NotoSansCJK-Regular.ttc",
+    "data/NotoSansVai-Regular.ttf",
+    "data/NotoSerifCJK-Regular.ttc",
+    "data/TestFont_Sans.ttf"
+  ]
+  outputs = [ "$root_out_dir/tests/unittest/font_manager/font_manager/resource/unittest/data/{{source_file_part}}" ]
+}
+
+copy("font_manager_test_xml") {
+  sources = [
+    "ohos_test.xml"
+  ]
+  outputs = [ "$root_out_dir/tests/unittest/font_manager/font_manager/resource/{{source_file_part}}" ]
+}
 
 ohos_source_set("font_manager_ut_permission") {
   include_dirs = [
@@ -34,53 +57,13 @@ ohos_source_set("font_manager_ut_permission") {
   subsystem_name = "global"
 }
 
-ohos_unittest("font_config_test") {
-  module_out_path = "font_manager/font_manager"
-
-  sources = [ 
-    "src/font_config_test.cpp",
-  ]
-
-  sources += fontmgr_src
-  include_dirs = [
-    "./include",
-    "../../common/include",
-  ]
-
-  include_dirs += fontmgr_include
-
-  external_deps = [
-    "googletest:gtest",
-    "googletest:gtest_main",
-    "hisysevent:libhisysevent",
-  ]
-
-  external_deps += fontmgr_external_deps
-
-  deps = [
-    "../../service:font_manager_server",
-    "../../service:font_service_interface",
-  ]
-
-  defines = [ "SUPPORT_GRAPHICS" ]
-
-  os_account_enable = false
-  if (defined(global_parts_info) && defined(global_parts_info.account_os_account)) {
-    os_account_enable = true
-  }
-
-  if (os_account_enable) {
-    external_deps += [ "os_account:os_account_innerkits" ]
-    defines += [ "ACCOUNT_ENABLE" ]
-  }
-}
-
 ohos_unittest("font_manager_module_test") {
   module_out_path = "font_manager/font_manager"
 
   resource_config_file = "ohos_test.xml"
 
-  sources = [ 
+  sources = [
+    "src/font_config_test.cpp",
     "src/font_manager_test.cpp",
     "src/data_migration_manager_test.cpp",
   ]
@@ -107,6 +90,8 @@ ohos_unittest("font_manager_module_test") {
     "../../service:font_manager_server",
     "../../service:font_service_interface",
     ":font_manager_ut_permission",
+    ":font_manager_test_data",
+    ":font_manager_test_xml"
   ]
 
   defines = [ "SUPPORT_GRAPHICS" ]
@@ -160,7 +145,6 @@ group("unittest") {
 
   deps += [
     # deps file
-    ":font_config_test",
     ":font_manager_module_test",
     ":hisysevent_adapter_test",
   ]

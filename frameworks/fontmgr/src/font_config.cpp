@@ -145,6 +145,7 @@ bool FontConfig::DeleteFontRecord(const std::string &fontPath)
     if (fontsMap_.find(fontPath) == fontsMap_.end()) {
         return false;
     }
+    fontsMap_.erase(fontPath);
     cJSON *fontData = CovertFontMapToJsonArray(fontsMap_);
     if (!fontData) {
         FONT_LOGE("DeleteFontRecord CovertFontMapToJsonArray failed");
@@ -155,7 +156,6 @@ bool FontConfig::DeleteFontRecord(const std::string &fontPath)
         FONT_LOGE("Parse config file failed");
         return false;
     }
-    fontsMap_.erase(fontPath);
     cJSON_ReplaceItemInObject(jsonValue, "fontlist", fontData);
     char *fileData = cJSON_Print(jsonValue);
     cJSON_Delete(jsonValue);

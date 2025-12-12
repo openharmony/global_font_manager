@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,9 +18,9 @@
 #define protected public
 #include "font_config.h"
 #include "font_manager.h"
+#include "font_manager_utils.h"
 #undef private
 #undef protected
-#include "font_manager_utils.h"
 #include <string>
 #include <vector>
 
@@ -247,6 +247,119 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest008, TestSize.Level1)
     EXPECT_EQ(this->config_.GetFontFileByName("ERROR"), "");
 }
 
+/**
+ * @tc.name: FontConfigFuncTest009
+ * @tc.desc: Test FontConfig TTC DeleteFontRecord case
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest009, TestSize.Level1)
+{
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
+    std::string fontFullPath = INSTALL_PATH_TEST + "NotoSansCJK-Regular.ttc";
+    std::vector<std::string> fullName{
+        "Noto Serif CJK JP", "Noto Serif CJK KR", "Noto Serif CJK SC", "Noto Serif CJK TC", "Noto Serif CJK HK"};
+
+    EXPECT_EQ(this->config_.InsertFontRecord(fontFullPath, fullName), true);
+    EXPECT_EQ(this->config_.DeleteFontRecord(fontFullPath), true);
+    EXPECT_EQ(this->config_.GetFontFileByName("Noto Serif CJK SC"), "");
+}
+
+/**
+ * @tc.name: FontConfigFuncTest010
+ * @tc.desc: Test FontConfig TTC CheckAndInitInstallPath case
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest010, TestSize.Level1)
+{
+    ASSERT_EQ(FontManagerUtils::CheckPathExist(INSTALL_PATH_TEST), true);
+    std::string fontList = R"({
+        "fontlist": []
+    })";
+    ASSERT_EQ(FontManagerUtils::CreateFileWithPermission(FONT_CONFIG_FILE_TEST, fontList), true);
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
+    std::string fontFullPath = INSTALL_PATH_TEST + "NotoSansCJK-Regular.ttc";
+    std::vector<std::string> fullName{
+        "Noto Serif CJK JP", "Noto Serif CJK KR", "Noto Serif CJK SC", "Noto Serif CJK TC", "Noto Serif CJK HK"};
+
+    EXPECT_EQ(this->config_.InsertFontRecord(fontFullPath, fullName), true);
+    EXPECT_EQ(this->config_.CheckAndUpdateFontRecord(), true);
+    // 只有记录，没有源文件，记录内的fullname会被至空
+    EXPECT_EQ(this->config_.fontsMap_.find(fontFullPath)->second.size(), 0);
+}
+
+/**
+ * @tc.name: FontConfigFuncTest011
+ * @tc.desc: Test CheckAndUpdateFontRecord with corrupted JSON content
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest011, TestSize.Level1)
+{
+    // 1. 构造一个非法的 JSON 内容 (不是合法的 JSON 格式)
+    std::string badJson = "{ \"fontlist\": [";
+    FILE *fp = fopen(FONT_CONFIG_FILE_TEST.c_str(), "w");
+    if (fp) {
+        fwrite(badJson.c_str(), 1, badJson.length(), fp);
+        fclose(fp);
+    }
+    
+    // 预期：解析失败，返回 false
+    EXPECT_FALSE(this->config_.CheckAndUpdateFontRecord());
+}
+
+/**
+ * @tc.name: FontConfigFuncTest012
+ * @tc.desc: Test CheckAndUpdateFontRecord with existing version field
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest012, TestSize.Level1)
+{
+    // 2. 构造包含 "version" 字段的 JSON，这是迁移或升级后的格式
+    // 对应代码: if (cJSON_IsNumber(versionJson)) { return true; }
+    std::string versionJson = "{\"version\": 1, \"fontlist\": []}";
+    FILE *fp = fopen(FONT_CONFIG_FILE_TEST.c_str(), "w");
+    if (fp) {
+        fwrite(versionJson.c_str(), 1, versionJson.length(), fp);
+        fclose(fp);
+    }
+
+    // 预期：直接返回 true，不做处理
+    EXPECT_TRUE(this->config_.CheckAndUpdateFontRecord());
+}
+
+/**
+ * @tc.name: FontConfigFuncTest013
+ * @tc.desc: Test CheckAndUpdateFontRecord where fontlist is not an array
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest013, TestSize.Level1)
+{
+    // 3. 构造 "fontlist" 不是数组的情况
+    // 对应代码: if (!cJSON_IsArray(fontList)) { return false; }
+    std::string invalidListJson = "{\"fontlist\": \"not_an_array\"}";
+    FILE *fp = fopen(FONT_CONFIG_FILE_TEST.c_str(), "w");
+    if (fp) {
+        fwrite(invalidListJson.c_str(), 1, invalidListJson.length(), fp);
+        fclose(fp);
+    }
+
+    // 预期：格式错误，返回 false
+    EXPECT_FALSE(this->config_.CheckAndUpdateFontRecord());
+}
+
+/**
+ * @tc.name: FontConfigFuncTest014
+ * @tc.desc: Test CheckConfigFile with non-existent file
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest014, TestSize.Level1)
+{
+    // 确保文件不存在
+    FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
+    
+    // 对应代码: GetFileData 返回 nullptr
+    std::string result = this->config_.CheckConfigFile(FONT_CONFIG_FILE_TEST);
+    EXPECT_EQ(result, "");
+}
 }  // namespace FontManager
 }  // namespace Global
 }  // namespace OHOS

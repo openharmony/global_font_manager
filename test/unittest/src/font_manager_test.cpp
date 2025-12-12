@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Huawei Device Co., Ltd.
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -31,6 +31,7 @@
 #include "font_manager_utils.h"
 #include "font_define.h"
 #include "directory_ex.h"
+#include "permission_common.h"
 
 namespace {
 const std::string INSTALL_PATH_TEST = "/data/service/el1/100/for-all-app/fonts/";
@@ -78,6 +79,7 @@ void FontManagerTest::SetUpTestCase(void)
 
 void FontManagerTest::TearDownTestCase(void)
 {
+    PermissionCommon::ResetTokenAndUid();
 }
 
 void FontManagerTest::SetUp(void)
@@ -413,6 +415,51 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest013, TestSize.Level1)
         }
     }
     EXPECT_EQ(rmdir("/data/test/testRepeats") != -1, true);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest014
+ * @tc.desc: Test CopyFileForInstall when target file already exists (Rename logic)
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest014, TestSize.Level1)
+{
+    // 准备环境
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
+    
+    // 1. 手动在安装目录创建一个同名文件，模拟残留文件
+    std::string targetFileName = "TestFont_Sans.ttf";
+    std::string targetPath = INSTALL_PATH_TEST + targetFileName;
+    int fdTarget = open(targetPath.c_str(), O_CREAT | O_RDWR, 0666);
+    ASSERT_GE(fdTarget, 0);
+    close(fdTarget);
+
+    // 2. 尝试安装同名字体
+    int fdSource = open(FONT_PATH.c_str(), O_RDONLY);
+    ASSERT_GE(fdSource, 0);
+
+    // 执行安装
+    int ret = manager_->InstallFont(fdSource, TEST_USERID);
+    close(fdSource);
+
+    // 验证
+    EXPECT_EQ(ret, ERR_OK);
+    
+    // 检查是否发生了重命名行为
+    bool hasRenamedFile = false;
+    DIR *dir = opendir(INSTALL_PATH_TEST.c_str());
+    if (dir) {
+        struct dirent *ent;
+        while ((ent = readdir(dir)) != nullptr) {
+            std::string name = ent->d_name;
+            if (name.find("_TestFont_Sans.ttf") != std::string::npos) {
+                hasRenamedFile = true;
+                break;
+            }
+        }
+        closedir(dir);
+    }
+    EXPECT_TRUE(hasRenamedFile);
 }
 } // namespace FontManager
 } // namespace Global

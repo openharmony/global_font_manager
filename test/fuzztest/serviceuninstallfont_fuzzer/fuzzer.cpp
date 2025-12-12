@@ -34,6 +34,7 @@ void ServiceUnInstallFuzz(const std::string& fontName)
     }
     int32_t result;
     (void)service->UninstallFont(fontName, result);
+    PermissionCommon::ResetTokenAndUid();
 }
 
 /* Fuzzer entry point */

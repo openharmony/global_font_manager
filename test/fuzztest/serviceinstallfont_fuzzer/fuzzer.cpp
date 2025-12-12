@@ -35,6 +35,7 @@ void ServiceInstallFuzz(const int32_t fd)
     }
     int32_t result;
     (void)service->InstallFont(fd, result);
+    PermissionCommon::ResetTokenAndUid();
 }
 
 /* Fuzzer entry point */
