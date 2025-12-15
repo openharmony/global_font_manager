@@ -331,7 +331,6 @@ std::vector<std::string> FontManagerUtils::GetFullNamesByFd(const int32_t &fd)
 
 std::vector<std::string> FontManagerUtils::GetFullNamesByPath(const std::string &path)
 {
-    FONT_LOGI("GetFullNamesByPath FullNameList path:%{public}s", path.c_str());
     std::vector<std::string> fullNames;
     int fd = open(path.c_str(), O_RDONLY);
     if (fd < 0) {
@@ -341,7 +340,7 @@ std::vector<std::string> FontManagerUtils::GetFullNamesByPath(const std::string 
     auto& fontToolSet = OHOS::Rosen::FontToolSet::GetInstance();
     fullNames = fontToolSet.GetFontFullName(fd);
     if (fullNames.empty()) {
-        FONT_LOGE("GetFullNamesByPath FullNameList is empty.");
+        FONT_LOGE("GetFullNamesByPath FullNameList is empty.path:%{public}s", path.c_str());
     }
     if (fd >= 0) {
         close(fd);

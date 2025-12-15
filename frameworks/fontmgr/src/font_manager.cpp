@@ -135,8 +135,10 @@ int32_t FontManager::UninstallFont(const std::string &fontFullName, const int32_
         return ERR_UNINSTALL_FILE_NOT_EXISTS;
     }
     std::string realPath = SandBoxPathToRealPath(installPath, path);
-    if (!FontManagerUtils::RemoveFile(realPath)) {
-        return ERR_UNINSTALL_REMOVE_FAIL;
+    if (FontManagerUtils::CheckPathExist(realPath)) {
+        if (!FontManagerUtils::RemoveFile(realPath)) {
+            return ERR_UNINSTALL_REMOVE_FAIL;
+        }
     }
     if (!fontConfig.DeleteFontRecord(path)) {
         FONT_LOGE("update install_fontconfig fail, path = %{public}s", path.c_str());

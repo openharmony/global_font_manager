@@ -62,6 +62,7 @@ void DataMigrationManagerTest::SetUpTestCase(void)
 void DataMigrationManagerTest::TearDownTestCase(void)
 {
     FontManagerUtils::DeleteDir(TEMP_PATH_TEST, true);
+    PermissionCommon::ResetTokenAndUid();
 }
 
 void DataMigrationManagerTest::SetUp(void)
@@ -180,6 +181,26 @@ HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest004, TestSize.Lev
     EXPECT_TRUE(paths.empty());
 }
 
+/**
+ * @tc.name: DataMigrationManagerFuncTest005
+ * @tc.desc: Test CheckAllUserDir fail
+ * @tc.type: FUNC
+ */
+HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest005, TestSize.Level1)
+{
+    // 1. 设置 userIds
+    manager_->userIds_ = {999}; // 使用一个不存在的用户ID
+
+    // 2. 确保该用户的目录不存在
+    std::string userPath = "/data/service/el1/999/for-all-app/fonts/";
+    FontManagerUtils::DeleteDir(userPath, true);
+
+    // 3. 执行 CheckAllUserDir
+    // 对应代码: CheckPathExist 返回 false -> 返回 false
+    bool ret = manager_->CheckAllUserDir();
+    
+    EXPECT_FALSE(ret);
+}
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS

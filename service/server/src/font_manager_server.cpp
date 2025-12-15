@@ -49,7 +49,9 @@ int32_t FontManagerServer::InstallFont(const int32_t fd, int32_t &outValue)
     callingCount_++;
     InstallFontInner(fd, outValue);
     callingCount_--;
-    AddUnloadFontServiceTask();
+    if (callingCount_ == 0) {
+        AddUnloadFontServiceTask();
+    }
     return ERR_OK;
 }
 
@@ -84,7 +86,9 @@ int32_t FontManagerServer::UninstallFont(const std::string &fontName, int32_t &o
     callingCount_++;
     UninstallFontInner(fontName, outValue);
     callingCount_--;
-    AddUnloadFontServiceTask();
+    if (callingCount_ == 0) {
+        AddUnloadFontServiceTask();
+    }
     return ERR_OK;
 }
 
@@ -134,10 +138,15 @@ int32_t FontManagerServer::DataMigrationInner(const sptr<IDataMigrationCallback>
         FONT_LOGE("FontManagerServer is DataMigrationing.");
         return ERR_DATA_MIGRATIONING;
     }
+    isDataMigrationing_ = true;
     auto task = [this, callback]() {
         StartDataMigrationTask(callback);
     };
-    handler_->PostTask(task);
+    if (!handler_->PostTask(task)) {
+        isDataMigrationing_ = false;
+        FONT_LOGE("FontManagerServer PostTask ERR.");
+        return ERR_SYSTEM_ERROR;
+    }
     FONT_LOGI("FontManagerServer DataMigration call success.");
     return ERR_OK;
 }
@@ -145,7 +154,6 @@ int32_t FontManagerServer::DataMigrationInner(const sptr<IDataMigrationCallback>
 void FontManagerServer::StartDataMigrationTask(const sptr<IDataMigrationCallback>& callback)
 {
     RemoveUnloadFontServiceTask();
-    isDataMigrationing_ = true;
     DataMigrationManager::GetInstance()->DataMigration(callback);
     isDataMigrationing_ = false;
     FONT_LOGI("FontManagerServer DataMigration finish.");
@@ -154,6 +162,9 @@ void FontManagerServer::StartDataMigrationTask(const sptr<IDataMigrationCallback
 
 void FontManagerServer::AddUnloadFontServiceTask()
 {
+    if (callingCount_ > 0 || isDataMigrationing_) {
+        return;
+    }
     auto task = [this]() {
         if (callingCount_ == 0 && !isDataMigrationing_) {
             auto fontSaLoadManager = DelayedSingleton<FontServiceLoadManager>::GetInstance();

@@ -25,16 +25,19 @@
 namespace OHOS {
 namespace Global {
 namespace FontManager {
-constexpr int PERMISSION_NUM = 1;
+constexpr int PERMISSION_NUM = 2;
 constexpr int ROOT_UID = 0;
-constexpr int FONT_MANAGER_UID = 7027;
+constexpr int FONT_MANAGER_UID = 1015;
 uint64_t PermissionCommon::selfTokenId_ = 0;
 void PermissionCommon::SetFontManagerPermission(const std::string &processName)
 {
-    selfTokenId_ = GetSelfTokenID();
+    if (selfTokenId_ == 0) {
+        selfTokenId_ = GetSelfTokenID();
+    }
     uint64_t tokenId;
     const char* perms[PERMISSION_NUM] = {
         "ohos.permission.MANAGE_LOCAL_ACCOUNTS",
+        "ohos.permission.UPDATE_FONT"
     };
     std::string process = processName;
     NativeTokenInfoParams infoInstance = {
@@ -68,18 +71,70 @@ void PermissionCommon::ResetUid()
 void PermissionCommon::ResetTokenAndUid()
 {
     seteuid(ROOT_UID);
-    SetSelfTokenID(selfTokenId_);
+    if (selfTokenId_ != 0) {
+        SetSelfTokenID(selfTokenId_);
+        selfTokenId_ = 0;
+    }
 }
 
 bool PermissionCommon::IsOriginalUTEnv()
 {
-    return (ROOT_UID == geteuid() && selfTokenId_ == GetSelfTokenID());
+    return (geteuid() == ROOT_UID);
 }
 
 void PermissionCommon::SetFontManagerInitEnv()
 {
     SetFontManagerPermission("font_manager_server");
     seteuid(FONT_MANAGER_UID);
+}
+
+void PermissionCommon::GrantPermission(const std::vector<std::string> &perms)
+{
+    if (selfTokenId_ == 0) {
+        selfTokenId_ = GetSelfTokenID();
+    }
+
+    std::vector<const char*> permPtrs;
+    for (const auto& perm : perms) {
+        permPtrs.push_back(perm.c_str());
+    }
+
+    NativeTokenInfoParams infoInstance = {
+        .dcapsNum = 0,
+        .permsNum = static_cast<int>(permPtrs.size()),
+        .aclsNum = 0,
+        .dcaps = nullptr,
+        .perms = permPtrs.data(),
+        .acls = nullptr,
+        .processName = "font_manager_ut_test",
+        .aplStr = "system_basic",
+    };
+
+    uint64_t tokenId = GetAccessTokenId(&infoInstance);
+    SetSelfTokenID(tokenId);
+    Security::AccessToken::AccessTokenKit::ReloadNativeTokenInfo();
+}
+
+void PermissionCommon::RemovePermission()
+{
+    if (selfTokenId_ == 0) {
+        selfTokenId_ = GetSelfTokenID();
+    }
+
+    NativeTokenInfoParams infoInstance = {
+        .dcapsNum = 0,
+        .permsNum = 0,
+        .aclsNum = 0,
+        .dcaps = nullptr,
+        .perms = nullptr,
+        .acls = nullptr,
+        .processName = "font_manager_ut_empty",
+        .aplStr = "system_basic",
+    };
+
+    uint64_t tokenId = GetAccessTokenId(&infoInstance);
+    SetSelfTokenID(tokenId);
+    Security::AccessToken::AccessTokenKit::ReloadNativeTokenInfo();
 }
 } // namespace FontManager
 } // namespace Global

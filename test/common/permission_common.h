@@ -27,6 +27,9 @@ public:
     static void ResetUid();
     static bool IsOriginalUTEnv();
     static void SetFontManagerInitEnv();
+
+    static void GrantPermission(const std::vector<std::string> &perms);
+    static void RemovePermission();
 private:
     static uint64_t selfTokenId_;
 };

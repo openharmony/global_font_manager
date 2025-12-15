@@ -49,6 +49,7 @@ void ServiceDataMigrationFuzz(const uint8_t *data, size_t size)
         return;
     }
     (void)service->DataMigration(cb);
+    PermissionCommon::ResetTokenAndUid();
 }
 
 /* Fuzzer entry point */
