@@ -26,7 +26,7 @@ export default namespace fontManager {
     return new Promise<int>((resolve, reject) => {
       taskpool.execute((): int => {
           return nativeInstallFont(path);
-      }).then((content: NullishType) => {
+      }).then((content: Any) => {
           resolve(content as int);
       }, (err: BusinessError): void => {
           reject(err);
@@ -39,7 +39,7 @@ export default namespace fontManager {
     return new Promise<int>((resolve, reject) => {
       taskpool.execute((): int => {
           return nativeUninstallFont(fullName);
-      }).then((content: NullishType) => {
+      }).then((content: Any) => {
           resolve(content as int);
       }, (err: BusinessError): void => {
           reject(err);
