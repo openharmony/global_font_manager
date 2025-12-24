@@ -21,6 +21,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/sendfile.h>
+#include <cerrno>
 
 #include "font_hilog.h"
 #include "font_define.h"
@@ -229,16 +230,19 @@ bool FontManagerUtils::CopyFileByFd(int32_t sourceFd, int32_t targetFd)
     }
 
     off_t offset = 0;
-    ssize_t bytesSent = 0;
+    size_t bytesSent = 0;
     size_t fileSize = static_cast<size_t>(sourceStat.st_size);
 
     while (bytesSent < fileSize) {
         ssize_t ret = sendfile(targetFd, sourceFd, &offset, fileSize - bytesSent);
         if (ret < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
             FONT_LOGE("Failed to send file data: %s", strerror(errno));
             return false;
         }
-        bytesSent += ret;
+        bytesSent += static_cast<size_t>(ret);
     }
     return true;
 }

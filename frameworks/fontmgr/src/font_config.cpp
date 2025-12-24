@@ -47,7 +47,7 @@ bool FontConfig::CheckAndUpdateFontRecord()
     int fontSize = cJSON_GetArraySize(fontList);
     for (int i = 0; i < fontSize; i++) {
         cJSON *fontFullPath = cJSON_GetObjectItem(cJSON_GetArrayItem(fontList, i), FONT_PATH);
-        if (fontFullPath && fontFullPath->valuestring) {
+        if (fontFullPath && cJSON_IsString(fontFullPath)) {
             std::string path = fontFullPath->valuestring;
             fontsMap.emplace(path, FontManagerUtils::GetFullNamesByPath(SandBoxPathToRealPath(path)));
         }
@@ -154,6 +154,7 @@ bool FontConfig::DeleteFontRecord(const std::string &fontPath)
     cJSON *jsonValue = cJSON_Parse(CheckConfigFile(ConfigPath_).c_str());
     if (jsonValue == nullptr) {
         FONT_LOGE("Parse config file failed");
+        cJSON_Delete(fontData);
         return false;
     }
     cJSON_ReplaceItemInObject(jsonValue, "fontlist", fontData);
@@ -312,12 +313,12 @@ std::unordered_map<std::string, std::vector<std::string>> FontConfig::GetFontsMa
         std::vector<std::string> fullNames;
         for (int j = 0; j < fullNameSize; j++) {
             cJSON *fullNameItem = cJSON_GetArrayItem(fullNameValue, j);
-            if (fullNameItem != nullptr && fullNameItem->valuestring != nullptr) {
+            if (fullNameItem != nullptr && cJSON_IsString(fullNameItem)) {
                 fullNames.emplace_back(fullNameItem->valuestring);
             }
         }
         cJSON *fontFullPathValue = cJSON_GetObjectItem(arrItem, FONT_PATH);
-        if (fontFullPathValue != nullptr && fontFullPathValue->valuestring != nullptr) {
+        if (fontFullPathValue != nullptr && cJSON_IsString(fontFullPathValue)) {
             fontsMap.insert(std::make_pair(fontFullPathValue->valuestring, fullNames));
         }
     }

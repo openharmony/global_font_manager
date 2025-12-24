@@ -15,12 +15,33 @@
 import { BusinessError } from '@ohos.base';
 
 export default namespace fontManager {
+  loadLibraryWithPermissionCheck("fontManager_ani.z", "@ohos.fontManager");
+  export interface DataMigrationProgress {
+    timeRemaining: int;
+    progressPercentage: int;
+  }
 
-  loadLibrary("fontManager_ani.z");
+  export class DataMigrationProgressImpl implements DataMigrationProgress {
+    timeRemaining: int = 0;
+    progressPercentage: int = 0;
+
+    public constructor(timeRemaining: int, progressPercentage: int) {
+      this.timeRemaining = timeRemaining;
+      this.progressPercentage = progressPercentage;
+    }
+  }
+
+  export interface DataMigrationCallback {
+    onHeartBeat(): void;
+    onProgress(progress: DataMigrationProgress): void;
+    onResult(result: int): void;
+  }
 
   native function nativeInstallFont(path: string): int;
 
   native function nativeUninstallFont(fullName: string): int;
+
+  export native function dataMigration(callback: DataMigrationCallback): int;
 
   export function installFont(path: string): Promise<int> {
     return new Promise<int>((resolve, reject) => {
@@ -46,4 +67,5 @@ export default namespace fontManager {
       });
     });
   };
+
 }

@@ -25,6 +25,7 @@ class FontManagerAni {
 public:
     static ani_int InstallFont(ani_env* env, ani_string path);
     static ani_int UninstallFont(ani_env* env, ani_string fullName);
+    static ani_int DataMigration(ani_env* env, ani_object callback);
     static ani_status Init(ani_env* env);
 
 private:
