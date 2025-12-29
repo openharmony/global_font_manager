@@ -40,9 +40,9 @@ private:
     int32_t StartOneFileCopyTask(const std::string& path);
     int32_t CopyFileForDataMigration(const std::string &srcPath, const int32_t userId);
     void CheckAndUpdateAllFontRecord();
-    bool IsShouldUpdateProgress(int32_t i, int32_t totalCount);
+    bool IsShouldUpdateProgress(uint32_t i, uint32_t totalCount);
     void EventDataHeartBeat();
-    void EventDataProgress(int32_t i, int32_t size, int32_t idsize);
+    void EventDataProgress(uint32_t i, uint32_t size, uint32_t idsize);
     void EventDataResult(int32_t result);
     bool CheckAllUserDir();
     bool InitDataMigrationTempDir();

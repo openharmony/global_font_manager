@@ -181,26 +181,26 @@ void DataMigrationManager::StartHeartBeatTask()
     }).detach();
 }
 
-bool DataMigrationManager::IsShouldUpdateProgress(int32_t i, int32_t totalCount)
+bool DataMigrationManager::IsShouldUpdateProgress(uint32_t i, uint32_t totalCount)
 {
     if (totalCount <= MAX_TRIGGER_COUNT) {
         return true;
     }
     double step = static_cast<double>(totalCount) / static_cast<double>(MAX_TRIGGER_COUNT);
-    int32_t expectedTriggerIndex = static_cast<int32_t>(std::round(i / step));
+    uint32_t expectedTriggerIndex = static_cast<uint32_t>(std::round(i / step));
     double triggerPos = expectedTriggerIndex * step;
     return std::fabs(i - triggerPos) < EPSILON;
 }
 
-void DataMigrationManager::EventDataProgress(int32_t i, int32_t size, int32_t idsize)
+void DataMigrationManager::EventDataProgress(uint32_t i, uint32_t size, uint32_t idsize)
 {
     std::uintmax_t remainSize = (OHOS::GetFolderSize(INSTALL_PATH_APP) * idsize) >> 20;
-    int32_t timeRemaining = remainSize / COPY_SPEED;
+    uint32_t timeRemaining = remainSize / COPY_SPEED;
     if (timeRemaining < 1) {
         timeRemaining = 1;
     }
-    int32_t progressPercentage =
-        i == 0 ? i : static_cast<int32_t>((static_cast<int64_t>(i) * MAX_TRIGGER_COUNT + size / 2) / size);
+    uint32_t progressPercentage =
+        i == 0 ? i : static_cast<uint32_t>((static_cast<uint64_t>(i) * MAX_TRIGGER_COUNT + size / 2) / size);
     EventData eventData = {.event = EventType::PROGRESS_DOING,
                            .timeRemaining = timeRemaining,
                            .progressPercentage = progressPercentage};

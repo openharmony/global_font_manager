@@ -53,9 +53,9 @@ int HisyseventAdapter::CollectUserDataSize(const std::string &path)
 
 int HisyseventAdapter::CollectDataMigrationState(const std::vector<int32_t> &userIds, int32_t result)
 {
-    int32_t count = 0;
-    int64_t size = 0;
-    int32_t userCount = 0;
+    uint32_t count = 0;
+    uint64_t size = 0;
+    uint32_t userCount = 0;
     if (!userIds.empty()) {
         std::vector<std::string> sucPaths;
         OHOS::GetDirFiles(INSTALL_PATH_PREFIX + std::to_string(userIds.back()) + INSTALL_PATH_SUFFIX, sucPaths);
@@ -65,9 +65,9 @@ int HisyseventAdapter::CollectDataMigrationState(const std::vector<int32_t> &use
     }
     std::vector<std::string> errPaths;
     OHOS::GetDirFiles(INSTALL_PATH_APP, errPaths);
-    int32_t errCount = errPaths.size();
-    int64_t errSize = OHOS::GetFolderSize(INSTALL_PATH_APP);
-    int64_t freeRom = static_cast<int64_t>(GetDataPartitionRemainSize());
+    uint32_t errCount = errPaths.size();
+    uint64_t errSize = OHOS::GetFolderSize(INSTALL_PATH_APP);
+    uint64_t freeRom = static_cast<int64_t>(GetDataPartitionRemainSize());
     return HiSysEventWrite(FONT_MANAGER, "FONT_DATA_MIGRATION",
         HiSysEventNameSpace::EventType::STATISTIC, "COUNT", count, "SIZE", size,
         "COUNT_ERR", errCount, "SIZE_ERR", errSize, "USER_COUNT",

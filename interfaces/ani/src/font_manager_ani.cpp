@@ -15,11 +15,13 @@
 
 #include "font_manager_ani.h"
 
+#include <unordered_map>
+#include <array>
 #include "ani.h"
 #include "font_hilog.h"
 #include "font_define.h"
 #include "font_manager_kits.h"
-#include <unordered_map>
+#include "ani_data_migration_listener.h"
 
 namespace OHOS {
 namespace Global {
@@ -30,6 +32,7 @@ static const char* CLASS_NAME_BUSINESSERROR = "@ohos.base.BusinessError";
 static const std::unordered_map<int, std::string> errorMsg = {
     {ERR_NO_PERMISSION, "Permission denied."},
     {ERR_NOT_SYSTEM_APP, "Non-system application."},
+    {ERR_INVALID_PARAM, "Parameter error."},
     {ERR_FILE_NOT_EXISTS, "Font does not exist."},
     {ERR_FILE_VERIFY_FAIL, "Font is not supported."},
     {ERR_COPY_FAIL, "Font file copy failed."},
@@ -37,6 +40,9 @@ static const std::unordered_map<int, std::string> errorMsg = {
     {ERR_MAX_FILE_COUNT, "Exceeded maximum number of installed files."},
     {ERR_UNINSTALL_FILE_NOT_EXISTS, "Font file does not exist."},
     {ERR_UNINSTALL_REMOVE_FAIL, "Font file delete error."},
+    {ERR_UNINSTALL_FAIL, "Font uninstall error."},
+    {ERR_SYSTEM_ERROR, "System error."},
+    {ERR_DATA_MIGRATIONING, "Font data migration in progress."},
 };
 
 ani_int FontManagerAni::InstallFont(ani_env* env, ani_string ani_path)
@@ -67,6 +73,25 @@ ani_int FontManagerAni::UninstallFont(ani_env* env, ani_string ani_fullName)
         ThrowError(env, errorCode);
     }
     return errorCode;
+}
+
+ani_int FontManagerAni::DataMigration(ani_env* env, ani_object callback)
+{
+    if (callback == nullptr) {
+        ThrowError(env, ERR_INVALID_PARAM);
+        return ERR_INVALID_PARAM;
+    }
+    auto aniListener = AniDataMigrationListener::Create(env, callback);
+    if (aniListener == nullptr) {
+        FONT_LOGE("Failed to create AniDataMigrationListener.");
+        ThrowError(env, ERR_SYSTEM_ERROR);
+        return ERR_SYSTEM_ERROR;
+    }
+    int32_t ret = FontManagerKits::GetInstance().DataMigration(aniListener);
+    if (ret != ERR_OK) {
+        ThrowError(env, ret);
+    }
+    return ret;
 }
 
 std::string FontManagerAni::ANIStringToStdString(ani_env *env, ani_string ani_str)
@@ -143,6 +168,7 @@ ani_status FontManagerAni::Init(ani_env* env)
     std::array nsMethods = {
         ani_native_function { "nativeInstallFont", nullptr, reinterpret_cast<void*>(InstallFont) },
         ani_native_function { "nativeUninstallFont", nullptr, reinterpret_cast<void*>(UninstallFont) },
+        ani_native_function { "dataMigration", nullptr, reinterpret_cast<void*>(DataMigration) },
     };
 
     if (ANI_OK != env->Namespace_BindNativeFunctions(ns, nsMethods.data(), nsMethods.size())) {
