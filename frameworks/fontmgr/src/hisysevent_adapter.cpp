@@ -67,7 +67,7 @@ int HisyseventAdapter::CollectDataMigrationState(const std::vector<int32_t> &use
     OHOS::GetDirFiles(INSTALL_PATH_APP, errPaths);
     uint32_t errCount = errPaths.size();
     uint64_t errSize = OHOS::GetFolderSize(INSTALL_PATH_APP);
-    uint64_t freeRom = static_cast<int64_t>(GetDataPartitionRemainSize());
+    uint64_t freeRom = GetDataPartitionRemainSize();
     return HiSysEventWrite(FONT_MANAGER, "FONT_DATA_MIGRATION",
         HiSysEventNameSpace::EventType::STATISTIC, "COUNT", count, "SIZE", size,
         "COUNT_ERR", errCount, "SIZE_ERR", errSize, "USER_COUNT",
