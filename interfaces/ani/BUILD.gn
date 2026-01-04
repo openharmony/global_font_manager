@@ -52,6 +52,7 @@ ohos_shared_library("fontManager_ani") {
     "hilog:libhilog",
     "ipc:ipc_core",
     "runtime_core:ani",
+    "bounds_checking_function:libsec_shared",
   ]
 
   cflags_cc = [
