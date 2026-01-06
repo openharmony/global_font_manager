@@ -53,12 +53,12 @@ enum DataMigrationResultCode {
     ERR_REMOVE_SRC_FILE,
 };
 
-const int FONT_SA_ID = 66262;
-const std::string INSTALL_PATH_APP = "/data/service/el1/public/for-all-app/fonts/";
-const std::string INSTALL_PATH_PREFIX = "/data/service/el1/";
-const std::string INSTALL_PATH_SUFFIX = "/for-all-app/fonts/";
-const std::string FONT_CONFIG_FILE = "install_fontconfig.json";
-const std::string TEMP_FILE = "temp/";
+inline const int FONT_SA_ID = 66262;
+inline const std::string INSTALL_PATH_APP = "/data/service/el1/public/for-all-app/fonts/";
+inline const std::string INSTALL_PATH_PREFIX = "/data/service/el1/";
+inline const std::string INSTALL_PATH_SUFFIX = "/for-all-app/fonts/";
+inline const std::string FONT_CONFIG_FILE = "install_fontconfig.json";
+inline const std::string TEMP_FILE = "temp/";
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS
