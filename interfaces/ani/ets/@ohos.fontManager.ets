@@ -49,7 +49,7 @@ export default namespace fontManager {
           return nativeInstallFont(path);
       }).then((content: Any) => {
           resolve(content as int);
-      }, (err: BusinessError): void => {
+      }, (err: Error): void => {
           reject(err);
       });
     });
@@ -62,7 +62,7 @@ export default namespace fontManager {
           return nativeUninstallFont(fullName);
       }).then((content: Any) => {
           resolve(content as int);
-      }, (err: BusinessError): void => {
+      }, (err: Error): void => {
           reject(err);
       });
     });
