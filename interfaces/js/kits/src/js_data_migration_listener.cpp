@@ -65,25 +65,24 @@ void JsDataMigrationListener::OnHandle(const EventData& eventData)
         return;
     }
     auto self = shared_from_this();
-    std::unique_ptr<AbilityRuntime::NapiAsyncTask::CompleteCallback> complete =
-        std::make_unique<AbilityRuntime::NapiAsyncTask::CompleteCallback>(
-            [self, eventData](napi_env env, AbilityRuntime::NapiAsyncTask& task, int32_t status) {
-                FONT_LOGI("JsDataMigrationListener CallJsMethod currentEventType:%{public}d", eventData.event);
-                if (eventData.event == EventType::HEART_BEAT) {
-                    self->DoHeartbeatCallback();
-                } else if (eventData.event == EventType::PROGRESS_DOING) {
-                    self->DoProgressCallback(eventData);
-                } else if (eventData.event == EventType::PROGRESS_RESULT) {
-                    self->DoResultCallback(eventData);
-                }
-            }
-        );
-    napi_ref callback = nullptr;
-    std::unique_ptr<AbilityRuntime::NapiAsyncTask::ExecuteCallback> execute = nullptr;
-    AbilityRuntime::NapiAsyncTask::Schedule(
-        "JsDataMigrationListener::OnHandle", env_,
-        std::make_unique<AbilityRuntime::NapiAsyncTask>(callback, std::move(execute), std::move(complete))
-    );
+    auto napiAsyncTask = std::make_unique<AbilityRuntime::NapiAsyncTask>(static_cast<napi_ref>(nullptr), nullptr,
+        nullptr);
+    auto asyncTask = [self, eventData, env = env_, taskPtr = napiAsyncTask.get()]() {
+        std::unique_ptr<AbilityRuntime::NapiAsyncTask> task(taskPtr);
+        FONT_LOGI("JsDataMigrationListener CallJsMethod currentEventType:%{public}d", eventData.event);
+        if (eventData.event == EventType::HEART_BEAT) {
+            self->DoHeartbeatCallback();
+        } else if (eventData.event == EventType::PROGRESS_DOING) {
+            self->DoProgressCallback(eventData);
+        } else if (eventData.event == EventType::PROGRESS_RESULT) {
+            self->DoResultCallback(eventData);
+        }
+    };
+    if (napi_status::napi_ok != napi_send_event(env_, asyncTask, napi_eprio_high)) {
+        FONT_LOGE("JsDataMigrationListener onHandle send event failed");
+    } else {
+        napiAsyncTask.release();
+    }
 }
 
 void JsDataMigrationListener::DoHeartbeatCallback()

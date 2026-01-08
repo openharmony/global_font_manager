@@ -283,7 +283,6 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest010, TestSize.Level1)
 
     EXPECT_EQ(this->config_.InsertFontRecord(fontFullPath, fullName), true);
     EXPECT_EQ(this->config_.CheckAndUpdateFontRecord(), true);
-    // 只有记录，没有源文件，记录内的fullname会被至空
     EXPECT_EQ(this->config_.fontsMap_.find(fontFullPath)->second.size(), 0);
 }
 
@@ -294,15 +293,13 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest010, TestSize.Level1)
  */
 HWTEST_F(FontConfigTest, FontConfigFuncTest011, TestSize.Level1)
 {
-    // 1. 构造一个非法的 JSON 内容 (不是合法的 JSON 格式)
     std::string badJson = "{ \"fontlist\": [";
     FILE *fp = fopen(FONT_CONFIG_FILE_TEST.c_str(), "w");
     if (fp) {
         fwrite(badJson.c_str(), 1, badJson.length(), fp);
         fclose(fp);
     }
-    
-    // 预期：解析失败，返回 false
+
     EXPECT_FALSE(this->config_.CheckAndUpdateFontRecord());
 }
 
@@ -313,8 +310,6 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest011, TestSize.Level1)
  */
 HWTEST_F(FontConfigTest, FontConfigFuncTest012, TestSize.Level1)
 {
-    // 2. 构造包含 "version" 字段的 JSON，这是迁移或升级后的格式
-    // 对应代码: if (cJSON_IsNumber(versionJson)) { return true; }
     std::string versionJson = "{\"version\": 1, \"fontlist\": []}";
     FILE *fp = fopen(FONT_CONFIG_FILE_TEST.c_str(), "w");
     if (fp) {
@@ -322,7 +317,6 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest012, TestSize.Level1)
         fclose(fp);
     }
 
-    // 预期：直接返回 true，不做处理
     EXPECT_TRUE(this->config_.CheckAndUpdateFontRecord());
 }
 
@@ -333,16 +327,12 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest012, TestSize.Level1)
  */
 HWTEST_F(FontConfigTest, FontConfigFuncTest013, TestSize.Level1)
 {
-    // 3. 构造 "fontlist" 不是数组的情况
-    // 对应代码: if (!cJSON_IsArray(fontList)) { return false; }
     std::string invalidListJson = "{\"fontlist\": \"not_an_array\"}";
     FILE *fp = fopen(FONT_CONFIG_FILE_TEST.c_str(), "w");
     if (fp) {
         fwrite(invalidListJson.c_str(), 1, invalidListJson.length(), fp);
         fclose(fp);
     }
-
-    // 预期：格式错误，返回 false
     EXPECT_FALSE(this->config_.CheckAndUpdateFontRecord());
 }
 
@@ -353,10 +343,8 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest013, TestSize.Level1)
  */
 HWTEST_F(FontConfigTest, FontConfigFuncTest014, TestSize.Level1)
 {
-    // 确保文件不存在
     FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
-    
-    // 对应代码: GetFileData 返回 nullptr
+
     std::string result = this->config_.CheckConfigFile(FONT_CONFIG_FILE_TEST);
     EXPECT_EQ(result, "");
 }

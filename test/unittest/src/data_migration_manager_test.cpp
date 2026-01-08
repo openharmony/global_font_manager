@@ -125,9 +125,7 @@ HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest001, TestSize.Lev
 HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest002, TestSize.Level1)
 {
     sptr<IDataMigrationCallback> cb = new (std::nothrow) TestCallback();
-    if (cb == nullptr) {
-        return;
-    }
+    ASSERT_TRUE(cb != nullptr);
     manager_->DataMigration(cb);
     std::vector<std::string> paths;
     OHOS::GetDirFiles(INSTALL_PATH_TEST, paths);
@@ -151,9 +149,7 @@ HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest003, TestSize.Lev
     };
     EXPECT_TRUE(this->CopyTestFileToInstallPath(srcPaths));
     sptr<IDataMigrationCallback> cb = new (std::nothrow) TestCallback();
-    if (cb == nullptr) {
-        return;
-    }
+    ASSERT_TRUE(cb != nullptr);
     manager_->DataMigration(cb);
     std::vector<std::string> paths;
     OHOS::GetDirFiles(INSTALL_PATH_TEST, paths);
@@ -172,9 +168,7 @@ HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest004, TestSize.Lev
     };
     EXPECT_TRUE(this->CopyTestFileToInstallPath(srcPaths));
     sptr<IDataMigrationCallback> cb = new (std::nothrow) TestCallback();
-    if (cb == nullptr) {
-        return;
-    }
+    ASSERT_TRUE(cb != nullptr);
     manager_->DataMigration(cb);
     std::vector<std::string> paths;
     OHOS::GetDirFiles(INSTALL_PATH_TEST, paths);

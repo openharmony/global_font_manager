@@ -17,7 +17,6 @@
 
 #include <unordered_map>
 #include <array>
-#include <securec.h>
 #include "ani.h"
 #include "font_hilog.h"
 #include "font_define.h"
