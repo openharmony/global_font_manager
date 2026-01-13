@@ -147,24 +147,30 @@ int32_t DataMigrationManager::CopyFileForDataMigration(const std::string &srcPat
         FONT_LOGI("CopyFileForDataMigration path is exist(%{public}s) ", fileName.c_str());
         return ERR_OK;
     }
-    int fd = open(srcPath.c_str(), O_RDONLY);
+    FILE* fp = fopen(srcPath.c_str(), "rb");
+    if (!fp) {
+        FONT_LOGE("CopyFileForDataMigration open font file failed.");
+        return ERR_OPEN_SRC_FILE;
+    }
+    int fd = fileno(fp);
     if (fd < 0) {
-        FONT_LOGE("CopyFileForDataMigration pen font file failed, errno: %{public}d", errno);
+        FONT_LOGE("CopyFileForDataMigration open font file failed, errno: %{public}d", errno);
+        (void)fclose(fp);
         return ERR_OPEN_SRC_FILE;
     }
 
     if (!FontManagerUtils::CopyFile(fd, tempPath)) {
         FONT_LOGE("CopyFileForDataMigration copy file %{public}s error", fileName.c_str());
-        close(fd);
+        (void)fclose(fp);
         return ERR_COPY_FILE;
     }
     if (!FontManagerUtils::RenameFile(tempPath, desPath)) {
         FONT_LOGE("CopyFileForDataMigration rename file %{public}s error", fileName.c_str());
         FontManagerUtils::RemoveFile(tempPath);
-        close(fd);
+        (void)fclose(fp);
         return ERR_RENAME_FILE;
     }
-    close(fd);
+    (void)fclose(fp);
     return ERR_OK;
 }
 

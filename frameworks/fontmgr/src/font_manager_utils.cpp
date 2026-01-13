@@ -203,10 +203,18 @@ std::string FontManagerUtils::GetFileDirectory(const std::string &path)
 bool FontManagerUtils::CopyFile(int32_t sourceFd, const std::string& path)
 {
     constexpr int32_t filePermission = 0644;
-    int32_t targetFd = open(path.c_str(), O_WRONLY | O_CREAT | O_SYNC, filePermission);
-    bool ret = CopyFileByFd(sourceFd, targetFd);
-    if (targetFd >= 0) {
-        close(targetFd);
+    int32_t targetFd = -1;
+    bool ret = false;
+    FILE* targetFile = fopen(path.c_str(), "wb");
+    if (targetFile) {
+        targetFd = fileno(targetFile);
+        if (targetFd >= 0) {
+            fchmod(targetFd, filePermission);
+            ret = CopyFileByFd(sourceFd, targetFd);
+        }
+        (void)fclose(targetFile);
+    } else {
+        FONT_LOGE("FontManagerUtils CopyFile Failed to open source file");
     }
     return ret;
 }
@@ -336,9 +344,15 @@ std::vector<std::string> FontManagerUtils::GetFullNamesByFd(const int32_t &fd)
 std::vector<std::string> FontManagerUtils::GetFullNamesByPath(const std::string &path)
 {
     std::vector<std::string> fullNames;
-    int fd = open(path.c_str(), O_RDONLY);
+    FILE* fp = fopen(path.c_str(), "rb");
+    if (!fp) {
+        FONT_LOGE("GetFullNamesByPath open font file failed");
+        return fullNames;
+    }
+    int fd = fileno(fp);
     if (fd < 0) {
         FONT_LOGE("open font file failed, errno: %{public}d", errno);
+        (void)fclose(fp);
         return fullNames;
     }
     auto& fontToolSet = OHOS::Rosen::FontToolSet::GetInstance();
@@ -346,9 +360,7 @@ std::vector<std::string> FontManagerUtils::GetFullNamesByPath(const std::string 
     if (fullNames.empty()) {
         FONT_LOGE("GetFullNamesByPath FullNameList is empty.path:%{public}s", path.c_str());
     }
-    if (fd >= 0) {
-        close(fd);
-    }
+    (void)fclose(fp);
     return fullNames;
 }
 } // namespace FontManager
