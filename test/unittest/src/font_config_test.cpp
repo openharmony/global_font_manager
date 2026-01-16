@@ -297,7 +297,7 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest011, TestSize.Level1)
     FILE *fp = fopen(FONT_CONFIG_FILE_TEST.c_str(), "w");
     if (fp) {
         fwrite(badJson.c_str(), 1, badJson.length(), fp);
-        fclose(fp);
+        (void)fclose(fp);
     }
 
     EXPECT_FALSE(this->config_.CheckAndUpdateFontRecord());
@@ -314,7 +314,7 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest012, TestSize.Level1)
     FILE *fp = fopen(FONT_CONFIG_FILE_TEST.c_str(), "w");
     if (fp) {
         fwrite(versionJson.c_str(), 1, versionJson.length(), fp);
-        fclose(fp);
+        (void)fclose(fp);
     }
 
     EXPECT_TRUE(this->config_.CheckAndUpdateFontRecord());
@@ -331,7 +331,7 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest013, TestSize.Level1)
     FILE *fp = fopen(FONT_CONFIG_FILE_TEST.c_str(), "w");
     if (fp) {
         fwrite(invalidListJson.c_str(), 1, invalidListJson.length(), fp);
-        fclose(fp);
+        (void)fclose(fp);
     }
     EXPECT_FALSE(this->config_.CheckAndUpdateFontRecord());
 }

@@ -424,28 +424,22 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest013, TestSize.Level1)
  */
 HWTEST_F(FontManagerTest, FontManagerFuncTest014, TestSize.Level1)
 {
-    // 准备环境
     ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
-    
-    // 1. 手动在安装目录创建一个同名文件，模拟残留文件
+
     std::string targetFileName = "TestFont_Sans.ttf";
     std::string targetPath = INSTALL_PATH_TEST + targetFileName;
     int fdTarget = open(targetPath.c_str(), O_CREAT | O_RDWR, 0666);
     ASSERT_GE(fdTarget, 0);
     close(fdTarget);
 
-    // 2. 尝试安装同名字体
     int fdSource = open(FONT_PATH.c_str(), O_RDONLY);
     ASSERT_GE(fdSource, 0);
 
-    // 执行安装
     int ret = manager_->InstallFont(fdSource, TEST_USERID);
     close(fdSource);
 
-    // 验证
     EXPECT_EQ(ret, ERR_OK);
-    
-    // 检查是否发生了重命名行为
+
     bool hasRenamedFile = false;
     DIR *dir = opendir(INSTALL_PATH_TEST.c_str());
     if (dir) {

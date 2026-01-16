@@ -113,6 +113,7 @@ std::string FontConfig::SandBoxPathToRealPath(const std::string &path)
 
 bool FontConfig::InsertFontRecord(const std::string &fontPath, const std::vector<std::string> &fullNames)
 {
+    std::lock_guard<std::mutex> lock(fontsMapLock_);
     cJSON *jsonValue = cJSON_Parse(CheckConfigFile(ConfigPath_).c_str());
     if (jsonValue == nullptr) {
         FONT_LOGE("heck config file failed");
