@@ -52,6 +52,7 @@ int32_t FontManagerClient::InstallFont(const std::string &fontPath, int &outValu
     if (service == nullptr) {
         FONT_LOGE("Service is null");
         outValue = ERR_INSTALL_FAIL;
+        (void)fclose(fp);
         return ERR_OK;
     }
     int32_t ret = service->InstallFont(fd, outValue);
