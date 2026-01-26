@@ -134,11 +134,11 @@ int32_t FontManagerServer::DataMigrationInner(const sptr<IDataMigrationCallback>
         FONT_LOGE("FontManagerServer handler_ is null.");
         return ERR_SYSTEM_ERROR;
     }
-    if (isDataMigrationing_) {
+    bool expected = false;
+    if (!isDataMigrationing_.compare_exchange_strong(expected, true)) {
         FONT_LOGE("FontManagerServer is DataMigrationing.");
         return ERR_DATA_MIGRATIONING;
     }
-    isDataMigrationing_ = true;
     auto task = [this, callback]() {
         StartDataMigrationTask(callback);
     };
