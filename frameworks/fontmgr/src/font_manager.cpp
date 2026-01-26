@@ -42,7 +42,7 @@ int32_t FontManager::InstallFont(const int32_t &fd, const int32_t userId)
     if (!(FontManagerUtils::CheckAndInitInstallPath(installPath))) {
         return ERR_FILE_NOT_EXISTS;
     }
-    auto& fontConfig = configMap_.try_emplace(userId, FontConfig(installPath + FONT_CONFIG_FILE)).first->second;
+    auto& fontConfig = SafeGetOrCreateConfig(userId, installPath + FONT_CONFIG_FILE);
     if (!fontConfig.CheckAndUpdateFontRecord()) {
         FONT_LOGE("CheckAndUpdateFontRecord fail");
         return ERR_INSTALL_FAIL;
@@ -124,7 +124,7 @@ int32_t FontManager::UninstallFont(const std::string &fontFullName, const int32_
         FONT_LOGE("FontManager::UninstallFont, fontName is empty");
         return ERR_UNINSTALL_FILE_NOT_EXISTS;
     }
-    auto& fontConfig = configMap_.try_emplace(userId, FontConfig(installPath + FONT_CONFIG_FILE)).first->second;
+    auto& fontConfig = SafeGetOrCreateConfig(userId, installPath + FONT_CONFIG_FILE);
     if (!fontConfig.CheckAndUpdateFontRecord()) {
         FONT_LOGE("CheckAndUpdateFontRecord fail");
         return ERR_UNINSTALL_FAIL;
@@ -154,6 +154,13 @@ std::string FontManager::SandBoxPathToRealPath(const std::string &installPath, c
 {
     std::string fileName = FontManagerUtils::GetFileName(path);
     return installPath + fileName;
+}
+
+FontConfig& FontManager::SafeGetOrCreateConfig(int32_t userId, const std::string& configPath)
+{
+    std::lock_guard<std::mutex> lock(mapLock_);
+    auto result = configMap_.try_emplace(userId, FontConfig(configPath));
+    return result.first->second;
 }
 } // namespace FontManager
 } // namespace Global
