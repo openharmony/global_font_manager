@@ -32,7 +32,9 @@ private:
     std::string GetFormatFullName(const std::vector<std::string> &fullNameVector);
     std::string CopyFileForInstall(const std::string &installPath, const std::string &fileName, const int32_t &fd);
     std::string SandBoxPathToRealPath(const std::string &installPath, const std::string &path);
+    FontConfig& SafeGetOrCreateConfig(int32_t userId, const std::string& configPath);
     std::unordered_map<int32_t, FontConfig> configMap_;
+    std::mutex mapLock_;
 };
 } // namespace FontManager
 } // namespace Global
