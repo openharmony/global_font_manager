@@ -250,6 +250,10 @@ bool FontManagerUtils::CopyFileByFd(int32_t sourceFd, int32_t targetFd)
             FONT_LOGE("Failed to send file data: %s", strerror(errno));
             return false;
         }
+        if (ret == 0) {
+            FONT_LOGE("Unexpected EOF reading source file. Expected %zu, got %zu", fileSize, bytesSent);
+            return false;
+        }
         bytesSent += static_cast<size_t>(ret);
     }
     return true;
