@@ -65,6 +65,7 @@ int32_t FontManager::InstallFont(const int32_t &fd, const int32_t userId)
         }
     }
     if (fontConfig.GetInstalledFontsNum() >= MAX_INSTALL_NUM) {
+        FONT_LOGE("FontManager: Max install count %{public}d reached", MAX_INSTALL_NUM);
         return ERR_MAX_FILE_COUNT;
     }
     std::string fileName = FontManagerUtils::GetFileName(FontManagerUtils::GetFilePathByFd(fd));
@@ -91,7 +92,10 @@ std::string FontManager::GetFormatFullName(const std::vector<std::string> &fullN
     for (const auto &name : fullNameVector) {
         FormatFullName += name + split;
     }
-    return FormatFullName.substr(0, FormatFullName.size() - split.size());
+    if (FormatFullName.size() >= split.size()) {
+        return FormatFullName.substr(0, FormatFullName.size() - split.size());
+    }
+    return FormatFullName;
 }
 
 std::string FontManager::CopyFileForInstall(const std::string &installPath, const std::string &fileName,

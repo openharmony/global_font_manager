@@ -36,6 +36,7 @@ namespace Global {
 namespace FontManager {
 static constexpr uint32_t TIME_STRING_LENGTH = 20;
 static constexpr uint32_t BEGIN_YEAR = 1900;
+static constexpr size_t MAX_FONT_FILE_SIZE = 1024 * 1024 * 1024; // 1024MB
 
 bool FontManagerUtils::CheckAndInitInstallPath(const std::string &installPath)
 {
@@ -234,6 +235,11 @@ bool FontManagerUtils::CopyFileByFd(int32_t sourceFd, int32_t targetFd)
     struct stat sourceStat;
     if (fstat(sourceFd, &sourceStat) < 0) {
         FONT_LOGE("Failed to get source file stat");
+        return false;
+    }
+
+    if (sourceStat.st_size < 0 || static_cast<size_t>(sourceStat.st_size) > MAX_FONT_FILE_SIZE) {
+        FONT_LOGE("Source file size invalid or too large: %{public}lld", static_cast<long long>(sourceStat.st_size));
         return false;
     }
 

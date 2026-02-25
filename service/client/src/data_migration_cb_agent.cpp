@@ -14,6 +14,7 @@
  */
 
 #include "font_define.h"
+#include "font_hilog.h"
 #include "data_migration_cb_agent.h"
 
 namespace OHOS {
@@ -32,6 +33,7 @@ ErrCode DataMigrationCbAgent::Handle(const EventData& eventData)
         listener_->OnHandle(eventData);
         return ERR_OK;
     }
+    FONT_LOGE("DataMigrationCbAgent listener is null");
     return ERR_SYSTEM_ERROR;
 }
 } // namespace FontManager
