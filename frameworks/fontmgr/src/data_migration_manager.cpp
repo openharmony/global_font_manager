@@ -17,6 +17,7 @@
 
 #include <thread>
 #include <fcntl.h>
+#include <limits>
 #include "font_define.h"
 #include "font_hilog.h"
 #include "font_manager_utils.h"
@@ -32,6 +33,7 @@ constexpr int32_t COPY_SPEED = 10 * 1024 / 60; // Mb/s
 constexpr int32_t MAX_TRIGGER_COUNT = 100;
 constexpr double EPSILON = 0.5;
 static constexpr uint32_t HEARTBEAT_INTERVAL = 60;
+static constexpr uint32_t BYTES_TO_MB_SHIFT = 20; // 2^20 = 1MB
 }
 
 DataMigrationManager::DataMigrationManager()
@@ -176,14 +178,23 @@ int32_t DataMigrationManager::CopyFileForDataMigration(const std::string &srcPat
 
 void DataMigrationManager::StartHeartBeatTask()
 {
-    std::thread([self = shared_from_this()]() {
+    std::weak_ptr<DataMigrationManager> weakPtr = shared_from_this();
+    std::thread([weakPtr]() {
         FONT_LOGI("DataMigrationManager HeartBeat thread started.");
-        while (self->isDataMigrationing_) {
-            FONT_LOGI("DataMigrationManager HeartBeat....");
-            self->EventDataHeartBeat();
+        bool shouldRun = true;
+        while (shouldRun) {
+            {
+                auto self = weakPtr.lock();
+                if (!self || !self->isDataMigrationing_.load()) {
+                    shouldRun = false;
+                    continue;
+                }
+                FONT_LOGI("DataMigrationManager HeartBeat....");
+                self->EventDataHeartBeat();
+            }
             std::this_thread::sleep_for(std::chrono::seconds(HEARTBEAT_INTERVAL));
         }
-        FONT_LOGI("DataMigrationManager HeartBeat thread stoped.");
+        FONT_LOGI("DataMigrationManager HeartBeat thread stopped.");
     }).detach();
 }
 
@@ -200,8 +211,12 @@ bool DataMigrationManager::IsShouldUpdateProgress(uint32_t i, uint32_t totalCoun
 
 void DataMigrationManager::EventDataProgress(uint32_t i, uint32_t size, uint32_t idsize)
 {
-    std::uintmax_t remainSize = (OHOS::GetFolderSize(INSTALL_PATH_APP) * idsize) >> 20;
-    uint32_t timeRemaining = remainSize / COPY_SPEED;
+    std::uintmax_t folderSize = OHOS::GetFolderSize(INSTALL_PATH_APP);
+    std::uintmax_t remain = 0;
+    if (idsize > 0 && folderSize < (std::numeric_limits<std::uintmax_t>::max() / idsize)) {
+        remain = (folderSize * idsize) >> BYTES_TO_MB_SHIFT;
+    }
+    uint32_t timeRemaining = remain / COPY_SPEED;
     if (timeRemaining < 1) {
         timeRemaining = 1;
     }

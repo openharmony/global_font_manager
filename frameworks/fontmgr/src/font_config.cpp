@@ -204,6 +204,11 @@ char *FontConfig::GetFileData(const std::string &filePath, long &size)
         (void)fclose(fp);
         return nullptr;
     }
+    if (fileSize >= LONG_MAX) {
+        FONT_LOGE("file size too large for filePath = %{public}s", filePath.c_str());
+        (void)fclose(fp);
+        return nullptr;
+    }
     size = fileSize + 1;
 
     if (size <= 0) {
