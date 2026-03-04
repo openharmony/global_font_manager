@@ -41,6 +41,10 @@ public:
 
     int32_t DataMigration(const sptr<IDataMigrationCallback>& callback) override;
 
+    int32_t InstallFontWithUserId(const int32_t fd, int32_t userId) override;
+
+    int32_t UninstallFontWithUserId(const std::string &fontName, int32_t userId) override;
+
 protected:
     void OnStart(const SystemAbilityOnDemandReason &startReason) override;
 

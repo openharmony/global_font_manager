@@ -66,6 +66,7 @@ ohos_unittest("font_manager_module_test") {
     "src/font_config_test.cpp",
     "src/font_manager_test.cpp",
     "src/data_migration_manager_test.cpp",
+    "src/font_manager_inner_api_test.cpp",
   ]
 
   sources += fontmgr_src
@@ -73,6 +74,7 @@ ohos_unittest("font_manager_module_test") {
     "./include",
     "../common",
     "../../common/include",
+    "../../service/inner_api/include",
   ]
 
   include_dirs += fontmgr_include
@@ -87,6 +89,7 @@ ohos_unittest("font_manager_module_test") {
   external_deps += fontmgr_external_deps
 
   deps = [
+    "../../service:font_manager_client",
     "../../service:font_manager_server",
     "../../service:font_service_interface",
     ":font_manager_ut_permission",

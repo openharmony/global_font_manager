@@ -35,6 +35,8 @@ public:
     int32_t InstallFont(const std::string &fontPath, int &outValue) override;
     int32_t UninstallFont(const std::string &fontName, int &outValue) override;
     int32_t DataMigration(std::shared_ptr<IDataMigrationListener> listener) override;
+    int32_t InstallFontWithUserId(const std::string &fontPath, int32_t userId);
+    int32_t UninstallFontWithUserId(const std::string &fontName, int32_t userId);
 
 private:
     bool PathToRealPath(const std::string& path, std::string& realPath);
