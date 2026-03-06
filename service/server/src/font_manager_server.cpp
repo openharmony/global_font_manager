@@ -221,6 +221,50 @@ int32_t FontManagerServer::CheckPermission()
     FONT_LOGI("FontManagerServer CheckPermission success.");
     return ERR_OK;
 }
+
+int32_t FontManagerServer::InstallFontWithUserId(const int32_t fd, int32_t userId)
+{
+    RemoveUnloadFontServiceTask();
+    callingCount_++;
+    int32_t ret = CheckPermission();
+    if (ret == ERR_OK) {
+        if (userId < 0) {
+            FONT_LOGE("Invalid userId: %{public}d", userId);
+            ret = ERR_INVALID_PARAM;
+        } else {
+            ret = FontManager::GetInstance()->InstallFont(fd, userId);
+        }
+    } else {
+        FONT_LOGE("CheckPermission failed, ret: %{public}d", ret);
+    }
+    callingCount_--;
+    if (callingCount_ == 0) {
+        AddUnloadFontServiceTask();
+    }
+    return ret;
+}
+
+int32_t FontManagerServer::UninstallFontWithUserId(const std::string &fontName, int32_t userId)
+{
+    RemoveUnloadFontServiceTask();
+    callingCount_++;
+    int32_t ret = CheckPermission();
+    if (ret == ERR_OK) {
+        if (userId < 0) {
+            FONT_LOGE("Invalid userId: %{public}d", userId);
+            ret = ERR_INVALID_PARAM;
+        } else {
+            ret = FontManager::GetInstance()->UninstallFont(fontName, userId);
+        }
+    } else {
+        FONT_LOGE("CheckPermission failed, ret: %{public}d", ret);
+    }
+    callingCount_--;
+    if (callingCount_ == 0) {
+        AddUnloadFontServiceTask();
+    }
+    return ret;
+}
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS

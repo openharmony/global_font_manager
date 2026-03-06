@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,15 +12,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package OHOS.Global.FontManager;
- 
- import IDataMigrationCallbackEvent;
- import IDataMigrationCallback;
 
- interface OHOS.Global.FontManager.IFontService {
-    void InstallFont([in] FileDescriptor fd, [out] int outValue);
-    void UninstallFont([in] String fontName, [out] int outValue);
-    void DataMigration([in] IDataMigrationCallback callbackInfo);
-    void InstallFontWithUserId([in] FileDescriptor fd, [in] int userId);
-    void UninstallFontWithUserId([in] String fontName, [in] int userId);
- }
+#ifndef GLOBAL_FONT_MANAGER_FONT_MANAGER_INNER_API_H
+#define GLOBAL_FONT_MANAGER_FONT_MANAGER_INNER_API_H
+
+#include <string>
+
+namespace OHOS {
+namespace Global {
+namespace FontManager {
+class FontManagerInnerApi {
+public:
+    static int32_t InstallFont(const std::string &fontPath, int32_t userId);
+    static int32_t UninstallFont(const std::string &fontName, int32_t userId);
+};
+} // namespace FontManager
+} // namespace Global
+} // namespace OHOS
+#endif // GLOBAL_FONT_MANAGER_FONT_MANAGER_INNER_API_H

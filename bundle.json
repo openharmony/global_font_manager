@@ -73,6 +73,17 @@
             "//base/global/font_manager/sa_profile:font_server_profile",
             "//base/global/font_manager/service:font_service_ability"
           ],
+          "inner_kits": [
+            {
+              "header": {
+                "header_base": "//base/global/font_manager/service/inner_api/include/",
+                "header_files": [
+                  "font_manager_inner_api.h"
+                ]
+              },
+              "name": "//base/global/font_manager/service:font_manager_client"
+            }
+          ],
           "test": [
             "//base/global/font_manager/test/unittest:unittest",
             "//base/global/font_manager/test/fuzztest:fuzztest"

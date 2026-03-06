@@ -58,6 +58,7 @@ ohos_shared_library("font_manager_client") {
     "client/src/font_sa_load_callback.cpp",
     "client/src/data_migration_cb_agent.cpp",
     "inner_api/src/font_manager_kits.cpp",
+    "inner_api/src/font_manager_inner_api.cpp",
   ]
 
   sources += filter_include(output_values, [ "*_proxy.cpp" ])

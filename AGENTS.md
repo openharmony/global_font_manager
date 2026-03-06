@@ -10,6 +10,7 @@ This project uses the GN (Generate Ninja) build system.
 
 ```bash
 # Build the entire font manager service
+# need 'cd ~/openharmony' first
 ./build.sh --product-name rk3568 --ccache --build-target font_manager
 
 # Build all tests

@@ -88,7 +88,8 @@ int32_t FontManagerClient::DataMigration(std::shared_ptr<IDataMigrationListener>
         FONT_LOGE("DataMigration listener is not object");
         return ERR_SYSTEM_ERROR;
     }
-    return service->DataMigration(cbAgent);
+    int32_t ret = service->DataMigration(cbAgent);
+    return ret;
 }
 
 bool FontManagerClient::PathToRealPath(const std::string& path, std::string& realPath)
@@ -115,6 +116,46 @@ bool FontManagerClient::PathToRealPath(const std::string& path, std::string& rea
         return false;
     }
     return true;
+}
+
+int32_t FontManagerClient::InstallFontWithUserId(const std::string &fontPath, int32_t userId)
+{
+    std::string realPath;
+    if (!PathToRealPath(fontPath, realPath)) {
+        FONT_LOGE("failed to get real path %{private}s, errno %{public}d", fontPath.c_str(), errno);
+        return ERR_FILE_NOT_EXISTS;
+    }
+    FILE* fp = fopen(realPath.c_str(), "rb");
+    if (!fp) {
+        FONT_LOGE("open font file failed");
+        return ERR_FILE_NOT_EXISTS;
+    }
+    int fd = fileno(fp);
+    if (fd < 0) {
+        FONT_LOGE("open font file failed, errno: %{public}d", errno);
+        (void)fclose(fp);
+        return ERR_FILE_NOT_EXISTS;
+    }
+    sptr<IFontService> service = FontServiceLoadManager::GetInstance()->GetFontServiceAbility(FONT_SA_ID);
+    if (service == nullptr) {
+        FONT_LOGE("Service is null");
+        (void)fclose(fp);
+        return ERR_INSTALL_FAIL;
+    }
+    int32_t ret = service->InstallFontWithUserId(fd, userId);
+    (void)fclose(fp);
+    return ret;
+}
+
+int32_t FontManagerClient::UninstallFontWithUserId(const std::string &fontName, int32_t userId)
+{
+    sptr<IFontService> service = FontServiceLoadManager::GetInstance()->GetFontServiceAbility(FONT_SA_ID);
+    if (service == nullptr) {
+        FONT_LOGE("Service is null");
+        return ERR_UNINSTALL_FAIL;
+    }
+    int32_t ret = service->UninstallFontWithUserId(fontName, userId);
+    return ret;
 }
 } // namespace FontManager
 } // namespace Global
