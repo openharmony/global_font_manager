@@ -66,9 +66,13 @@ AniDataMigrationListener::~AniDataMigrationListener()
                 return;
             }
         }
-        env->GlobalReference_Delete(listenerRef_);
+        if (env->GlobalReference_Delete(listenerRef_) != ANI_OK) {
+            FONT_LOGE("AniDataMigrationListener Destructor: Failed to delete global reference.");
+        }
         if (isAttached) {
-            vm_->DetachCurrentThread();
+            if (vm_->DetachCurrentThread() != ANI_OK) {
+                FONT_LOGE("AniDataMigrationListener Destructor: Failed to detach current thread.");
+            }
         }
     }
 }
@@ -94,7 +98,9 @@ void AniDataMigrationListener::OnHandle(const EventData& eventData)
     if (env->FindClass("@ohos.fontManager.fontManager.DataMigrationCallback", &cls) != ANI_OK) {
         FONT_LOGE("AniDataMigrationListener: GetClass failed");
         if (isAttached) {
-            vm_->DetachCurrentThread();
+            if (vm_->DetachCurrentThread() != ANI_OK) {
+                FONT_LOGE("AniDataMigrationListener OnHandle: Failed to detach current thread.");
+            }
         }
         return;
     }
@@ -108,14 +114,16 @@ void AniDataMigrationListener::OnHandle(const EventData& eventData)
     }
 
     if (isAttached) {
-        vm_->DetachCurrentThread();
+        if (vm_->DetachCurrentThread() != ANI_OK) {
+            FONT_LOGE("AniDataMigrationListener OnHandle: Failed to detach current thread.");
+        }
     }
 }
 
 void AniDataMigrationListener::DoHeartbeatCallback(ani_env* env, ani_class cls)
 {
     ani_method method = nullptr;
-    if (env->Class_FindMethod(cls, "onHeartBeat", nullptr, &method) != ANI_OK) {
+    if (env->Class_FindMethod(cls, "onHeartBeat", ":", &method) != ANI_OK) {
         FONT_LOGE("DoHeartbeatCallback: FindMethod onHeartBeat failed");
         return;
     }
@@ -139,7 +147,7 @@ void AniDataMigrationListener::DoProgressCallback(ani_env* env, ani_class cls, c
     }
     
     ani_method ctor = nullptr;
-    if (env->Class_FindMethod(dataCls, "<ctor>", nullptr, &ctor) != ANI_OK) {
+    if (env->Class_FindMethod(dataCls, "<ctor>", "ii:", &ctor) != ANI_OK) {
         FONT_LOGE("Find ProgressData ctor method failed");
         return;
     }
@@ -158,7 +166,7 @@ void AniDataMigrationListener::DoProgressCallback(ani_env* env, ani_class cls, c
 void AniDataMigrationListener::DoResultCallback(ani_env* env, ani_class cls, const EventData& eventData)
 {
     ani_method method = nullptr;
-    if (env->Class_FindMethod(cls, "onResult", "I:V", &method) != ANI_OK) {
+    if (env->Class_FindMethod(cls, "onResult", "i:", &method) != ANI_OK) {
         FONT_LOGE("DoResultCallback: FindMethod onResult failed");
         return;
     }
