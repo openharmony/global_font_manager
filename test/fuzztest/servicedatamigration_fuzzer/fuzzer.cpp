@@ -36,6 +36,9 @@ public:
 
 void ServiceDataMigrationFuzz(const uint8_t *data, size_t size)
 {
+    if (data == nullptr || size == 0) {
+        return;
+    }
     std::string processName = "ServiceDataMigrationFuzz";
     PermissionCommon::SetFontManagerPermission(processName);
     sptr<IDataMigrationCallback> cb = new (std::nothrow) FuzzCallback();
