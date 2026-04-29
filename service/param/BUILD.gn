@@ -10,14 +10,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+ 
 import("//build/ohos.gni")
-
-group()
-
-ohos_prebuilt_etc("font_sa_etc") {
-  source = "font_manager_server.cfg"
-  relative_install_dir = "init"
-  subsystem_name = "global"
+ 
+group("param_files") {
+  deps = [
+    ":font_manager_para",
+    ":font_manager_para_dac"
+  ]
+}
+ 
+ohos_prebuilt_etc("font_manager_para") {
+  source = "font_manager.para"
+  relative_install_dir = "param"
   part_name = "font_manager"
+  subsystem_name = "global"
+}
+ 
+ohos_prebuilt_etc("font_manager_para_dac") {
+  source = "font_manager.para.dac"
+  relative_install_dir = "param"
+  part_name = "font_manager"
+  subsystem_name = "global"
 }
