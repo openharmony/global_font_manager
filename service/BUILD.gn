@@ -47,6 +47,7 @@ group("font_service_ability") {
     ":font_manager_server",
     ":font_manager_client",
     "./etc:font_sa_etc",
+    "./param:param_files",
   ]
 }
 
