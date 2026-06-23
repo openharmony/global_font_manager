@@ -59,6 +59,7 @@ inline const std::string INSTALL_PATH_PREFIX = "/data/service/el1/";
 inline const std::string INSTALL_PATH_SUFFIX = "/for-all-app/fonts/";
 inline const std::string FONT_CONFIG_FILE = "install_fontconfig.json";
 inline const std::string TEMP_FILE = "temp/";
+inline const std::string EXT_STORAGE_BUNDLE_PARAM_KEY = "const.fontmanager.extstoragebundle";
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS

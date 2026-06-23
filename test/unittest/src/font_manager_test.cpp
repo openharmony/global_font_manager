@@ -26,6 +26,7 @@
 #define private public
 #define protected public
 #include "font_manager.h"
+#include "storage_manager_adapter.h"
 #undef private
 #undef protected
 #include "font_manager_utils.h"
@@ -454,6 +455,46 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest014, TestSize.Level1)
         closedir(dir);
     }
     EXPECT_TRUE(hasRenamedFile);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest015
+ * @tc.desc: Test InstallFont triggers ReportFontBundleStats
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest015, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    int ret = manager_->InstallFont(fd, TEST_USERID);
+    EXPECT_EQ(ret, ERR_OK);
+    if (fd >= 0) {
+        close(fd);
+    }
+    auto adapter = StorageManagerAdapter::GetInstance();
+    uint64_t size = adapter->GetFontFolderSize(INSTALL_PATH_TEST);
+    EXPECT_GT(size, 0);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest016
+ * @tc.desc: Test UninstallFont triggers ReportFontBundleStats
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest016, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    int ret = manager_->InstallFont(fd, TEST_USERID);
+    EXPECT_EQ(ret, ERR_OK);
+    if (fd >= 0) {
+        close(fd);
+    }
+    ret = manager_->UninstallFont(FONT_FULL_NAME, TEST_USERID);
+    EXPECT_EQ(ret, ERR_OK);
+    auto adapter = StorageManagerAdapter::GetInstance();
+    uint64_t size = adapter->GetFontFolderSize(INSTALL_PATH_TEST);
+    EXPECT_GT(size, 0);
 }
 } // namespace FontManager
 } // namespace Global
