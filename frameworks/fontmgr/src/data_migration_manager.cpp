@@ -24,6 +24,7 @@
 #include "directory_ex.h"
 #include "hisysevent_adapter.h"
 #include "font_config.h"
+#include "storage_manager_adapter.h"
 
 namespace OHOS {
 namespace Global {
@@ -53,6 +54,10 @@ void DataMigrationManager::DataMigration(const sptr<IDataMigrationCallback>& cal
         FONT_LOGE("FontManager DataMigration err.ErrCode:%{public}d", ret);
     }
     CheckAndUpdateAllFontRecord();
+    for (const auto& userId : userIds_) {
+        std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX;
+        StorageManagerAdapter::GetInstance()->ReportFontBundleStats(userId, installPath);
+    }
     isDataMigrationing_ = false;
     EventDataResult(ret);
     ret = HisyseventAdapter::GetInstance()->CollectDataMigrationState(userIds_, ret);

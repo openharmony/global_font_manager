@@ -57,6 +57,7 @@
           "hilog",
           "hisysevent",
           "hitrace",
+          "init",
           "libuv",
           "ipc",
           "napi",
@@ -65,7 +66,8 @@
           "samgr",
           "graphic_2d",
           "runtime_core",
-          "os_account"
+          "os_account",
+          "storage_service"
         ]
     },
       "build": {

@@ -25,7 +25,8 @@ fontmgr_src = [
     "$root_path/src/font_manager.cpp",
     "$root_path/src/font_event_publish.cpp",
     "$root_path/src/hisysevent_adapter.cpp",
-    "$root_path/src/data_migration_manager.cpp"
+    "$root_path/src/data_migration_manager.cpp",
+    "$root_path/src/storage_manager_adapter.cpp"
 ]
 
 fontmgr_external_deps = [
@@ -34,6 +35,8 @@ fontmgr_external_deps = [
     "cJSON:cjson",
     "common_event_service:cesfwk_innerkits",
     "hilog:libhilog",
+    "init:libbegetutil",
+    "storage_service:storage_manager_sa_proxy",
     "graphic_2d:2d_graphics",
     "graphic_2d:rosen_text",
 ]
