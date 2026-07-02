@@ -21,6 +21,7 @@
 #define private public
 #define protected public
 #include "data_migration_manager.h"
+#include "storage_manager_adapter.h"
 #undef private
 #undef protected
 #include "font_manager_utils.h"
@@ -198,6 +199,30 @@ HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest005, TestSize.Lev
     bool ret = manager_->CheckAllUserDir();
     
     EXPECT_FALSE(ret);
+}
+
+/**
+ * @tc.name: DataMigrationManagerFuncTest006
+ * @tc.desc: Test DataMigration triggers ReportFontBundleStats for each user
+ * @tc.type: FUNC
+ */
+HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest006, TestSize.Level1)
+{
+    PermissionCommon::SetFontManagerInitEnv();
+    std::vector<std::string> srcPaths = {
+        "/data/test/NotoSansCJK-Regular.ttc",
+        "/data/test/TestFont_Sans.ttf",
+    };
+    EXPECT_TRUE(this->CopyTestFileToInstallPath(srcPaths));
+    sptr<IDataMigrationCallback> cb = new (std::nothrow) TestCallback();
+    ASSERT_TRUE(cb != nullptr);
+    manager_->DataMigration(cb);
+    std::vector<std::string> paths;
+    OHOS::GetDirFiles(INSTALL_PATH_TEST, paths);
+    EXPECT_TRUE(paths.size() == srcPaths.size());
+    auto adapter = StorageManagerAdapter::GetInstance();
+    uint64_t size = adapter->GetFontFolderSize(INSTALL_PATH_TEST);
+    EXPECT_GT(size, 0);
 }
 } // namespace FontManager
 } // namespace Global

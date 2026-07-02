@@ -22,6 +22,7 @@
 #include "font_event_publish.h"
 #include "font_manager_utils.h"
 #include "hisysevent_adapter.h"
+#include "storage_manager_adapter.h"
 #include "font_define.h"
 
 namespace OHOS {
@@ -80,6 +81,7 @@ int32_t FontManager::InstallFont(const int32_t &fd, const int32_t userId)
         return ERR_INSTALL_FAIL;
     }
     HisyseventAdapter::GetInstance()->CollectUserDataSize(installPath);
+    StorageManagerAdapter::GetInstance()->ReportFontBundleStats(userId, installPath);
     FontEventPublish::PublishFontUpdate(FontEventType::INSTALL, GetFormatFullName(fullNameVector), userId);
     FONT_LOGI("Install font success, fileName:%{public}s, userId:%{public}d", realFileName.c_str(), userId);
     return ERR_OK;
@@ -149,6 +151,7 @@ int32_t FontManager::UninstallFont(const std::string &fontFullName, const int32_
         return ERR_UNINSTALL_FAIL;
     }
     HisyseventAdapter::GetInstance()->CollectUserDataSize(installPath);
+    StorageManagerAdapter::GetInstance()->ReportFontBundleStats(userId, installPath);
     FontEventPublish::PublishFontUpdate(FontEventType::UNINSTALL, fontFullName, userId);
     FONT_LOGI("Uninstall font success, fontFullName:%{public}s, userId:%{public}d", fontFullName.c_str(), userId);
     return ERR_OK;
