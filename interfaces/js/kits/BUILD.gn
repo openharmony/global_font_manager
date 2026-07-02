@@ -40,6 +40,8 @@ ohos_shared_library("fontmanager") {
     "hilog:libhilog",
     "ipc:ipc_core",
     "napi:ace_napi",
+    "node:node_header_notice",
+    "libuv:uv",
   ]
 
   cflags_cc = [
