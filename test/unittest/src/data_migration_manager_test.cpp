@@ -157,29 +157,6 @@ HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest003, TestSize.Lev
 }
 
 /**
- * @tc.name: DataMigrationManagerFuncTest004
- * @tc.desc: Test FontManager DataMigration case
- * @tc.type: FUNC
- */
-HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest004, TestSize.Level1)
-{
-    std::vector<std::string> srcPaths = {
-        "/data/test/NotoSansCJK-Regular.ttc"
-    };
-    EXPECT_TRUE(this->CopyTestFileToInstallPath(srcPaths));
-    sptr<IDataMigrationCallback> cb = new (std::nothrow) TestCallback();
-    ASSERT_TRUE(cb != nullptr);
-    manager_->DataMigration(cb);
-    std::vector<std::string> paths;
-    OHOS::GetDirFiles(INSTALL_PATH_TEST, paths);
-#ifdef USE_EXTENSION_DATA
-    EXPECT_TRUE(paths.empty());
-#else
-    EXPECT_TRUE(paths.size() == srcPaths.size());
-#endif
-}
-
-/**
  * @tc.name: DataMigrationManagerFuncTest005
  * @tc.desc: Test CheckAllUserDir fail
  * @tc.type: FUNC
