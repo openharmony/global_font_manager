@@ -72,6 +72,7 @@ ohos_shared_library("font_manager_client") {
   deps = [ ":font_service_interface" ]
 
   external_deps = [
+    "bounds_checking_function:libsec_shared",
     "c_utils:utils",
     "hilog:libhilog",
     "hitrace:hitrace_meter",
