@@ -186,17 +186,13 @@ void DataMigrationManager::StartHeartBeatTask()
     std::weak_ptr<DataMigrationManager> weakPtr = shared_from_this();
     std::thread([weakPtr]() {
         FONT_LOGI("DataMigrationManager HeartBeat thread started.");
-        bool shouldRun = true;
-        while (shouldRun) {
-            {
-                auto self = weakPtr.lock();
-                if (!self || !self->isDataMigrationing_.load()) {
-                    shouldRun = false;
-                    continue;
-                }
-                FONT_LOGI("DataMigrationManager HeartBeat....");
-                self->EventDataHeartBeat();
+        while (true) {
+            auto self = weakPtr.lock();
+            if (!self || !self->isDataMigrationing_.load()) {
+                break;
             }
+            FONT_LOGI("DataMigrationManager HeartBeat....");
+            self->EventDataHeartBeat();
             std::this_thread::sleep_for(std::chrono::seconds(HEARTBEAT_INTERVAL));
         }
         FONT_LOGI("DataMigrationManager HeartBeat thread stopped.");

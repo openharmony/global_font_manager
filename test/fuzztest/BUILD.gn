@@ -41,5 +41,8 @@ group("fuzztest") {
     "serviceinstallfont_fuzzer:ServiceInstallFontFuzzTest",
     "serviceuninstallfont_fuzzer:ServiceUnInstallFontFuzzTest",
     "servicedatamigration_fuzzer:ServiceDataMigrationFuzzTest",
+    "serviceinstallscopefont_fuzzer:ServiceInstallScopeFontFuzzTest",
+    "serviceuninstallscopefont_fuzzer:ServiceUninstallScopeFontFuzzTest",
+    "servicegetfontscope_fuzzer:ServiceGetFontScopeFuzzTest",
   ]
 }

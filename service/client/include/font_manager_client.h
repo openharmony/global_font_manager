@@ -18,15 +18,26 @@
 
 #include <string>
 #include <unistd.h>
+#include <mutex>
 #include <singleton.h>
 
 #include "font_manager_kits.h"
 #include "data_migration_cb_agent.h"
 #include "font_service_load_manager.h"
+#include "ifont_client_observer.h"
 
 namespace OHOS {
 namespace Global {
 namespace FontManager {
+class FontServiceDeathRecipient : public IRemoteObject::DeathRecipient {
+public:
+    explicit FontServiceDeathRecipient(sptr<IFontClientObserver> observer) : observer_(observer) {}
+    ~FontServiceDeathRecipient() override = default;
+    void OnRemoteDied(const wptr<IRemoteObject> &remote) override;
+private:
+    sptr<IFontClientObserver> observer_;
+};
+
 class FontManagerClient : public FontManagerKits, public DelayedSingleton<FontManagerClient> {
     DECLARE_DELAYED_REF_SINGLETON(FontManagerClient);
 using CbAgentPtr = sptr<DataMigrationCbAgent>;
@@ -38,8 +49,17 @@ public:
     int32_t InstallFontWithUserId(const std::string &fontPath, int32_t userId);
     int32_t UninstallFontWithUserId(const std::string &fontName, int32_t userId);
 
+    int32_t OnFontObserver(const sptr<IFontClientObserver>& observer) override;
+    int32_t OffFontObserver(const sptr<IFontClientObserver>& observer) override;
+    int32_t InstallScopeFont(const std::string &fontPath, int32_t scope, int32_t &outValue) override;
+    int32_t UninstallScopeFont(const std::string &srcPath, int32_t &outValue) override;
+    int32_t GetFontScope(const std::string &srcPath, int32_t &outValue) override;
+
 private:
     bool PathToRealPath(const std::string& path, std::string& realPath);
+    std::mutex observerLock_;
+    sptr<IRemoteObject> saBinder_;
+    sptr<FontServiceDeathRecipient> saDeathRecipient_;
 };
 } // namespace FontManager
 } // namespace Global

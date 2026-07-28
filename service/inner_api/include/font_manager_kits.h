@@ -19,6 +19,7 @@
 #include <string>
 #include "singleton.h"
 #include "idata_migration_listener.h"
+#include "ifont_client_observer.h"
 
 namespace OHOS {
 namespace Global {
@@ -32,6 +33,13 @@ public:
     virtual int32_t InstallFont(const std::string &fontPath, int &outValue) = 0;
     virtual int32_t UninstallFont(const std::string &fontName, int &outValue) = 0;
     virtual int32_t DataMigration(std::shared_ptr<IDataMigrationListener> listener) = 0;
+
+    virtual int32_t OnFontObserver(const sptr<IFontClientObserver>& observer) = 0;
+    virtual int32_t OffFontObserver(const sptr<IFontClientObserver>& observer) = 0;
+    virtual int32_t InstallScopeFont(const std::string &fontPath, int32_t scope,
+        int32_t &outValue) = 0;
+    virtual int32_t UninstallScopeFont(const std::string &srcPath, int32_t &outValue) = 0;
+    virtual int32_t GetFontScope(const std::string &srcPath, int32_t &outValue) = 0;
 
 protected:
     FontManagerKits() = default;

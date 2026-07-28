@@ -17,7 +17,10 @@ import("//build/config/components/idl_tool/idl.gni")
 
 idl_gen_interface("font_service_interface") {
   sources = [ "IFontService.idl" ]
-  sources_callback = ["IDataMigrationCallback.idl"]
+  sources_callback = [
+    "IDataMigrationCallback.idl",
+    "IFontClientObserver.idl",
+  ]
   log_domainid = "0xD001E00"
   log_tag = "FONT_MSG"
   sources_common = [
@@ -58,6 +61,7 @@ ohos_shared_library("font_manager_client") {
     "client/src/font_service_load_manager.cpp",
     "client/src/font_sa_load_callback.cpp",
     "client/src/data_migration_cb_agent.cpp",
+    "client/src/font_client_observer_agent.cpp",
     "inner_api/src/font_manager_kits.cpp",
     "inner_api/src/font_manager_inner_api.cpp",
   ]
@@ -65,6 +69,7 @@ ohos_shared_library("font_manager_client") {
   sources += filter_include(output_values, [ "*_proxy.cpp" ])
   sources += filter_include(output_values, [ "*_callback_stub.cpp" ])
   sources += filter_include(output_values, [ "*_callback_event.cpp" ])
+  sources += filter_include(output_values, [ "*_observer_stub.cpp" ])
   public_configs = [ ":font_client_config" ]
 
   include_dirs = [ "../common/include" ]
@@ -116,6 +121,7 @@ ohos_shared_library("font_manager_server") {
     "access_token:libaccesstoken_sdk",
     "access_token:libtokenid_sdk",
     "c_utils:utils",
+    "common_event_service:cesfwk_innerkits",
     "eventhandler:libeventhandler",
     "hilog:libhilog",
     "hisysevent:libhisysevent",

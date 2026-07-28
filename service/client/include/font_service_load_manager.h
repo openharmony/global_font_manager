@@ -49,6 +49,7 @@ private:
     LoadSaStatus loadSaStatus_ = LoadSaStatus::WAIT_RESULT;
     std::condition_variable proxyConVar_;
     std::mutex serviceLock_;
+    std::mutex loadMutex_;
 };
 } // namespace FontManager
 } // namespace Global

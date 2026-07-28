@@ -44,10 +44,6 @@ int32_t FontManager::InstallFont(const int32_t &fd, const int32_t userId)
         return ERR_FILE_NOT_EXISTS;
     }
     auto& fontConfig = SafeGetOrCreateConfig(userId, installPath + FONT_CONFIG_FILE);
-    if (!fontConfig.CheckAndUpdateFontRecord()) {
-        FONT_LOGE("CheckAndUpdateFontRecord fail");
-        return ERR_INSTALL_FAIL;
-    }
     std::vector<std::string> fullNameVector = FontManagerUtils::GetFullNamesByFd(fd);
     if (fullNameVector.size() == 0) {
         return ERR_FILE_VERIFY_FAIL;
@@ -131,10 +127,6 @@ int32_t FontManager::UninstallFont(const std::string &fontFullName, const int32_
         return ERR_UNINSTALL_FILE_NOT_EXISTS;
     }
     auto& fontConfig = SafeGetOrCreateConfig(userId, installPath + FONT_CONFIG_FILE);
-    if (!fontConfig.CheckAndUpdateFontRecord()) {
-        FONT_LOGE("CheckAndUpdateFontRecord fail");
-        return ERR_UNINSTALL_FAIL;
-    }
     std::string path = fontConfig.GetFontFileByName(fontFullName);
     if (path.empty()) {
         FONT_LOGE("Can't find fontFullName = %{public}s", fontFullName.c_str());
@@ -159,6 +151,9 @@ int32_t FontManager::UninstallFont(const std::string &fontFullName, const int32_
 
 std::string FontManager::SandBoxPathToRealPath(const std::string &installPath, const std::string &path)
 {
+    if (path.find(INSTALL_PATH_APP) == 0) {
+        return installPath + path.substr(INSTALL_PATH_APP.length());
+    }
     std::string fileName = FontManagerUtils::GetFileName(path);
     return installPath + fileName;
 }
@@ -168,6 +163,212 @@ FontConfig& FontManager::SafeGetOrCreateConfig(int32_t userId, const std::string
     std::lock_guard<std::mutex> lock(mapLock_);
     auto result = configMap_.try_emplace(userId, FontConfig(configPath));
     return result.first->second;
+}
+
+std::string FontManager::GetAppInstallPath(int32_t userId, const std::string &appIdentifier)
+{
+    return INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX + appIdentifier + "/";
+}
+
+int32_t FontManager::InstallScopeFont(const ScopeFontInstallInfo &info)
+{
+    if (info.scope != FONT_SCOPE_APP && info.scope != FONT_SCOPE_SESSION) {
+        FONT_LOGE("InstallScopeFont: invalid scope=%{public}d", info.scope);
+        return ERR_INVALID_PARAM;
+    }
+    std::string installPath = INSTALL_PATH_PREFIX + std::to_string(info.userId) + INSTALL_PATH_SUFFIX;
+    if (!FontManagerUtils::CheckAndInitInstallPath(installPath)) {
+        return ERR_FILE_NOT_EXISTS;
+    }
+    auto& fontConfig = SafeGetOrCreateConfig(info.userId, installPath + FONT_CONFIG_FILE);
+    if (!fontConfig.CheckAndUpdateFontRecord()) {
+        FONT_LOGE("CheckAndUpdateFontRecord fail");
+        return ERR_INSTALL_FAIL;
+    }
+    std::vector<std::string> fullNames;
+    int32_t ret = ValidateScopeFontForInstall(fontConfig, info.srcPath, info.fd, fullNames);
+    if (ret != ERR_OK) {
+        return ret;
+    }
+    ret = CopyAndInsertScopeFont(info, fontConfig, fullNames);
+    if (ret != ERR_OK) {
+        return ret;
+    }
+    HisyseventAdapter::GetInstance()->CollectUserDataSize(installPath);
+    StorageManagerAdapter::GetInstance()->ReportFontBundleStats(info.userId, installPath);
+    FontEventPublish::PublishFontUpdate(FontEventType::INSTALL, GetFormatFullName(fullNames), info.userId);
+    FONT_LOGI("InstallScopeFont success, srcPath:%{public}s, scope:%{public}d", info.srcPath.c_str(), info.scope);
+    return ERR_OK;
+}
+
+int32_t FontManager::ValidateScopeFontForInstall(FontConfig& fontConfig, const std::string &srcPath,
+    const int32_t fd, std::vector<std::string>& fullNames)
+{
+    auto record = fontConfig.GetFontRecordByUrl(srcPath);
+    if (record.has_value()) {
+        FONT_LOGE("InstallScopeFont: srcPath already installed");
+        return ERR_INSTALLED_ALRADY;
+    }
+    if (fontConfig.GetTotalInstalledFontsNum() >= MAX_INSTALL_NUM) {
+        FONT_LOGE("InstallScopeFont: max count reached");
+        return ERR_MAX_FILE_COUNT;
+    }
+    fullNames = FontManagerUtils::GetFullNamesByFd(fd);
+    if (fullNames.empty()) {
+        return ERR_FILE_VERIFY_FAIL;
+    }
+    for (const auto &name : fullNames) {
+        auto existing = fontConfig.GetFontRecordByName(name);
+        if (existing.has_value()) {
+            FONT_LOGE("InstallScopeFont: font name already exists");
+            return ERR_INSTALLED_ALRADY;
+        }
+    }
+    return ERR_OK;
+}
+
+int32_t FontManager::CopyAndInsertScopeFont(const ScopeFontInstallInfo &info,
+    FontConfig& fontConfig, const std::vector<std::string>& fullNames)
+{
+    std::string appDir = GetAppInstallPath(info.userId, info.appIdentifier);
+    if (!FontManagerUtils::CheckAndInitScopeFontPath(appDir)) {
+        FONT_LOGE("InstallScopeFont: init app dir failed");
+        return ERR_INSTALL_FAIL;
+    }
+    std::string fileName = FontManagerUtils::GetFileName(FontManagerUtils::GetFilePathByFd(info.fd));
+    std::string destPath = CopyFileForInstall(appDir, fileName, info.fd);
+    if (destPath.empty()) {
+        return ERR_COPY_FAIL;
+    }
+    FontRecordInfo record;
+    record.fontPath = INSTALL_PATH_APP + info.appIdentifier + "/" + FontManagerUtils::GetFileName(destPath);
+    record.fullNames = fullNames;
+    record.scope = info.scope;
+    record.srcPath = info.srcPath;
+    record.appIdentifier = info.appIdentifier;
+    record.bundleName = info.bundleName;
+    if (!fontConfig.InsertScopeFontRecord(record)) {
+        FontManagerUtils::DeleteDir(destPath, true);
+        FONT_LOGE("InstallScopeFont: insert record failed");
+        return ERR_INSTALL_FAIL;
+    }
+    return ERR_OK;
+}
+
+int32_t FontManager::UninstallScopeFont(const std::string &srcPath, const std::string &bundleName,
+    int32_t userId)
+{
+    std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX;
+    if (srcPath.empty()) {
+        return ERR_UNINSTALL_FILE_NOT_EXISTS;
+    }
+    auto& fontConfig = SafeGetOrCreateConfig(userId, installPath + FONT_CONFIG_FILE);
+    auto record = fontConfig.GetFontRecordByUrl(srcPath);
+    if (!record.has_value()) {
+        FONT_LOGE("UninstallScopeFont: record not found, srcPath=%{public}s", srcPath.c_str());
+        return ERR_UNINSTALL_FILE_NOT_EXISTS;
+    }
+    if (record->bundleName != bundleName) {
+        FONT_LOGE("UninstallScopeFont: bundleName mismatch, caller=%{public}s, owner=%{public}s",
+            bundleName.c_str(), record->bundleName.c_str());
+        return ERR_UNINSTALL_FILE_NOT_EXISTS;
+    }
+    // scope font fontPath is sandbox path, convert to real path
+    std::string realPath = SandBoxPathToRealPath(installPath, record->fontPath);
+    if (FontManagerUtils::CheckPathExist(realPath)) {
+        if (!FontManagerUtils::RemoveFile(realPath)) {
+            return ERR_UNINSTALL_REMOVE_FAIL;
+        }
+    }
+    if (!fontConfig.DeleteScopeFontRecordByUrl(srcPath)) {
+        FONT_LOGE("UninstallScopeFont: delete record failed");
+        return ERR_UNINSTALL_FAIL;
+    }
+    HisyseventAdapter::GetInstance()->CollectUserDataSize(installPath);
+    StorageManagerAdapter::GetInstance()->ReportFontBundleStats(userId, installPath);
+    FontEventPublish::PublishFontUpdate(FontEventType::UNINSTALL,
+        GetFormatFullName(record->fullNames), userId);
+    FONT_LOGI("UninstallScopeFont success, srcPath=%{public}s", srcPath.c_str());
+    return ERR_OK;
+}
+
+int32_t FontManager::GetFontScope(const std::string &srcPath, int32_t userId)
+{
+    std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX;
+    auto& fontConfig = SafeGetOrCreateConfig(userId, installPath + FONT_CONFIG_FILE);
+    auto record = fontConfig.GetFontRecordByUrl(srcPath);
+    if (!record.has_value()) {
+        return FONT_SCOPE_NONE;
+    }
+    return record->scope;
+}
+
+int32_t FontManager::CleanupAppScopeFonts(const std::string &appIdentifier, int32_t userId)
+{
+    std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX;
+    auto& fontConfig = SafeGetOrCreateConfig(userId, installPath + FONT_CONFIG_FILE);
+    auto records = fontConfig.GetFontRecordsByAppId(appIdentifier);
+    for (const auto &record : records) {
+        std::string realPath = SandBoxPathToRealPath(installPath, record.fontPath);
+        if (FontManagerUtils::CheckPathExist(realPath)) {
+            FontManagerUtils::RemoveFile(realPath);
+        }
+        fontConfig.DeleteScopeFontRecordByUrl(record.srcPath);
+    }
+    HisyseventAdapter::GetInstance()->CollectUserDataSize(installPath);
+    StorageManagerAdapter::GetInstance()->ReportFontBundleStats(userId, installPath);
+    if (!records.empty()) {
+        FontEventPublish::PublishFontUpdate(FontEventType::UNINSTALL, "", userId);
+    }
+    std::string appDir = GetAppInstallPath(userId, appIdentifier);
+    FontManagerUtils::DeleteDir(appDir, true);
+    FONT_LOGI("CleanupAppScopeFonts done, appIdentifier=%{public}s, count=%{public}zu",
+        appIdentifier.c_str(), records.size());
+    return ERR_OK;
+}
+
+int32_t FontManager::CleanupScopeFontsByUser(int32_t userId)
+{
+    std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX;
+    auto& fontConfig = SafeGetOrCreateConfig(userId, installPath + FONT_CONFIG_FILE);
+    auto scopeRecords = fontConfig.GetScopeFontRecords();
+    for (const auto &record : scopeRecords) {
+        std::string realPath = SandBoxPathToRealPath(installPath, record.fontPath);
+        if (FontManagerUtils::CheckPathExist(realPath)) {
+            FontManagerUtils::RemoveFile(realPath);
+        }
+        fontConfig.DeleteScopeFontRecordByUrl(record.srcPath);
+    }
+    HisyseventAdapter::GetInstance()->CollectUserDataSize(installPath);
+    StorageManagerAdapter::GetInstance()->ReportFontBundleStats(userId, installPath);
+    if (!scopeRecords.empty()) {
+        FontEventPublish::PublishFontUpdate(FontEventType::UNINSTALL, "", userId);
+    }
+    FONT_LOGI("CleanupScopeFontsByUser done, userId=%{public}d, count=%{public}zu",
+        userId, scopeRecords.size());
+    return ERR_OK;
+}
+
+int32_t FontManager::CleanupAppScopeFontsByUser(int32_t userId)
+{
+    std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX;
+    auto& fontConfig = SafeGetOrCreateConfig(userId, installPath + FONT_CONFIG_FILE);
+    auto appRecords = fontConfig.GetAppScopeFontRecords();
+    for (const auto &record : appRecords) {
+        std::string realPath = SandBoxPathToRealPath(installPath, record.fontPath);
+        if (FontManagerUtils::CheckPathExist(realPath)) {
+            FontManagerUtils::RemoveFile(realPath);
+        }
+        fontConfig.DeleteScopeFontRecordByUrl(record.srcPath);
+    }
+    HisyseventAdapter::GetInstance()->CollectUserDataSize(installPath);
+    StorageManagerAdapter::GetInstance()->ReportFontBundleStats(userId, installPath);
+    if (!appRecords.empty()) {
+        FontEventPublish::PublishFontUpdate(FontEventType::UNINSTALL, "", userId);
+    }
+    FONT_LOGI("CleanupAppScopeFontsByUser done, userId=%{public}d, count=%{public}zu",
+        userId, appRecords.size());
+    return ERR_OK;
 }
 } // namespace FontManager
 } // namespace Global

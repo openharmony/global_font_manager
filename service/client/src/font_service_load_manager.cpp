@@ -34,19 +34,20 @@ sptr<IFontService> FontServiceLoadManager::GetFontServiceAbility(int32_t systemA
         FONT_LOGE("manager is nullptr");
         return nullptr;
     }
-    {
-        std::lock_guard<std::mutex> lock(serviceLock_);
-        sptr<IRemoteObject> object = manager->CheckSystemAbility(systemAbilityId);
-        if (object != nullptr) {
-            return iface_cast<IFontService>(object);
-        }
+    sptr<IRemoteObject> object = manager->CheckSystemAbility(systemAbilityId);
+    if (object != nullptr) {
+        return iface_cast<IFontService>(object);
     }
-
+    std::lock_guard<std::mutex> loadLock(loadMutex_);
+    object = manager->CheckSystemAbility(systemAbilityId);
+    if (object != nullptr) {
+        return iface_cast<IFontService>(object);
+    }
     if (!LoadSa(systemAbilityId)) {
         FONT_LOGE("loadSA failed");
         return nullptr;
     }
-    sptr<IRemoteObject> object = manager->GetSystemAbility(systemAbilityId);
+    object = manager->GetSystemAbility(systemAbilityId);
     if (object == nullptr) {
         FONT_LOGE("Get remote object from samgr failed");
         return nullptr;
@@ -56,19 +57,26 @@ sptr<IFontService> FontServiceLoadManager::GetFontServiceAbility(int32_t systemA
  
 void FontServiceLoadManager::OnLoadSystemAbilitySuccess()
 {
-    loadSaStatus_ = LoadSaStatus::SUCCESS;
+    {
+        std::lock_guard<std::mutex> lock(serviceLock_);
+        loadSaStatus_ = LoadSaStatus::SUCCESS;
+    }
     proxyConVar_.notify_one();
 }
  
 void FontServiceLoadManager::OnLoadSystemAbilityFail()
 {
     FONT_LOGE("SystemAbility Load fail");
-    loadSaStatus_ = LoadSaStatus::FAIL;
+    {
+        std::lock_guard<std::mutex> lock(serviceLock_);
+        loadSaStatus_ = LoadSaStatus::FAIL;
+    }
     proxyConVar_.notify_one();
 }
 
 void FontServiceLoadManager::InitStatus()
 {
+    std::lock_guard<std::mutex> lock(serviceLock_);
     loadSaStatus_ = LoadSaStatus::WAIT_RESULT;
 }
  
@@ -95,8 +103,8 @@ bool FontServiceLoadManager::LoadSa(int systemAbilityId)
         std::unique_lock<std::mutex> lock(serviceLock_);
         constexpr int64_t sleepTime = 5000;
         auto waitStatus = proxyConVar_.wait_for(lock, std::chrono::milliseconds(sleepTime),
-            [this]() { return loadSaStatus_ == LoadSaStatus::SUCCESS; });
-        if (!waitStatus) {
+            [this]() { return loadSaStatus_ != LoadSaStatus::WAIT_RESULT; });
+        if (!waitStatus || loadSaStatus_ != LoadSaStatus::SUCCESS) {
             FONT_LOGE("systemAbilityId: %{public}d, CheckSaLoaded failed", systemAbilityId);
             return false;
         }

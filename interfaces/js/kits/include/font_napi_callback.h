@@ -31,8 +31,12 @@ struct FontNapiCallback {
     std::string errMsg_;
     bool success_;
     int errCode_;
+    int32_t scope_;       // input: FontScope for InstallScopeFont
+    int32_t queryResult_; // output: scope for GetFontScope (-1/0/1)
+    bool isQuery_;        // true if this is a GetFontScope query
 
-    FontNapiCallback() : work_(nullptr), deferred_(nullptr), success_(true), errCode_(ERR_OK) {}
+    FontNapiCallback() : work_(nullptr), deferred_(nullptr), success_(true),
+        errCode_(ERR_OK), scope_(0), queryResult_(-1), isQuery_(false) {}
 
     void SetErrorMsg(const std::string &msg, int32_t errCode)
     {

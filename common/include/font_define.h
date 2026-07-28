@@ -40,6 +40,11 @@ enum FontErrorCode {
     ERR_UNINSTALL_FAIL = 31100109,
     ERR_SYSTEM_ERROR = 31100110,
     ERR_DATA_MIGRATIONING = 31100111,
+
+    // Scope font management (third-party app-level / session-level)
+    ERR_SCOPE_FONT_REPEATED_REGISTER = 31100501,
+    ERR_SCOPE_FONT_EXCEED_REGISTER_LIMIT = 31100502,
+    ERR_SCOPE_FONT_NOT_REGISTERED = 31100503,
 };
 
 enum DataMigrationResultCode {
@@ -60,6 +65,14 @@ inline const std::string INSTALL_PATH_SUFFIX = "/for-all-app/fonts/";
 inline const std::string FONT_CONFIG_FILE = "install_fontconfig.json";
 inline const std::string TEMP_FILE = "temp/";
 inline const std::string EXT_STORAGE_BUNDLE_PARAM_KEY = "const.fontmanager.extstoragebundle";
+
+// Scope font management constants
+inline const std::string APP_FONT_DIR_PREFIX = "app_";  // app-level font subdirectory prefix
+inline const std::string FONT_CONFIG_VERSION_7 = "7.0";  // config file version for scope font
+inline constexpr int32_t MAX_SCOPE_FONT_APP_NUM = 5;  // max registered FontClientObserver apps per user
+inline constexpr int32_t FONT_SCOPE_APP = 0;
+inline constexpr int32_t FONT_SCOPE_SESSION = 1;
+inline constexpr int32_t FONT_SCOPE_NONE = -1;  // user-level (legacy records)
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS

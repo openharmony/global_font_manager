@@ -13,22 +13,27 @@
  * limitations under the License.
  */
 
-#ifndef GLOBAL_FONT_MANAGER_FONT_MANAGER_INNER_API_H
-#define GLOBAL_FONT_MANAGER_FONT_MANAGER_INNER_API_H
+#ifndef GLOBAL_FONT_MANAGER_FONT_CLIENT_OBSERVER_AGENT_H
+#define GLOBAL_FONT_MANAGER_FONT_CLIENT_OBSERVER_AGENT_H
 
-#include <string>
+#include "font_client_observer_stub.h"
+#include <functional>
 
 namespace OHOS {
 namespace Global {
 namespace FontManager {
-class FontManagerInnerApi {
+class FontClientObserverAgent : public FontClientObserverStub {
 public:
-    static int32_t InstallFont(const std::string &fontPath, int32_t userId);
-    static int32_t UninstallFont(const std::string &fontName, int32_t userId);
-    static int32_t InstallScopeFont(const std::string &fontPath, int32_t scope, int32_t userId);
-    static int32_t UninstallScopeFont(const std::string &srcPath, int32_t userId);
+    using OnServiceDiedCallback = std::function<void()>;
+    explicit FontClientObserverAgent(OnServiceDiedCallback callback)
+        : FontClientObserverStub(), callback_(std::move(callback)) {}
+    ~FontClientObserverAgent() override = default;
+    ErrCode OnServiceDied() override;
+
+private:
+    OnServiceDiedCallback callback_;
 };
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS
-#endif // GLOBAL_FONT_MANAGER_FONT_MANAGER_INNER_API_H
+#endif // GLOBAL_FONT_MANAGER_FONT_CLIENT_OBSERVER_AGENT_H

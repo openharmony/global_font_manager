@@ -12,15 +12,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package OHOS.Global.FontManager;
+package OHOS.Global.FontManager;
  
- import IDataMigrationCallbackEvent;
- import IDataMigrationCallback;
+import IDataMigrationCallbackEvent;
+import IDataMigrationCallback;
+import IFontClientObserver;
 
- interface OHOS.Global.FontManager.IFontService {
+interface OHOS.Global.FontManager.IFontService {
     void InstallFont([in] FileDescriptor fd, [out] int outValue);
     void UninstallFont([in] String fontName, [out] int outValue);
     void DataMigration([in] IDataMigrationCallback callbackInfo);
     void InstallFontWithUserId([in] FileDescriptor fd, [in] int userId);
     void UninstallFontWithUserId([in] String fontName, [in] int userId);
- }
+
+    void OnFontObserver([in] IFontClientObserver observer);
+    void OffFontObserver([in] IFontClientObserver observer);
+    void InstallScopeFont([in] FileDescriptor fd, [in] int scope, [in] String srcPath, [out] int outValue);
+    void UninstallScopeFont([in] String srcPath, [out] int outValue);
+    void GetFontScope([in] String srcPath, [out] int outValue);
+}

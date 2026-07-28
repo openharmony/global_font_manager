@@ -29,14 +29,18 @@ ohos_shared_library("fontmanager") {
     "src/font_manager_napi.cpp",
     "src/js_data_migration_listener.cpp",
     "src/js_func_ref_holder.cpp",
+    "../../../service/client/src/font_client_observer_agent.cpp",
+    "$root_gen_dir/base/global/font_manager/service/font_client_observer_stub.cpp",
   ]
 
   deps = [
     "../../../service:font_manager_client",
+    "../../../service:font_service_interface",
   ]
 
   external_deps = [
     "ability_runtime:runtime",
+    "c_utils:utils",
     "hilog:libhilog",
     "ipc:ipc_core",
     "napi:ace_napi",
