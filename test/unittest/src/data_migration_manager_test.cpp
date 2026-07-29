@@ -164,6 +164,7 @@ HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest003, TestSize.Lev
  */
 HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest004, TestSize.Level1)
 {
+    PermissionCommon::SetFontManagerInitEnv();
     std::vector<std::string> srcPaths = {
         "/data/test/NotoSansCJK-Regular.ttc"
     };
@@ -173,11 +174,7 @@ HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest004, TestSize.Lev
     manager_->DataMigration(cb);
     std::vector<std::string> paths;
     OHOS::GetDirFiles(INSTALL_PATH_TEST, paths);
-#ifdef USE_EXTENSION_DATA
-    EXPECT_TRUE(paths.empty());
-#else
     EXPECT_TRUE(paths.size() == srcPaths.size());
-#endif
 }
 
 /**
