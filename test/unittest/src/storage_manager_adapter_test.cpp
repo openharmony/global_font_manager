@@ -24,6 +24,7 @@
 #undef protected
 #include "font_manager_utils.h"
 #include "font_define.h"
+#include "parameters.h"
 
 namespace {
 const std::string INSTALL_PATH_TEST = "/data/service/el1/100/for-all-app/fonts/";
@@ -154,11 +155,12 @@ HWTEST_F(StorageManagerAdapterTest, StorageManagerAdapterFuncTest006, TestSize.L
     uint32_t size = adapter_->GetFontFolderSize(INSTALL_PATH_TEST);
     EXPECT_GT(size, 0);
     int32_t ret = adapter_->ReportFontBundleStats(TEST_USERID, INSTALL_PATH_TEST);
-#ifdef USE_EXTENSION_DATA
-    EXPECT_EQ(ret, 13600001);
-#else
-    EXPECT_EQ(ret, ERR_INVALID_PARAM);
-#endif
+    std::string businessName = OHOS::system::GetParameter(EXT_STORAGE_BUNDLE_PARAM_KEY, "");
+    if (businessName.empty()) {
+        EXPECT_EQ(ret, ERR_INVALID_PARAM);
+    } else {
+        EXPECT_EQ(ret, 13600001);
+    }
 }
 } // namespace FontManager
 } // namespace Global
