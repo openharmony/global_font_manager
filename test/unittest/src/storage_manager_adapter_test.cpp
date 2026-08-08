@@ -17,11 +17,7 @@
 #include <fcntl.h>
 #include <string>
 
-#define private public
-#define protected public
 #include "storage_manager_adapter.h"
-#undef private
-#undef protected
 #include "font_manager_utils.h"
 #include "font_define.h"
 #include "parameters.h"

@@ -18,12 +18,8 @@
 #include <string>
 #include <vector>
 
-#define private public
-#define protected public
 #include "data_migration_manager.h"
 #include "storage_manager_adapter.h"
-#undef private
-#undef protected
 #include "font_manager_utils.h"
 #include "font_define.h"
 #include "callback_mock.h"
@@ -33,6 +29,7 @@
 namespace {
 const std::string INSTALL_PATH_TEST = "/data/service/el1/100/for-all-app/fonts/";
 const std::string TEMP_PATH_TEST = "/data/service/el1/100/for-all-app/fonts/temp/";
+const std::string FONT_PATH = "/data/test/TestFont_Sans.ttf";
 constexpr int32_t TEST_USERID = 100;
 }
 
@@ -217,6 +214,175 @@ HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest006, TestSize.Lev
     std::vector<std::string> paths;
     OHOS::GetDirFiles(INSTALL_PATH_TEST, paths);
     EXPECT_TRUE(paths.size() == srcPaths.size());
+    auto adapter = StorageManagerAdapter::GetInstance();
+    uint64_t size = adapter->GetFontFolderSize(INSTALL_PATH_TEST);
+    EXPECT_GT(size, 0);
+}
+
+/**
+ * @tc.name: DataMigrationManagerFuncTest007
+ * @tc.desc: Test CopyFileForDataMigration with non-existent source
+ * @tc.type: FUNC
+ */
+HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest007, TestSize.Level1)
+{
+    ASSERT_TRUE(manager_->InitDataMigrationTempDir());
+    int32_t ret = manager_->CopyFileForDataMigration("/data/test/nonexistent_12345.ttf", TEST_USERID);
+    EXPECT_EQ(ret, ERR_OPEN_SRC_FILE);
+}
+
+/**
+ * @tc.name: DataMigrationManagerFuncTest008
+ * @tc.desc: Test IsShouldUpdateProgress with totalCount > MAX_TRIGGER_COUNT
+ * @tc.type: FUNC
+ */
+HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest008, TestSize.Level1)
+{
+    EXPECT_TRUE(manager_->IsShouldUpdateProgress(0, 150));
+    EXPECT_TRUE(manager_->IsShouldUpdateProgress(3, 150));
+    EXPECT_TRUE(manager_->IsShouldUpdateProgress(6, 150));
+    EXPECT_FALSE(manager_->IsShouldUpdateProgress(50, 150));
+    EXPECT_FALSE(manager_->IsShouldUpdateProgress(100, 150));
+}
+
+HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest009, TestSize.Level1)
+{
+    EXPECT_TRUE(manager_->IsShouldUpdateProgress(0, 50));
+    EXPECT_TRUE(manager_->IsShouldUpdateProgress(25, 50));
+    EXPECT_TRUE(manager_->IsShouldUpdateProgress(49, 50));
+}
+
+HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest010, TestSize.Level1)
+{
+    PermissionCommon::SetFontManagerInitEnv();
+    ASSERT_TRUE(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST));
+    manager_->userIds_ = {TEST_USERID};
+    EXPECT_TRUE(manager_->CheckAllUserDir());
+}
+
+HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest011, TestSize.Level1)
+{
+    PermissionCommon::SetFontManagerInitEnv();
+    ASSERT_TRUE(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST));
+    manager_->userIds_ = {TEST_USERID};
+    EXPECT_TRUE(manager_->InitDataMigrationTempDir());
+    EXPECT_TRUE(FontManagerUtils::CheckPathExist(TEMP_PATH_TEST));
+}
+
+HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest012, TestSize.Level1)
+{
+    PermissionCommon::SetFontManagerInitEnv();
+    ASSERT_TRUE(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST));
+    manager_->userIds_ = {TEST_USERID};
+    EXPECT_TRUE(manager_->InitDataMigrationTempDir());
+    EXPECT_TRUE(manager_->InitDataMigrationTempDir());
+}
+
+HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest013, TestSize.Level1)
+{
+    manager_->userIds_ = {999};
+    std::string userPath = "/data/service/el1/999/for-all-app/fonts/";
+    FontManagerUtils::DeleteDir(userPath, true);
+    EXPECT_FALSE(manager_->CheckAllUserDir());
+}
+
+HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest014, TestSize.Level1)
+{
+    PermissionCommon::SetFontManagerInitEnv();
+    manager_->userIds_ = {TEST_USERID};
+    ASSERT_TRUE(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST));
+    int32_t ret = manager_->CopyFileForDataMigration("/data/test/nonexistent_12345.ttf", TEST_USERID);
+    EXPECT_EQ(ret, ERR_OPEN_SRC_FILE);
+}
+
+HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest015, TestSize.Level1)
+{
+    PermissionCommon::SetFontManagerInitEnv();
+    ASSERT_TRUE(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST));
+    manager_->userIds_ = {TEST_USERID};
+    int32_t ret = manager_->CopyFileForDataMigration(FONT_PATH.c_str(), TEST_USERID);
+    EXPECT_EQ(ret, ERR_OK);
+    std::string destPath = INSTALL_PATH_TEST + "TestFont_Sans.ttf";
+    EXPECT_TRUE(FontManagerUtils::CheckPathExist(destPath));
+    FontManagerUtils::RemoveFile(destPath);
+}
+
+HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest016, TestSize.Level1)
+{
+    manager_->callback_ = nullptr;
+    EventData eventData = {.event = EventType::PROGRESS_RESULT, .progressResult = 0};
+    manager_->RefreshEventData(eventData);
+    SUCCEED();
+}
+
+HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest017, TestSize.Level1)
+{
+    PermissionCommon::SetFontManagerInitEnv();
+    ASSERT_TRUE(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST));
+    manager_->userIds_ = {TEST_USERID};
+    std::string destPath = INSTALL_PATH_TEST + "TestFont_Sans.ttf";
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    ASSERT_GE(fd, 0);
+    FontManagerUtils::CopyFile(fd, destPath);
+    if (fd >= 0) {
+        close(fd);
+    }
+    int32_t ret = manager_->CopyFileForDataMigration(FONT_PATH.c_str(), TEST_USERID);
+    EXPECT_EQ(ret, ERR_OK);
+    FontManagerUtils::RemoveFile(destPath);
+}
+
+HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest018, TestSize.Level1)
+{
+    sptr<IDataMigrationCallback> cb = new (std::nothrow) TestCallback();
+    ASSERT_TRUE(cb != nullptr);
+    manager_->callback_ = cb;
+    EventData eventData = {.event = EventType::HEART_BEAT};
+    manager_->RefreshEventData(eventData);
+    SUCCEED();
+}
+
+HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest019, TestSize.Level1)
+{
+    PermissionCommon::SetFontManagerInitEnv();
+    std::vector<std::string> srcPaths = {"/data/test/TestFont_Sans.ttf"};
+    EXPECT_TRUE(this->CopyTestFileToInstallPath(srcPaths));
+    ASSERT_TRUE(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST));
+    manager_->userIds_ = {TEST_USERID};
+    int32_t ret = manager_->StartOneFileCopyTask(INSTALL_PATH_APP + "TestFont_Sans.ttf");
+    EXPECT_EQ(ret, ERR_OK);
+}
+
+HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest020, TestSize.Level1)
+{
+    PermissionCommon::SetFontManagerInitEnv();
+    ASSERT_TRUE(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST));
+    manager_->userIds_ = {TEST_USERID};
+    int32_t ret = manager_->StartOneFileCopyTask(INSTALL_PATH_APP + "nonexistent_12345.ttf");
+    EXPECT_EQ(ret, ERR_OPEN_SRC_FILE);
+}
+
+HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest021, TestSize.Level1)
+{
+    PermissionCommon::SetFontManagerInitEnv();
+    ASSERT_TRUE(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST));
+    manager_->userIds_ = {TEST_USERID};
+    int32_t ret = manager_->CopyFileForDataMigration(FONT_PATH.c_str(), TEST_USERID);
+    EXPECT_EQ(ret, ERR_OK);
+    FontManagerUtils::RemoveFile(INSTALL_PATH_TEST + "TestFont_Sans.ttf");
+}
+
+HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest022, TestSize.Level1)
+{
+    PermissionCommon::SetFontManagerInitEnv();
+    std::vector<std::string> srcPaths = {
+        "/data/test/NotoSansCJK-Regular.ttc",
+        "/data/test/TestFont_Sans.ttf",
+    };
+    EXPECT_TRUE(this->CopyTestFileToInstallPath(srcPaths));
+    sptr<IDataMigrationCallback> cb = new (std::nothrow) TestCallback();
+    ASSERT_TRUE(cb != nullptr);
+    manager_->DataMigration(cb);
     auto adapter = StorageManagerAdapter::GetInstance();
     uint64_t size = adapter->GetFontFolderSize(INSTALL_PATH_TEST);
     EXPECT_GT(size, 0);

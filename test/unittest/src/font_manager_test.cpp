@@ -23,12 +23,8 @@
 #include <dirent.h>
 #include <unistd.h>
 
-#define private public
-#define protected public
 #include "font_manager.h"
 #include "storage_manager_adapter.h"
-#undef private
-#undef protected
 #include "font_manager_utils.h"
 #include "font_define.h"
 #include "directory_ex.h"
@@ -38,8 +34,9 @@ namespace {
 const std::string INSTALL_PATH_TEST = "/data/service/el1/100/for-all-app/fonts/";
 const std::string TEMP_PATH_TEST = "/data/service/el1/100/for-all-app/fonts/temp/";
 const std::string FONT_CONFIG_FILE_TEST = INSTALL_PATH_TEST + "install_fontconfig.json";
-const std::string FONT_PATH = "/data/test/TestFont_Sans.ttf";
-const std::string FONT_FULL_NAME = "HarmonyOS Sans";
+const std::string FONT_PATH = "/data/test/NotoSansVai-Regular.ttf";
+const std::string FONT_FULL_NAME = "Noto Sans Vai Regular";
+const std::string PUBLIC_FONT_DIR = "/data/service/el1/public/for-all-app/fonts/";
 const std::string TTC_FONT_PATH = "/data/test/NotoSansCJK-Regular.ttc";
 constexpr int32_t TEST_USERID = 100;
 const std::vector<std::string> TTC_FONT_FULL_NAME{"Noto Sans CJK JP",
@@ -87,6 +84,9 @@ void FontManagerTest::SetUp(void)
 {
     manager_ = FontManager::GetInstance();
     manager_->configMap_.clear();
+    FontManagerUtils::DeleteDir(INSTALL_PATH_TEST, false);
+    FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST);
+    FontManagerUtils::CreateFileWithPermission(FONT_CONFIG_FILE_TEST, R"({"fontlist":[],"version":1})");
 }
 
 void FontManagerTest::TearDown(void)
@@ -427,7 +427,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest014, TestSize.Level1)
 {
     ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
 
-    std::string targetFileName = "TestFont_Sans.ttf";
+    std::string targetFileName = "NotoSansVai-Regular.ttf";
     std::string targetPath = INSTALL_PATH_TEST + targetFileName;
     int fdTarget = open(targetPath.c_str(), O_CREAT | O_RDWR, 0666);
     ASSERT_GE(fdTarget, 0);
@@ -447,7 +447,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest014, TestSize.Level1)
         struct dirent *ent;
         while ((ent = readdir(dir)) != nullptr) {
             std::string name = ent->d_name;
-            if (name.find("_TestFont_Sans.ttf") != std::string::npos) {
+            if (name.find("_NotoSansVai-Regular.ttf") != std::string::npos) {
                 hasRenamedFile = true;
                 break;
             }
@@ -495,6 +495,352 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest016, TestSize.Level1)
     auto adapter = StorageManagerAdapter::GetInstance();
     uint64_t size = adapter->GetFontFolderSize(INSTALL_PATH_TEST);
     EXPECT_GT(size, 0);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest017
+ * @tc.desc: Test InstallFont with corrupt config file
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest017, TestSize.Level1)
+{
+    FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST);
+    FontManagerUtils::CreateFileWithPermission(FONT_CONFIG_FILE_TEST, "{corrupt json");
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    ASSERT_GE(fd, 0);
+    int32_t ret = manager_->InstallFont(fd, TEST_USERID);
+    EXPECT_EQ(ret, ERR_INSTALL_FAIL);
+    if (fd >= 0) {
+        close(fd);
+    }
+    FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest018
+ * @tc.desc: Test UninstallFont with non-existent font name
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest018, TestSize.Level1)
+{
+    FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST);
+    int32_t ret = manager_->UninstallFont("NonExistentFont12345", TEST_USERID);
+    EXPECT_EQ(ret, ERR_UNINSTALL_FILE_NOT_EXISTS);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest019
+ * @tc.desc: Test InstallFont with invalid fd
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest019, TestSize.Level1)
+{
+    FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST);
+    int32_t ret = manager_->InstallFont(-1, TEST_USERID);
+    EXPECT_EQ(ret, ERR_FILE_VERIFY_FAIL);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest020
+ * @tc.desc: Test UninstallFont with corrupt config
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest020, TestSize.Level1)
+{
+    FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST);
+    FontManagerUtils::CreateFileWithPermission(FONT_CONFIG_FILE_TEST, "{corrupt");
+    int32_t ret = manager_->UninstallFont("SomeFont", TEST_USERID);
+    EXPECT_EQ(ret, ERR_UNINSTALL_FAIL);
+    FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest021
+ * @tc.desc: Test InstallFont with invalid fd that fails CheckAndInitInstallPath
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest021, TestSize.Level1)
+{
+    FontManagerUtils::DeleteDir(INSTALL_PATH_TEST, true);
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    int32_t ret = manager_->InstallFont(fd, TEST_USERID);
+    EXPECT_NE(ret, ERR_OK);
+    if (fd >= 0) {
+        close(fd);
+    }
+}
+
+/**
+ * @tc.name: FontManagerFuncTest022
+ * @tc.desc: Test InstallFont when font file already exists at target path
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest022, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    int32_t ret = manager_->InstallFont(fd, TEST_USERID);
+    EXPECT_EQ(ret, ERR_OK);
+    if (fd >= 0) {
+        close(fd);
+    }
+    fd = open(FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    ret = manager_->InstallFont(fd, TEST_USERID);
+    EXPECT_EQ(ret, ERR_INSTALLED_ALRADY);
+    if (fd >= 0) {
+        close(fd);
+    }
+}
+
+/**
+ * @tc.name: FontManagerFuncTest023
+ * @tc.desc: Test UninstallFont removes font file from disk
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest023, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    int32_t ret = manager_->InstallFont(fd, TEST_USERID);
+    EXPECT_EQ(ret, ERR_OK);
+    if (fd >= 0) {
+        close(fd);
+    }
+    ret = manager_->UninstallFont(FONT_FULL_NAME, TEST_USERID);
+    EXPECT_EQ(ret, ERR_OK);
+    ret = manager_->UninstallFont(FONT_FULL_NAME, TEST_USERID);
+    EXPECT_EQ(ret, ERR_UNINSTALL_FILE_NOT_EXISTS);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest024
+ * @tc.desc: Test UninstallFont when font file not on disk but in config
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest024, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    int32_t ret = manager_->InstallFont(fd, TEST_USERID);
+    EXPECT_EQ(ret, ERR_OK);
+    if (fd >= 0) {
+        close(fd);
+    }
+    std::string installedPath = INSTALL_PATH_TEST + "TestFont_Sans.ttf";
+    FontManagerUtils::RemoveFile(installedPath);
+    ret = manager_->UninstallFont(FONT_FULL_NAME, TEST_USERID);
+    EXPECT_EQ(ret, ERR_OK);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest025
+ * @tc.desc: Test UninstallFont with TTC font
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest025, TestSize.Level1)
+{
+    int fd = open(TTC_FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    int32_t ret = manager_->InstallFont(fd, TEST_USERID);
+    EXPECT_EQ(ret, ERR_OK);
+    if (fd >= 0) {
+        close(fd);
+    }
+    ret = manager_->UninstallFont(TTC_FONT_FULL_NAME[0], TEST_USERID);
+    EXPECT_EQ(ret, ERR_OK);
+    ret = manager_->UninstallFont(TTC_FONT_FULL_NAME[0], TEST_USERID);
+    EXPECT_EQ(ret, ERR_UNINSTALL_FILE_NOT_EXISTS);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest026
+ * @tc.desc: Test InstallFont with existing target file triggers rename
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest026, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    int32_t ret = manager_->InstallFont(fd, TEST_USERID);
+    EXPECT_EQ(ret, ERR_OK);
+    if (fd >= 0) {
+        close(fd);
+    }
+    FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
+    FontManagerUtils::CreateFileWithPermission(FONT_CONFIG_FILE_TEST, R"({"fontlist":[],"version":1})");
+    manager_->configMap_.clear();
+    fd = open(FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    ret = manager_->InstallFont(fd, TEST_USERID);
+    EXPECT_EQ(ret, ERR_OK);
+    if (fd >= 0) {
+        close(fd);
+    }
+    bool hasRenamedFile = false;
+    DIR *dir = opendir(INSTALL_PATH_TEST.c_str());
+    if (dir) {
+        struct dirent *ent;
+        while ((ent = readdir(dir)) != nullptr) {
+            std::string name = ent->d_name;
+            if (name.find("_NotoSansVai-Regular.ttf") != std::string::npos) {
+                hasRenamedFile = true;
+                break;
+            }
+        }
+        closedir(dir);
+    }
+    EXPECT_TRUE(hasRenamedFile);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest027
+ * @tc.desc: Test UninstallFont with empty font name
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest027, TestSize.Level1)
+{
+    int32_t ret = manager_->UninstallFont("", TEST_USERID);
+    EXPECT_EQ(ret, ERR_UNINSTALL_FILE_NOT_EXISTS);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest028
+ * @tc.desc: Test InstallFont with font having duplicate full name in config
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest028, TestSize.Level1)
+{
+    std::string configWithFont = R"({"fontlist":[{"fontfullpath":)"
+        "\"" + PUBLIC_FONT_DIR + "TestFont_Sans.ttf\","
+        R"("fullname":[")" + FONT_FULL_NAME + R"("]}],"version":1})";
+    FontManagerUtils::CreateFileWithPermission(FONT_CONFIG_FILE_TEST, configWithFont);
+    manager_->configMap_.clear();
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    int32_t ret = manager_->InstallFont(fd, TEST_USERID);
+    EXPECT_EQ(ret, ERR_OK);
+    if (fd >= 0) {
+        close(fd);
+    }
+}
+
+HWTEST_F(FontManagerTest, FontManagerFuncTest029, TestSize.Level1)
+{
+    std::vector<std::string> names = {"FontA", "FontB", "FontC"};
+    std::string result = manager_->GetFormatFullName(names);
+    EXPECT_EQ(result, "FontA,FontB,FontC");
+}
+
+HWTEST_F(FontManagerTest, FontManagerFuncTest030, TestSize.Level1)
+{
+    std::vector<std::string> names = {"FontA"};
+    std::string result = manager_->GetFormatFullName(names);
+    EXPECT_EQ(result, "FontA");
+}
+
+HWTEST_F(FontManagerTest, FontManagerFuncTest031, TestSize.Level1)
+{
+    std::vector<std::string> names;
+    std::string result = manager_->GetFormatFullName(names);
+    EXPECT_EQ(result, "");
+}
+
+HWTEST_F(FontManagerTest, FontManagerFuncTest032, TestSize.Level1)
+{
+    std::string installPath = INSTALL_PATH_PREFIX + std::to_string(TEST_USERID) + INSTALL_PATH_SUFFIX;
+    std::string path = "/data/service/el1/public/for-all-app/fonts/TestFont.ttf";
+    std::string result = manager_->SandBoxPathToRealPath(installPath, path);
+    EXPECT_EQ(result, installPath + "TestFont.ttf");
+}
+
+HWTEST_F(FontManagerTest, FontManagerFuncTest033, TestSize.Level1)
+{
+    std::string configPath = INSTALL_PATH_TEST + FONT_CONFIG_FILE;
+    FontConfig& config = manager_->SafeGetOrCreateConfig(TEST_USERID, configPath);
+    EXPECT_EQ(config.GetInstalledFontsNum(), 0);
+    FontConfig& config2 = manager_->SafeGetOrCreateConfig(TEST_USERID, configPath);
+    EXPECT_EQ(&config, &config2);
+}
+
+HWTEST_F(FontManagerTest, FontManagerFuncTest034, TestSize.Level1)
+{
+    std::string configPath1 = INSTALL_PATH_TEST + FONT_CONFIG_FILE;
+    std::string configPath2 = "/data/service/el1/200/for-all-app/fonts/" + FONT_CONFIG_FILE;
+    FontConfig& config1 = manager_->SafeGetOrCreateConfig(100, configPath1);
+    FontConfig& config2 = manager_->SafeGetOrCreateConfig(200, configPath2);
+    EXPECT_NE(&config1, &config2);
+}
+
+HWTEST_F(FontManagerTest, FontManagerFuncTest035, TestSize.Level1)
+{
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    ASSERT_GE(fd, 0);
+    std::string fileName = "TestFont_Sans.ttf";
+    std::string destPath = manager_->CopyFileForInstall(INSTALL_PATH_TEST, fileName, fd);
+    EXPECT_FALSE(destPath.empty());
+    if (fd >= 0) {
+        close(fd);
+    }
+    FontManagerUtils::RemoveFile(destPath);
+}
+
+HWTEST_F(FontManagerTest, FontManagerFuncTest036, TestSize.Level1)
+{
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
+    int fd = open("/data/test/nonexistent_12345.ttf", O_RDONLY);
+    if (fd < 0) {
+        std::string fileName = "TestFont_Sans.ttf";
+        std::string destPath = manager_->CopyFileForInstall(INSTALL_PATH_TEST, fileName, fd);
+        EXPECT_TRUE(destPath.empty());
+    }
+}
+
+HWTEST_F(FontManagerTest, FontManagerFuncTest037, TestSize.Level1)
+{
+    FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST);
+    std::string installPath = INSTALL_PATH_PREFIX + std::to_string(TEST_USERID) + INSTALL_PATH_SUFFIX;
+    std::string path = "TestFont.ttf";
+    std::string result = manager_->SandBoxPathToRealPath(installPath, path);
+    EXPECT_EQ(result, installPath + "TestFont.ttf");
+}
+
+HWTEST_F(FontManagerTest, FontManagerFuncTest038, TestSize.Level1)
+{
+    FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST);
+    std::string configWithFont = R"({"fontlist":[{"fontfullpath":)"
+        "\"" + PUBLIC_FONT_DIR + "TestFont_Sans.ttf\","
+        R"("fullname":[")" + FONT_FULL_NAME + R"("]}],"version":1})";
+    FontManagerUtils::CreateFileWithPermission(FONT_CONFIG_FILE_TEST, configWithFont);
+    manager_->configMap_.clear();
+    std::string realPath = INSTALL_PATH_TEST + "TestFont_Sans.ttf";
+    FontManagerUtils::CreateFileWithPermission(realPath, "");
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    int32_t ret = manager_->InstallFont(fd, TEST_USERID);
+    EXPECT_EQ(ret, ERR_INSTALLED_ALRADY);
+    if (fd >= 0) {
+        close(fd);
+    }
+}
+
+HWTEST_F(FontManagerTest, FontManagerFuncTest039, TestSize.Level1)
+{
+    FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST);
+    std::string configWithFont = R"({"fontlist":[{"fontfullpath":)"
+        "\"" + PUBLIC_FONT_DIR + "GhostFont.ttf\","
+        R"("fullname":["GhostFont"]}],"version":1})";
+    FontManagerUtils::CreateFileWithPermission(FONT_CONFIG_FILE_TEST, configWithFont);
+    manager_->configMap_.clear();
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    int32_t ret = manager_->InstallFont(fd, TEST_USERID);
+    EXPECT_EQ(ret, ERR_OK);
+    if (fd >= 0) {
+        close(fd);
+    }
 }
 } // namespace FontManager
 } // namespace Global

@@ -19,11 +19,7 @@
 #include "hisysevent_adapter_test.h"
 
 #include <gtest/gtest.h>
-#define private public
-#define protected public
 #include "hisysevent_adapter.h"
-#undef private
-#undef protected
 #include "singleton.h"
 
 using testing::ext::TestSize;
