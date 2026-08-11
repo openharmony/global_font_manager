@@ -80,6 +80,19 @@ HWTEST_F(FontManagerInnerApiTest, InnerApiUninstallFontTest001, TestSize.Level1)
     int32_t ret = FontManagerInnerApi::UninstallFont("", TEST_USERID);
     EXPECT_EQ(ret, ERR_NO_PERMISSION);
 }
+
+HWTEST_F(FontManagerInnerApiTest, InnerApiInstallFontTest003, TestSize.Level1)
+{
+    std::string nonExistPath = "/data/test/nonexistent_font_99999.ttf";
+    int32_t ret = FontManagerInnerApi::InstallFont(nonExistPath, TEST_USERID);
+    EXPECT_NE(ret, ERR_OK);
+}
+
+HWTEST_F(FontManagerInnerApiTest, InnerApiUninstallFontTest002, TestSize.Level1)
+{
+    int32_t ret = FontManagerInnerApi::UninstallFont("NonExistentFont99999", TEST_USERID);
+    EXPECT_NE(ret, ERR_OK);
+}
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS
