@@ -16,6 +16,8 @@
 #include "font_manager_server.h"
 
 #include <cstdlib>
+#include <cerrno>
+#include <climits>
 #include <chrono>
 #include "accesstoken_kit.h"
 #include "font_manager_utils.h"
@@ -77,13 +79,8 @@ FontManagerServer::FontManagerServer(int32_t saId, bool runOnCreate) : SystemAbi
 
 int32_t FontManagerServer::InstallFont(const int32_t fd, int32_t &outValue)
 {
-    RemoveUnloadFontServiceTask();
-    callingCount_++;
+    CallingCountGuard guard(this, false);
     InstallFontInner(fd, outValue);
-    callingCount_--;
-    if (callingCount_ == 0) {
-        AddUnloadFontServiceTask();
-    }
     return ERR_OK;
 }
 
@@ -114,13 +111,8 @@ void FontManagerServer::InstallFontInner(const int32_t fd, int32_t &outValue)
 
 int32_t FontManagerServer::UninstallFont(const std::string &fontName, int32_t &outValue)
 {
-    RemoveUnloadFontServiceTask();
-    callingCount_++;
+    CallingCountGuard guard(this, false);
     UninstallFontInner(fontName, outValue);
-    callingCount_--;
-    if (callingCount_ == 0) {
-        AddUnloadFontServiceTask();
-    }
     return ERR_OK;
 }
 
@@ -148,12 +140,8 @@ void FontManagerServer::UninstallFontInner(const std::string &fontName, int32_t 
 
 int32_t FontManagerServer::DataMigration(const sptr<IDataMigrationCallback>& callback)
 {
-    RemoveUnloadFontServiceTask();
-    callingCount_++;
-    int32_t ret = DataMigrationInner(callback);
-    callingCount_--;
-    AddUnloadFontServiceTask();
-    return ret;
+    CallingCountGuard guard(this, false);
+    return DataMigrationInner(callback);
 }
 
 int32_t FontManagerServer::DataMigrationInner(const sptr<IDataMigrationCallback>& callback)
@@ -310,8 +298,7 @@ int32_t FontManagerServer::CheckPermission()
 
 int32_t FontManagerServer::InstallFontWithUserId(const int32_t fd, int32_t userId)
 {
-    RemoveUnloadFontServiceTask();
-    callingCount_++;
+    CallingCountGuard guard(this, false);
     int32_t ret = CheckPermission();
     if (ret == ERR_OK) {
         if (userId < 0) {
@@ -323,17 +310,12 @@ int32_t FontManagerServer::InstallFontWithUserId(const int32_t fd, int32_t userI
     } else {
         FONT_LOGE("CheckPermission failed, ret: %{public}d", ret);
     }
-    callingCount_--;
-    if (callingCount_ == 0) {
-        AddUnloadFontServiceTask();
-    }
     return ret;
 }
 
 int32_t FontManagerServer::UninstallFontWithUserId(const std::string &fontName, int32_t userId)
 {
-    RemoveUnloadFontServiceTask();
-    callingCount_++;
+    CallingCountGuard guard(this, false);
     int32_t ret = CheckPermission();
     if (ret == ERR_OK) {
         if (userId < 0) {
@@ -344,10 +326,6 @@ int32_t FontManagerServer::UninstallFontWithUserId(const std::string &fontName, 
         }
     } else {
         FONT_LOGE("CheckPermission failed, ret: %{public}d", ret);
-    }
-    callingCount_--;
-    if (callingCount_ == 0) {
-        AddUnloadFontServiceTask();
     }
     return ret;
 }
@@ -404,14 +382,9 @@ std::string FontManagerServer::MakeAppIdentifier(int32_t scope, int32_t userId, 
 
 int32_t FontManagerServer::OnFontObserver(const sptr<IFontClientObserver>& observer)
 {
-    RemoveUnloadFontServiceTask();
-    callingCount_++;
+    CallingCountGuard guard(this, true);
     int32_t ret = ERR_OK;
     OnFontObserverInner(observer, ret);
-    callingCount_--;
-    if (callingCount_ == 0 && FontClientRegistry::GetInstance()->GetClientCount() == 0) {
-        AddUnloadFontServiceTask();
-    }
     return ret;
 }
 
@@ -428,14 +401,9 @@ void FontManagerServer::OnFontObserverInner(const sptr<IFontClientObserver>& obs
 
 int32_t FontManagerServer::OffFontObserver(const sptr<IFontClientObserver>& observer)
 {
-    RemoveUnloadFontServiceTask();
-    callingCount_++;
+    CallingCountGuard guard(this, true);
     int32_t ret = ERR_OK;
     OffFontObserverInner(ret);
-    callingCount_--;
-    if (callingCount_ == 0 && FontClientRegistry::GetInstance()->GetClientCount() == 0) {
-        AddUnloadFontServiceTask();
-    }
     return ret;
 }
 
@@ -450,13 +418,8 @@ void FontManagerServer::OffFontObserverInner(int32_t &ret)
 int32_t FontManagerServer::InstallScopeFont(const int32_t fd, int32_t scope,
     const std::string &srcPath, int32_t &outValue)
 {
-    RemoveUnloadFontServiceTask();
-    callingCount_++;
+    CallingCountGuard guard(this, true);
     InstallScopeFontInner(fd, scope, srcPath, outValue);
-    callingCount_--;
-    if (callingCount_ == 0 && FontClientRegistry::GetInstance()->GetClientCount() == 0) {
-        AddUnloadFontServiceTask();
-    }
     return ERR_OK;
 }
 
@@ -491,13 +454,8 @@ void FontManagerServer::InstallScopeFontInner(const int32_t fd, int32_t scope,
 
 int32_t FontManagerServer::UninstallScopeFont(const std::string &srcPath, int32_t &outValue)
 {
-    RemoveUnloadFontServiceTask();
-    callingCount_++;
+    CallingCountGuard guard(this, true);
     UninstallScopeFontInner(srcPath, outValue);
-    callingCount_--;
-    if (callingCount_ == 0 && FontClientRegistry::GetInstance()->GetClientCount() == 0) {
-        AddUnloadFontServiceTask();
-    }
     return ERR_OK;
 }
 
@@ -516,13 +474,8 @@ void FontManagerServer::UninstallScopeFontInner(const std::string &srcPath, int3
 
 int32_t FontManagerServer::GetFontScope(const std::string &srcPath, int32_t &outValue)
 {
-    RemoveUnloadFontServiceTask();
-    callingCount_++;
+    CallingCountGuard guard(this, true);
     GetFontScopeInner(srcPath, outValue);
-    callingCount_--;
-    if (callingCount_ == 0 && FontClientRegistry::GetInstance()->GetClientCount() == 0) {
-        AddUnloadFontServiceTask();
-    }
     return ERR_OK;
 }
 
@@ -546,8 +499,10 @@ int32_t FontManagerServer::ParseUserIdFromReason(const SystemAbilityOnDemandReas
         return INVALID_USERID;
     }
     char *endPtr = nullptr;
+    errno = 0;
     long userId = strtol(value.c_str(), &endPtr, 10);
-    if (endPtr == value.c_str() || *endPtr != '\0') {
+    if (endPtr == value.c_str() || *endPtr != '\0' || errno == ERANGE ||
+        userId < 0 || userId > INT32_MAX) {
         FONT_LOGE("ParseUserIdFromReason failed, value=%{public}s", value.c_str());
         return INVALID_USERID;
     }

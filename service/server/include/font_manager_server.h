@@ -80,6 +80,29 @@ private:
     void SubscribeCommonEvent();
     int32_t ParseUserIdFromReason(const SystemAbilityOnDemandReason &reason);
     void StartDataMigrationTask(const sptr<IDataMigrationCallback>& callback);
+    class CallingCountGuard {
+    public:
+        CallingCountGuard(FontManagerServer *server, bool checkClientCount)
+            : server_(server), checkClientCount_(checkClientCount)
+        {
+            server_->RemoveUnloadFontServiceTask();
+            ++server_->callingCount_;
+        }
+        ~CallingCountGuard()
+        {
+            --server_->callingCount_;
+            if (server_->callingCount_ == 0) {
+                if (!checkClientCount_ || FontClientRegistry::GetInstance()->GetClientCount() == 0) {
+                    server_->AddUnloadFontServiceTask();
+                }
+            }
+        }
+        CallingCountGuard(const CallingCountGuard &) = delete;
+        CallingCountGuard &operator=(const CallingCountGuard &) = delete;
+    private:
+        FontManagerServer *server_;
+        bool checkClientCount_;
+    };
     std::shared_ptr<AppExecFwk::EventHandler> handler_;
     std::shared_ptr<EventFwk::CommonEventSubscriber> subscriber_;
     std::atomic_uint callingCount_ {0};
