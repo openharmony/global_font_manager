@@ -30,8 +30,8 @@ namespace FontManager {
 static const char* CLASS_NAME_BUSINESSERROR = "@ohos.base.BusinessError";
 
 static const std::unordered_map<int, std::string> errorMsg = {
-    {ERR_NO_PERMISSION, "Permission denied."},
-    {ERR_NOT_SYSTEM_APP, "Non-system application."},
+    {ERR_NO_PERMISSION, "Permission verification failed. The application does not have the permission required to call the API."},
+    {ERR_NOT_SYSTEM_APP, "Permission verification failed. A non-system application calls a system API."},
     {ERR_INVALID_PARAM, "Parameter error."},
     {ERR_FILE_NOT_EXISTS, "The font does not exist."},
     {ERR_FILE_VERIFY_FAIL, "The font is not supported."},

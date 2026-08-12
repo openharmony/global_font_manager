@@ -26,8 +26,8 @@ namespace FontManager {
 using namespace AbilityRuntime;
 namespace {
 static const std::unordered_map<uint32_t, std::string> g_DataMigrationErrMsgMap = {
-    {ERR_NO_PERMISSION, "Permission denied."},
-    {ERR_NOT_SYSTEM_APP, "Non-system application."},
+    {ERR_NO_PERMISSION, "Permission verification failed. The application does not have the permission required to call the API."},
+    {ERR_NOT_SYSTEM_APP, "Permission verification failed. A non-system application calls a system API."},
     {ERR_DATA_MIGRATIONING, "Data migration is in progress."},
     {ERR_SYSTEM_ERROR, "Call failed due to system error."}
 };
@@ -166,10 +166,10 @@ auto installFontFunc = [](napi_env env, void* data) {
         std::string msg = "";
         switch (callback->errCode_) {
             case ERR_NO_PERMISSION :
-                msg = "Permission denied.";
+                msg = "Permission verification failed. The application does not have the permission required to call the API.";
                 break;
             case ERR_NOT_SYSTEM_APP :
-                msg = "Non-system application.";
+                msg = "Permission verification failed. A non-system application calls a system API.";
                 break;
             case ERR_FILE_NOT_EXISTS :
                 msg = "The font does not exist.";
@@ -220,10 +220,10 @@ auto uninstallFontFunc = [](napi_env env, void* data) {
         std::string msg = "";
         switch (callback->errCode_) {
             case ERR_NO_PERMISSION :
-                msg = "Permission denied.";
+                msg = "Permission verification failed. The application does not have the permission required to call the API.";
                 break;
             case ERR_NOT_SYSTEM_APP :
-                msg = "Non-system application.";
+                msg = "Permission verification failed. A non-system application calls a system API.";
                 break;
             case ERR_UNINSTALL_FILE_NOT_EXISTS :
                 msg = "The font file does not exist.";
