@@ -65,25 +65,49 @@ ohos_unittest("font_manager_module_test") {
   sources = [
     "src/font_config_test.cpp",
     "src/font_manager_test.cpp",
+    "src/font_manager_utils_test.cpp",
     "src/font_manager_inner_api_test.cpp",
     "src/font_client_registry_test.cpp",
     "src/data_migration_manager_test.cpp",
     "src/storage_manager_adapter_test.cpp",
+    "src/font_manager_client_test.cpp",
+    "../../service/client/src/font_manager_client.cpp",
+    "../../service/client/src/font_service_load_manager.cpp",
+    "../../service/client/src/font_sa_load_callback.cpp",
+    "../../service/client/src/data_migration_cb_agent.cpp",
+    "../../service/inner_api/src/font_manager_kits.cpp",
+    "../../service/inner_api/src/font_manager_inner_api.cpp",
   ]
 
   sources += fontmgr_src
+
+  _service_gen_dir = get_label_info("//base/global/font_manager/service:font_service_interface", "target_gen_dir")
+  sources += [
+    "$_service_gen_dir/font_service_proxy.cpp",
+    "$_service_gen_dir/font_service_stub.cpp",
+    "$_service_gen_dir/data_migration_callback_proxy.cpp",
+    "$_service_gen_dir/data_migration_callback_stub.cpp",
+    "$_service_gen_dir/idata_migration_callback_event.cpp",
+  ]
+
   include_dirs = [
     "./include",
     "../common",
     "../../common/include",
     "../../service/inner_api/include",
+    "../../service/client/include",
+    "../../service/server/include",
+    "$_service_gen_dir",
   ]
 
   include_dirs += fontmgr_include
 
   external_deps = [
+    "bounds_checking_function:libsec_shared",
     "c_utils:utils",
     "common_event_service:cesfwk_innerkits",
+    "hilog:libhilog",
+    "hitrace:hitrace_meter",
     "ipc:ipc_core",
     "samgr:samgr_proxy",
     "googletest:gtest",
@@ -94,17 +118,17 @@ ohos_unittest("font_manager_module_test") {
   external_deps += fontmgr_external_deps
 
   deps = [
-    "../../service:font_manager_client",
-    "../../service:font_manager_server",
     "../../service:font_service_interface",
     ":font_manager_ut_permission",
     ":font_manager_test_data",
     ":font_manager_test_xml"
   ]
 
-  defines = [ "SUPPORT_GRAPHICS" ]
-
-  os_account_enable = false
+  defines = [
+    "SUPPORT_GRAPHICS",
+    "private=public",
+    "protected=public",
+  ]
   if (defined(global_parts_info) && defined(global_parts_info.account_os_account)) {
     os_account_enable = true
   }
@@ -112,10 +136,6 @@ ohos_unittest("font_manager_module_test") {
   if (os_account_enable) {
     external_deps += [ "os_account:os_account_innerkits" ]
     defines += [ "ACCOUNT_ENABLE" ]
-  }
-
-  if (current_cpu == "arm64") {
-    defines += [ "USE_EXTENSION_DATA" ]
   }
 }
 
@@ -150,7 +170,11 @@ ohos_unittest("hisysevent_adapter_test") {
     "../../service:font_service_interface",
   ]
 
-  defines = [ "SUPPORT_GRAPHICS" ]
+  defines = [
+    "SUPPORT_GRAPHICS",
+    "private=public",
+    "protected=public",
+  ]
 }
 
 group("unittest") {
