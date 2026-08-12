@@ -26,9 +26,10 @@ namespace FontManager {
 using namespace AbilityRuntime;
 namespace {
 static const std::unordered_map<uint32_t, std::string> g_DataMigrationErrMsgMap = {
-    {ERR_NO_PERMISSION, "Dont have permission."},
-    {ERR_DATA_MIGRATIONING, "The device is dataMigrationing."},
-    {ERR_SYSTEM_ERROR, "System service exception."}
+    {ERR_NO_PERMISSION, "Permission denied."},
+    {ERR_NOT_SYSTEM_APP, "Non-system application."},
+    {ERR_DATA_MIGRATIONING, "Data migration is in progress."},
+    {ERR_SYSTEM_ERROR, "Call failed due to system error."}
 };
 static constexpr int32_t ARRAY_SUBCRIPTOR_ZERO = 0;
 static constexpr int32_t ARGS_ZERO = 0;
@@ -159,7 +160,7 @@ auto installFontFunc = [](napi_env env, void* data) {
     }
     int ret = FontManagerKits::GetInstance().InstallFont(callback->value_, callback->errCode_);
     if (ret != ERR_OK) {
-        callback->SetErrorMsg("Other error.", ERR_INSTALL_FAIL);
+        callback->SetErrorMsg("The system ability works abnormally.", ERR_INSTALL_FAIL);
     }
     if (callback->errCode_ != ERR_OK) {
         std::string msg = "";
@@ -171,19 +172,22 @@ auto installFontFunc = [](napi_env env, void* data) {
                 msg = "Non-system application.";
                 break;
             case ERR_FILE_NOT_EXISTS :
-                msg = "Font does not exist.";
+                msg = "The font does not exist.";
                 break;
             case ERR_FILE_VERIFY_FAIL :
-                msg = "Font is not supported.";
+                msg = "The font is not supported.";
                 break;
             case ERR_COPY_FAIL :
-                msg = "Font file copy failed.";
+                msg = "Failed to copy the font file.";
                 break;
             case ERR_INSTALLED_ALRADY :
-                msg = "Font file installed.";
+                msg = "The font file is installed.";
                 break;
             case ERR_MAX_FILE_COUNT :
-                msg = "Exceeded maximum number of installed files.";
+                msg = "Exceeded the maximum number of installed files.";
+                break;
+            case ERR_INSTALL_FAIL :
+                msg = "The system ability works abnormally.";
                 break;
             default:
                 msg = "Other error.";
@@ -210,7 +214,7 @@ auto uninstallFontFunc = [](napi_env env, void* data) {
     }
     int ret = FontManagerKits::GetInstance().UninstallFont(callback->value_, callback->errCode_);
     if (ret != ERR_OK) {
-        callback->SetErrorMsg("Other error.", ERR_UNINSTALL_FAIL);
+        callback->SetErrorMsg("The system ability works abnormally.", ERR_UNINSTALL_FAIL);
     }
     if (callback->errCode_ != ERR_OK) {
         std::string msg = "";
@@ -222,10 +226,13 @@ auto uninstallFontFunc = [](napi_env env, void* data) {
                 msg = "Non-system application.";
                 break;
             case ERR_UNINSTALL_FILE_NOT_EXISTS :
-                msg = "Font file does not exist.";
+                msg = "The font file does not exist.";
                 break;
             case ERR_UNINSTALL_REMOVE_FAIL :
-                msg = "Font file delete error.";
+                msg = "Failed to delete the font file.";
+                break;
+            case ERR_UNINSTALL_FAIL :
+                msg = "The system ability works abnormally.";
                 break;
             default:
                 msg = "Other error.";
