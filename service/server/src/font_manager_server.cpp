@@ -253,6 +253,7 @@ void FontManagerServer::OnStart(const SystemAbilityOnDemandReason &startReason)
 void FontManagerServer::OnStop(const SystemAbilityOnDemandReason &stopReason)
 {
     FONT_LOGI("FontManagerServer OnStop, stopReason name %{public}s", stopReason.GetName().c_str());
+    FontClientRegistry::GetInstance()->SetClientDiedCallback(nullptr);
     if (subscriber_ != nullptr) {
         EventFwk::CommonEventManager::UnSubscribeCommonEvent(subscriber_);
         subscriber_ = nullptr;
@@ -447,6 +448,11 @@ void FontManagerServer::InstallScopeFontInner(const int32_t fd, int32_t scope,
     info.scope = scope;
     info.srcPath = srcPath;
     info.bundleName = GetBundleNameByToken();
+    if (info.bundleName.empty()) {
+        FONT_LOGE("InstallScopeFontInner: failed to get bundleName, tokenId=%{public}d", tokenId);
+        outValue = ERR_SYSTEM_ERROR;
+        return;
+    }
     info.appIdentifier = MakeAppIdentifier(scope, userId, tokenId);
     info.userId = userId;
     outValue = FontManager::GetInstance()->InstallScopeFont(info);
@@ -469,6 +475,11 @@ void FontManagerServer::UninstallScopeFontInner(const std::string &srcPath, int3
         return;
     }
     std::string bundleName = GetBundleNameByToken();
+    if (bundleName.empty()) {
+        FONT_LOGE("UninstallScopeFontInner: failed to get bundleName");
+        outValue = ERR_SYSTEM_ERROR;
+        return;
+    }
     outValue = FontManager::GetInstance()->UninstallScopeFont(srcPath, bundleName, userId);
 }
 

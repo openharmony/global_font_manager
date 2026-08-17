@@ -91,6 +91,7 @@ void FontManagerUtils::CleanupScopeFontDirs()
         if (!CheckPathExist(installPath)) {
             continue;
         }
+        std::vector<std::string> dirsToRemove;
         std::error_code ec;
         for (const auto &entry : std::filesystem::directory_iterator(installPath, ec)) {
             if (!entry.is_directory()) {
@@ -106,9 +107,12 @@ void FontManagerUtils::CleanupScopeFontDirs()
                 DeleteDir(tempPath, true);
             }
             if (std::filesystem::is_empty(entry.path(), ec)) {
-                std::filesystem::remove(entry.path(), ec);
-                FONT_LOGI("CleanupScopeFontDirs removed empty dir: %{public}s", dirName.c_str());
+                dirsToRemove.push_back(dirPath);
+                FONT_LOGI("CleanupScopeFontDirs will remove empty dir: %{public}s", dirName.c_str());
             }
+        }
+        for (const auto &dirPath : dirsToRemove) {
+            std::filesystem::remove(dirPath, ec);
         }
     }
 }
@@ -122,6 +126,7 @@ void FontManagerUtils::CleanupAllScopeFontDirs()
         if (!CheckPathExist(installPath)) {
             continue;
         }
+        std::vector<std::string> dirsToRemove;
         std::error_code ec;
         for (const auto &entry : std::filesystem::directory_iterator(installPath, ec)) {
             if (!entry.is_directory()) {
@@ -131,8 +136,11 @@ void FontManagerUtils::CleanupAllScopeFontDirs()
             if (dirName.rfind("app_", 0) != 0 && dirName.rfind("session_", 0) != 0) {
                 continue;
             }
-            DeleteDir(entry.path().string(), true);
-            FONT_LOGI("CleanupAllScopeFontDirs removed dir: %{public}s", dirName.c_str());
+            dirsToRemove.push_back(entry.path().string());
+            FONT_LOGI("CleanupAllScopeFontDirs will remove dir: %{public}s", dirName.c_str());
+        }
+        for (const auto &dirPath : dirsToRemove) {
+            DeleteDir(dirPath, true);
         }
     }
 }
@@ -146,6 +154,7 @@ void FontManagerUtils::CleanupAppScopeFontDirs()
         if (!CheckPathExist(installPath)) {
             continue;
         }
+        std::vector<std::string> dirsToRemove;
         std::error_code ec;
         for (const auto &entry : std::filesystem::directory_iterator(installPath, ec)) {
             if (!entry.is_directory()) {
@@ -155,8 +164,11 @@ void FontManagerUtils::CleanupAppScopeFontDirs()
             if (dirName.rfind("app_", 0) != 0) {
                 continue;
             }
-            DeleteDir(entry.path().string(), true);
-            FONT_LOGI("CleanupAppScopeFontDirs removed dir: %{public}s", dirName.c_str());
+            dirsToRemove.push_back(entry.path().string());
+            FONT_LOGI("CleanupAppScopeFontDirs will remove dir: %{public}s", dirName.c_str());
+        }
+        for (const auto &dirPath : dirsToRemove) {
+            DeleteDir(dirPath, true);
         }
     }
 }

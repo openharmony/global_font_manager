@@ -55,6 +55,10 @@ int32_t FontClientRegistry::RegisterClient(const sptr<IRemoteObject> &observerBi
         FONT_LOGE("RegisterClient: exceed limit, userId=%{public}d count=%{public}d", userId, count);
         return ERR_SCOPE_FONT_EXCEED_REGISTER_LIMIT;
     }
+    if (observerBinder == nullptr) {
+        FONT_LOGE("RegisterClient: observerBinder is null, tokenId=%{public}d", tokenId);
+        return ERR_SYSTEM_ERROR;
+    }
     auto recipient = sptr<FontClientDeathRecipient>::MakeSptr(tokenId);
     if (recipient == nullptr) {
         FONT_LOGE("RegisterClient: alloc recipient failed");
