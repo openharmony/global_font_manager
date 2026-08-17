@@ -461,7 +461,7 @@ napi_value FontManagerAddon::OffFontObserver(napi_env env, napi_callback_info in
         napi_throw(env, CreateJsError(env, ERR_INVALID_PARAM, GetScopeFontErrMsg(ERR_INVALID_PARAM)));
         return CreateJsUndefined(env);
     }
-    auto dummyAgent = sptr<FontClientObserverAgent>::MakeSptr([](){});
+    auto dummyAgent = sptr<FontClientObserverAgent>::MakeSptr([]() {});
     if (dummyAgent == nullptr) {
         napi_throw(env, CreateJsError(env, ERR_SYSTEM_ERROR, GetScopeFontErrMsg(ERR_SYSTEM_ERROR)));
         return CreateJsUndefined(env);
