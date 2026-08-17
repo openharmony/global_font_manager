@@ -34,21 +34,22 @@ static const std::unordered_map<uint32_t, std::string> g_DataMigrationErrMsgMap 
     {ERR_SYSTEM_ERROR, "Call failed due to system error."}
 };
 static const std::unordered_map<uint32_t, std::string> g_ScopeFontErrMsgMap = {
-    {ERR_NO_PERMISSION, "Permission denied."},
-    {ERR_INVALID_PARAM, "Invalid parameter."},
-    {ERR_FILE_NOT_EXISTS, "Font does not exist."},
-    {ERR_FILE_VERIFY_FAIL, "Font is not supported."},
-    {ERR_COPY_FAIL, "Font file copy failed."},
-    {ERR_INSTALLED_ALRADY, "Font file installed."},
-    {ERR_MAX_FILE_COUNT, "Exceeded maximum number of installed files."},
-    {ERR_INSTALL_FAIL, "Other error."},
-    {ERR_UNINSTALL_FILE_NOT_EXISTS, "Font file does not exist."},
-    {ERR_UNINSTALL_REMOVE_FAIL, "Font file delete error."},
-    {ERR_UNINSTALL_FAIL, "Other error."},
-    {ERR_SYSTEM_ERROR, "System error."},
+    {ERR_NO_PERMISSION, "Permission verification failed. The application does not "
+        "have the permission required to call the API."},
+    {ERR_INVALID_PARAM, "Parameter error."},
+    {ERR_FILE_NOT_EXISTS, "The font does not exist."},
+    {ERR_FILE_VERIFY_FAIL, "The font is not supported."},
+    {ERR_COPY_FAIL, "Failed to copy the font file."},
+    {ERR_INSTALLED_ALRADY, "The font file is installed."},
+    {ERR_MAX_FILE_COUNT, "Exceeded the maximum number of installed files."},
+    {ERR_INSTALL_FAIL, "The system ability works abnormally."},
+    {ERR_UNINSTALL_FILE_NOT_EXISTS, "The font file does not exist."},
+    {ERR_UNINSTALL_REMOVE_FAIL, "Failed to delete the font file."},
+    {ERR_UNINSTALL_FAIL, "The system ability works abnormally."},
+    {ERR_SYSTEM_ERROR, "Call failed due to system error."},
     {ERR_SCOPE_FONT_REPEATED_REGISTER, "Font observer already registered."},
     {ERR_SCOPE_FONT_EXCEED_REGISTER_LIMIT, "Exceeded maximum number of font observers."},
-    {ERR_SCOPE_FONT_NOT_REGISTERED, "Font observer not registered, please register first."}
+    {ERR_SCOPE_FONT_NOT_REGISTERED, "Font observer not registered."}
 };
 static constexpr int32_t ARRAY_SUBCRIPTOR_ZERO = 0;
 static constexpr int32_t ARGS_ZERO = 0;
@@ -191,7 +192,7 @@ auto installFontFunc = [](napi_env env, void* data) {
 
     FontNapiCallback *callback = static_cast<FontNapiCallback*>(data);
     if (callback->value_.empty()) {
-        callback->SetErrorMsg("invalid param", ERR_FILE_NOT_EXISTS);
+        callback->SetErrorMsg("The font does not exist.", ERR_FILE_NOT_EXISTS);
         return;
     }
     int ret = FontManagerKits::GetInstance().InstallFont(callback->value_, callback->errCode_);
@@ -246,7 +247,7 @@ auto uninstallFontFunc = [](napi_env env, void* data) {
 
     FontNapiCallback *callback = static_cast<FontNapiCallback*>(data);
     if (callback->value_.empty()) {
-        callback->SetErrorMsg("invalid param", ERR_UNINSTALL_FILE_NOT_EXISTS);
+        callback->SetErrorMsg("The font file does not exist.", ERR_UNINSTALL_FILE_NOT_EXISTS);
         return;
     }
     int ret = FontManagerKits::GetInstance().UninstallFont(callback->value_, callback->errCode_);
@@ -484,7 +485,7 @@ napi_value FontManagerAddon::ProcessScopeFont(napi_env env, napi_callback_info i
     std::unique_ptr<FontNapiCallback> callback = std::make_unique<FontNapiCallback>();
     callback->value_ = GetResNameOrPath(env, 1, argv);
     if (callback->value_.empty() && argc > 0) {
-        callback->SetErrorMsg("invalid param", ERR_INVALID_PARAM);
+        callback->SetErrorMsg(GetScopeFontErrMsg(ERR_INVALID_PARAM), ERR_INVALID_PARAM);
     }
     if (hasScopeArg && argc >= ARGS_SIZE_TWO) {
         napi_valuetype type;
@@ -547,7 +548,7 @@ napi_value FontManagerAddon::ProcessScopeFontQuery(napi_env env, napi_callback_i
     callback->isQuery_ = true;
     callback->value_ = GetResNameOrPath(env, argc, argv);
     if (callback->value_.empty() && argc > 0) {
-        callback->SetErrorMsg("invalid param", ERR_INVALID_PARAM);
+        callback->SetErrorMsg(GetScopeFontErrMsg(ERR_INVALID_PARAM), ERR_INVALID_PARAM);
     }
     return GetResult(env, callback, name, execute);
 }
