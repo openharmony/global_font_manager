@@ -566,7 +566,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest021, TestSize.Level1)
     int fd = open(FONT_PATH.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
     int32_t ret = manager_->InstallFont(fd, TEST_USERID);
-    EXPECT_NE(ret, ERR_OK);
+    EXPECT_EQ(ret, ERR_OK);
     if (fd >= 0) {
         close(fd);
     }
