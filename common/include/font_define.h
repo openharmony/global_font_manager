@@ -68,6 +68,7 @@ inline const std::string EXT_STORAGE_BUNDLE_PARAM_KEY = "const.fontmanager.extst
 
 // Scope font management constants
 inline const std::string APP_FONT_DIR_PREFIX = "app_";  // app-level font subdirectory prefix
+inline const std::string SESSION_FONT_DIR_PREFIX = "session_";  // session-level font subdirectory prefix
 inline const std::string FONT_CONFIG_VERSION_7 = "7.0";  // config file version for scope font
 inline constexpr int32_t MAX_SCOPE_FONT_APP_NUM = 5;  // max registered FontClientObserver apps per user
 inline constexpr int32_t FONT_SCOPE_APP = 0;

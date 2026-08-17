@@ -98,7 +98,7 @@ void FontManagerUtils::CleanupScopeFontDirs()
                 continue;
             }
             std::string dirName = entry.path().filename().string();
-            if (dirName.rfind("app_", 0) != 0 && dirName.rfind("session_", 0) != 0) {
+            if (dirName.rfind(APP_FONT_DIR_PREFIX, 0) != 0 && dirName.rfind(SESSION_FONT_DIR_PREFIX, 0) != 0) {
                 continue;
             }
             std::string dirPath = entry.path().string();
@@ -133,7 +133,7 @@ void FontManagerUtils::CleanupAllScopeFontDirs()
                 continue;
             }
             std::string dirName = entry.path().filename().string();
-            if (dirName.rfind("app_", 0) != 0 && dirName.rfind("session_", 0) != 0) {
+            if (dirName.rfind(APP_FONT_DIR_PREFIX, 0) != 0 && dirName.rfind(SESSION_FONT_DIR_PREFIX, 0) != 0) {
                 continue;
             }
             dirsToRemove.push_back(entry.path().string());
@@ -161,7 +161,7 @@ void FontManagerUtils::CleanupAppScopeFontDirs()
                 continue;
             }
             std::string dirName = entry.path().filename().string();
-            if (dirName.rfind("app_", 0) != 0) {
+            if (dirName.rfind(APP_FONT_DIR_PREFIX, 0) != 0) {
                 continue;
             }
             dirsToRemove.push_back(entry.path().string());

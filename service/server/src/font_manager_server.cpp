@@ -376,9 +376,9 @@ int32_t FontManagerServer::GetCallingUserId()
 std::string FontManagerServer::MakeAppIdentifier(int32_t scope, int32_t userId, int32_t tokenId)
 {
     if (scope == FONT_SCOPE_APP) {
-        return "app_" + std::to_string(tokenId);
+        return APP_FONT_DIR_PREFIX + std::to_string(tokenId);
     }
-    return "session_" + std::to_string(tokenId);
+    return SESSION_FONT_DIR_PREFIX + std::to_string(tokenId);
 }
 
 int32_t FontManagerServer::OnFontObserver(const sptr<IFontClientObserver>& observer)
