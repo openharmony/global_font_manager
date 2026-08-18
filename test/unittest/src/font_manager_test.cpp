@@ -557,12 +557,12 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest020, TestSize.Level1)
 
 /**
  * @tc.name: FontManagerFuncTest021
- * @tc.desc: Test InstallFont with invalid fd that fails CheckAndInitInstallPath
+ * @tc.desc: Test InstallFont when install path exists but is empty
  * @tc.type: FUNC
  */
 HWTEST_F(FontManagerTest, FontManagerFuncTest021, TestSize.Level1)
 {
-    FontManagerUtils::DeleteDir(INSTALL_PATH_TEST, true);
+    FontManagerUtils::DeleteDir(INSTALL_PATH_TEST, false);
     int fd = open(FONT_PATH.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
     int32_t ret = manager_->InstallFont(fd, TEST_USERID);
