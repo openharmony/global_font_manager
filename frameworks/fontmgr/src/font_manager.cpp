@@ -127,11 +127,17 @@ int32_t FontManager::UninstallFont(const std::string &fontFullName, const int32_
         return ERR_UNINSTALL_FILE_NOT_EXISTS;
     }
     auto& fontConfig = SafeGetOrCreateConfig(userId, installPath + FONT_CONFIG_FILE);
-    std::string path = fontConfig.GetFontFileByName(fontFullName);
-    if (path.empty()) {
+    auto record = fontConfig.GetFontRecordByName(fontFullName);
+    if (!record.has_value() || record->fontPath.empty()) {
         FONT_LOGE("Can't find fontFullName = %{public}s", fontFullName.c_str());
         return ERR_UNINSTALL_FILE_NOT_EXISTS;
     }
+    if (record->scope >= 0) {
+        FONT_LOGE("UninstallFont: font is scope font, cannot uninstall via user-level API, name=%{public}s",
+            fontFullName.c_str());
+        return ERR_UNINSTALL_FILE_NOT_EXISTS;
+    }
+    std::string path = record->fontPath;
     std::string realPath = SandBoxPathToRealPath(installPath, path);
     if (FontManagerUtils::CheckPathExist(realPath)) {
         if (!FontManagerUtils::RemoveFile(realPath)) {
