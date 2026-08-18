@@ -316,8 +316,8 @@ int32_t FontManager::CleanupAppScopeFonts(const std::string &appIdentifier, int3
         fontConfig.DeleteScopeFontRecordByUrl(record.srcPath);
     }
     HisyseventAdapter::GetInstance()->CollectUserDataSize(installPath);
-    StorageManagerAdapter::GetInstance()->ReportFontBundleStats(userId, installPath);
     if (!records.empty()) {
+        StorageManagerAdapter::GetInstance()->ReportFontBundleStats(userId, installPath);
         FontEventPublish::PublishFontUpdate(FontEventType::UNINSTALL, "", userId);
     }
     std::string appDir = GetAppInstallPath(userId, appIdentifier);
@@ -340,8 +340,8 @@ int32_t FontManager::CleanupScopeFontsByUser(int32_t userId)
         fontConfig.DeleteScopeFontRecordByUrl(record.srcPath);
     }
     HisyseventAdapter::GetInstance()->CollectUserDataSize(installPath);
-    StorageManagerAdapter::GetInstance()->ReportFontBundleStats(userId, installPath);
     if (!scopeRecords.empty()) {
+        StorageManagerAdapter::GetInstance()->ReportFontBundleStats(userId, installPath);
         FontEventPublish::PublishFontUpdate(FontEventType::UNINSTALL, "", userId);
     }
     FONT_LOGI("CleanupScopeFontsByUser done, userId=%{public}d, count=%{public}zu",
@@ -362,8 +362,8 @@ int32_t FontManager::CleanupAppScopeFontsByUser(int32_t userId)
         fontConfig.DeleteScopeFontRecordByUrl(record.srcPath);
     }
     HisyseventAdapter::GetInstance()->CollectUserDataSize(installPath);
-    StorageManagerAdapter::GetInstance()->ReportFontBundleStats(userId, installPath);
     if (!appRecords.empty()) {
+        StorageManagerAdapter::GetInstance()->ReportFontBundleStats(userId, installPath);
         FontEventPublish::PublishFontUpdate(FontEventType::UNINSTALL, "", userId);
     }
     FONT_LOGI("CleanupAppScopeFontsByUser done, userId=%{public}d, count=%{public}zu",

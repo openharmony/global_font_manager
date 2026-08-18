@@ -54,9 +54,11 @@ void DataMigrationManager::DataMigration(const sptr<IDataMigrationCallback>& cal
         FONT_LOGE("FontManager DataMigration err.ErrCode:%{public}d", ret);
     }
     CheckAndUpdateAllFontRecord();
-    for (const auto& userId : userIds_) {
-        std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX;
-        StorageManagerAdapter::GetInstance()->ReportFontBundleStats(userId, installPath);
+    if (ret == ERR_OK) {
+        for (const auto& userId : userIds_) {
+            std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX;
+            StorageManagerAdapter::GetInstance()->ReportFontBundleStats(userId, installPath);
+        }
     }
     isDataMigrationing_ = false;
     EventDataResult(ret);
