@@ -298,12 +298,17 @@ int32_t FontManager::UninstallScopeFont(const std::string &srcPath, const std::s
     return ERR_OK;
 }
 
-int32_t FontManager::GetFontScope(const std::string &srcPath, int32_t userId)
+int32_t FontManager::GetFontScope(const std::string &srcPath, const std::string &bundleName,
+    int32_t userId)
 {
     std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX;
     auto& fontConfig = SafeGetOrCreateConfig(userId, installPath + FONT_CONFIG_FILE);
     auto record = fontConfig.GetFontRecordByUrl(srcPath);
     if (!record.has_value()) {
+        return FONT_SCOPE_NONE;
+    }
+    if (record->bundleName != bundleName) {
+        FONT_LOGI("GetFontScope: bundleName mismatch, caller does not own this font");
         return FONT_SCOPE_NONE;
     }
     return record->scope;

@@ -499,7 +499,13 @@ void FontManagerServer::GetFontScopeInner(const std::string &srcPath, int32_t &o
         outValue = ERR_SYSTEM_ERROR;
         return;
     }
-    outValue = FontManager::GetInstance()->GetFontScope(srcPath, userId);
+    std::string bundleName = GetBundleNameByToken();
+    if (bundleName.empty()) {
+        FONT_LOGE("GetFontScopeInner: failed to get bundleName");
+        outValue = ERR_SYSTEM_ERROR;
+        return;
+    }
+    outValue = FontManager::GetInstance()->GetFontScope(srcPath, bundleName, userId);
 }
 
 int32_t FontManagerServer::ParseUserIdFromReason(const SystemAbilityOnDemandReason &reason)

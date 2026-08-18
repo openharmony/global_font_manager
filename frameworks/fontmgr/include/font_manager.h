@@ -39,7 +39,7 @@ public:
     int32_t InstallScopeFont(const ScopeFontInstallInfo &info);
     int32_t UninstallScopeFont(const std::string &srcPath, const std::string &bundleName,
         int32_t userId);
-    int32_t GetFontScope(const std::string &srcPath, int32_t userId);
+    int32_t GetFontScope(const std::string &srcPath, const std::string &bundleName, int32_t userId);
     int32_t CleanupAppScopeFonts(const std::string &appIdentifier, int32_t userId);
     int32_t CleanupScopeFontsByUser(int32_t userId);
     int32_t CleanupAppScopeFontsByUser(int32_t userId);
