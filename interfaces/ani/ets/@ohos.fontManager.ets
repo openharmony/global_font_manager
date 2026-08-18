@@ -110,17 +110,13 @@ export default namespace fontManager {
     });
   };
 
-  export function getFontScope(url: string): Promise<FontScope | null> {
-    return new Promise<FontScope | null>((resolve, reject) => {
+  export function getFontScope(url: string): Promise<FontScope> {
+    return new Promise<FontScope>((resolve, reject) => {
       taskpool.execute((): int => {
           return nativeGetFontScope(url);
       }).then((content: Any) => {
           let result: int = content as int;
-          if (result < 0) {
-            resolve(null);
-          } else {
-            resolve(result as FontScope);
-          }
+          resolve(result as FontScope);
       }, (err: Error): void => {
           reject(err);
       });

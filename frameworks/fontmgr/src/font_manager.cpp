@@ -305,11 +305,11 @@ int32_t FontManager::GetFontScope(const std::string &srcPath, const std::string 
     auto& fontConfig = SafeGetOrCreateConfig(userId, installPath + FONT_CONFIG_FILE);
     auto record = fontConfig.GetFontRecordByUrl(srcPath);
     if (!record.has_value()) {
-        return FONT_SCOPE_NONE;
+        return ERR_UNINSTALL_FILE_NOT_EXISTS;
     }
     if (record->bundleName != bundleName) {
         FONT_LOGI("GetFontScope: bundleName mismatch, caller does not own this font");
-        return FONT_SCOPE_NONE;
+        return ERR_UNINSTALL_FILE_NOT_EXISTS;
     }
     return record->scope;
 }
