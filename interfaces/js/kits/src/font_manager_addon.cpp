@@ -565,8 +565,10 @@ napi_value FontManagerAddon::GetFontScope(napi_env env, napi_callback_info info)
         int32_t ret = FontManagerKits::GetInstance().GetFontScope(callback->value_, outValue);
         if (ret != ERR_OK) {
             callback->SetErrorMsg(GetScopeFontErrMsg(ret), ret);
-        } else {
+        } else if (outValue <= 1) {
             callback->queryResult_ = outValue;
+        } else {
+            callback->SetErrorMsg(GetScopeFontErrMsg(outValue), outValue);
         }
     };
     return ProcessScopeFontQuery(env, info, "GetFontScope", execute);
