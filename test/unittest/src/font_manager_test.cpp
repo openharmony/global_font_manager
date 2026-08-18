@@ -866,7 +866,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest040, TestSize.Level1)
     }
     EXPECT_EQ(ret, ERR_OK);
 
-    auto scopeVal = manager_->GetFontScope("file://test/app_font1.ttf", TEST_USERID);
+    auto scopeVal = manager_->GetFontScope("file://test/app_font1.ttf", "com.example.app", TEST_USERID);
     EXPECT_EQ(scopeVal, FONT_SCOPE_APP);
 }
 
@@ -957,7 +957,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest043, TestSize.Level1)
 
     int ret;
     manager_->UninstallScopeFont("file://test/uninstall_scope.ttf", "com.example.app", TEST_USERID);
-    ret = manager_->GetFontScope("file://test/uninstall_scope.ttf", TEST_USERID);
+    ret = manager_->GetFontScope("file://test/uninstall_scope.ttf", "com.example.app", TEST_USERID);
     EXPECT_EQ(ret, FONT_SCOPE_NONE);
 }
 
@@ -979,7 +979,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest044, TestSize.Level1)
  */
 HWTEST_F(FontManagerTest, FontManagerFuncTest045, TestSize.Level1)
 {
-    int ret = manager_->GetFontScope("file://test/not_installed.ttf", TEST_USERID);
+    int ret = manager_->GetFontScope("file://test/not_installed.ttf", "com.example.app", TEST_USERID);
     EXPECT_EQ(ret, FONT_SCOPE_NONE);
 }
 
@@ -1005,7 +1005,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest046, TestSize.Level1)
     }
     EXPECT_EQ(ret, ERR_OK);
 
-    auto scopeVal = manager_->GetFontScope("file://test/session_font.ttf", TEST_USERID);
+    auto scopeVal = manager_->GetFontScope("file://test/session_font.ttf", "com.example.session", TEST_USERID);
     EXPECT_EQ(scopeVal, FONT_SCOPE_SESSION);
 }
 
@@ -1031,7 +1031,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest047, TestSize.Level1)
     }
 
     manager_->CleanupAppScopeFonts("app_cleanup_001", TEST_USERID);
-    int ret = manager_->GetFontScope("file://test/cleanup_app.ttf", TEST_USERID);
+    int ret = manager_->GetFontScope("file://test/cleanup_app.ttf", "com.example.cleanup", TEST_USERID);
     EXPECT_EQ(ret, FONT_SCOPE_NONE);
 }
 
@@ -1070,8 +1070,8 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest048, TestSize.Level1)
     }
 
     manager_->CleanupScopeFontsByUser(TEST_USERID);
-    EXPECT_EQ(manager_->GetFontScope("file://test/cleanup_user_app.ttf", TEST_USERID), FONT_SCOPE_NONE);
-    EXPECT_EQ(manager_->GetFontScope("file://test/cleanup_user_session.ttf", TEST_USERID), FONT_SCOPE_NONE);
+    EXPECT_EQ(manager_->GetFontScope("file://test/cleanup_user_app.ttf", "com.example.app", TEST_USERID), FONT_SCOPE_NONE);
+    EXPECT_EQ(manager_->GetFontScope("file://test/cleanup_user_session.ttf", "com.example.session", TEST_USERID), FONT_SCOPE_NONE);
 }
 
 /**
@@ -1110,8 +1110,8 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest049, TestSize.Level1)
     }
 
     manager_->CleanupAppScopeFontsByUser(TEST_USERID);
-    EXPECT_EQ(manager_->GetFontScope("file://test/keep_session_app.ttf", TEST_USERID), FONT_SCOPE_NONE);
-    EXPECT_EQ(manager_->GetFontScope("file://test/keep_session_sess.ttf", TEST_USERID), FONT_SCOPE_SESSION);
+    EXPECT_EQ(manager_->GetFontScope("file://test/keep_session_app.ttf", "com.example.app", TEST_USERID), FONT_SCOPE_NONE);
+    EXPECT_EQ(manager_->GetFontScope("file://test/keep_session_sess.ttf", "com.example.session", TEST_USERID), FONT_SCOPE_SESSION);
 }
 
 /**
@@ -1173,8 +1173,8 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest051, TestSize.Level1)
     }
 
     manager_->CleanupScopeFontsByUser(TEST_USERID);
-    EXPECT_EQ(manager_->GetFontScope("file://test/no_global_cleanup_app.ttf", TEST_USERID), FONT_SCOPE_NONE);
-    EXPECT_EQ(manager_->GetFontScope("file://test/no_global_cleanup_session.ttf", TEST_USERID), FONT_SCOPE_NONE);
+    EXPECT_EQ(manager_->GetFontScope("file://test/no_global_cleanup_app.ttf", "com.example.app", TEST_USERID), FONT_SCOPE_NONE);
+    EXPECT_EQ(manager_->GetFontScope("file://test/no_global_cleanup_session.ttf", "com.example.session", TEST_USERID), FONT_SCOPE_NONE);
 }
 
 /**
