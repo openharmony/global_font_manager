@@ -72,7 +72,7 @@ private:
     void InstallScopeFontInner(const int32_t fd, int32_t scope,
         const std::string &srcPath, int32_t &outValue);
     void UninstallScopeFontInner(const std::string &srcPath, int32_t &outValue);
-    void GetFontScopeInner(const std::string &srcPath, int32_t &outValue);
+    void GetFontScopeInner(const std::string &srcPath, int32_t &outValue, int32_t &ret);
     static std::string MakeAppIdentifier(int32_t scope, int32_t userId, int32_t tokenId);
     void CleanupAllScopeFontsOnBoot();
     void CleanupUserScopeFonts(int32_t userId);

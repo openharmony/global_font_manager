@@ -246,11 +246,7 @@ ani_int FontManagerAni::GetFontScope(ani_env* env, ani_string ani_url)
         ThrowError(env, ret);
         return ret;
     }
-    if (outValue > 1) {
-        ThrowError(env, outValue);
-        return outValue;
-    }
-    return outValue;  // -1/0/1, ArkTS layer converts -1 to null
+    return outValue;
 }
 
 std::string FontManagerAni::ANIStringToStdString(ani_env *env, ani_string ani_str)

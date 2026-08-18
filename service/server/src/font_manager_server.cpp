@@ -486,26 +486,33 @@ void FontManagerServer::UninstallScopeFontInner(const std::string &srcPath, int3
 int32_t FontManagerServer::GetFontScope(const std::string &srcPath, int32_t &outValue)
 {
     CallingCountGuard guard(this, true);
-    GetFontScopeInner(srcPath, outValue);
-    return ERR_OK;
+    int32_t ret = ERR_OK;
+    GetFontScopeInner(srcPath, outValue, ret);
+    return ret;
 }
 
-void FontManagerServer::GetFontScopeInner(const std::string &srcPath, int32_t &outValue)
+void FontManagerServer::GetFontScopeInner(const std::string &srcPath, int32_t &outValue, int32_t &ret)
 {
-    outValue = CheckScopeFontPermission();
-    if (outValue != ERR_OK) return;
+    ret = CheckScopeFontPermission();
+    if (ret != ERR_OK) return;
     int32_t userId = GetCallingUserId();
     if (userId < 0) {
-        outValue = ERR_SYSTEM_ERROR;
+        ret = ERR_SYSTEM_ERROR;
         return;
     }
     std::string bundleName = GetBundleNameByToken();
     if (bundleName.empty()) {
         FONT_LOGE("GetFontScopeInner: failed to get bundleName");
-        outValue = ERR_SYSTEM_ERROR;
+        ret = ERR_SYSTEM_ERROR;
         return;
     }
-    outValue = FontManager::GetInstance()->GetFontScope(srcPath, bundleName, userId);
+    int32_t scope = FontManager::GetInstance()->GetFontScope(srcPath, bundleName, userId);
+    if (scope < 0 || scope > 1) {
+        ret = scope;
+        return;
+    }
+    outValue = scope;
+    ret = ERR_OK;
 }
 
 int32_t FontManagerServer::ParseUserIdFromReason(const SystemAbilityOnDemandReason &reason)
