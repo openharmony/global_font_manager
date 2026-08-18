@@ -53,6 +53,15 @@ bool FontConfig::InsertFontRecord(const std::string &fontPath, const std::vector
         cJSON_Delete(jsonValue);
         return false;
     }
+    int arrSize = cJSON_GetArraySize(fontList);
+    for (int i = 0; i < arrSize; i++) {
+        cJSON *item = cJSON_GetArrayItem(fontList, i);
+        cJSON *pathVal = cJSON_GetObjectItem(item, FONT_PATH);
+        if (pathVal != nullptr && cJSON_IsString(pathVal) && fontPath == pathVal->valuestring) {
+            cJSON_Delete(jsonValue);
+            return true;
+        }
+    }
     cJSON *insertValue = ConstructCJSON(fontPath, fullNames);
     if (insertValue == nullptr) {
         cJSON_Delete(jsonValue);

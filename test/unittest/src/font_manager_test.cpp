@@ -551,7 +551,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest020, TestSize.Level1)
     FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST);
     FontManagerUtils::CreateFileWithPermission(FONT_CONFIG_FILE_TEST, "{corrupt");
     int32_t ret = manager_->UninstallFont("SomeFont", TEST_USERID);
-    EXPECT_EQ(ret, ERR_UNINSTALL_FAIL);
+    EXPECT_EQ(ret, ERR_UNINSTALL_FILE_NOT_EXISTS);
     FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
 }
 
