@@ -1070,8 +1070,10 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest048, TestSize.Level1)
     }
 
     manager_->CleanupScopeFontsByUser(TEST_USERID);
-    EXPECT_EQ(manager_->GetFontScope("file://test/cleanup_user_app.ttf", "com.example.app", TEST_USERID), ERR_SCOPE_FONT_NOT_FOUND);
-    EXPECT_EQ(manager_->GetFontScope("file://test/cleanup_user_session.ttf", "com.example.session", TEST_USERID), ERR_SCOPE_FONT_NOT_FOUND);
+    EXPECT_EQ(manager_->GetFontScope("file://test/cleanup_user_app.ttf",
+        "com.example.app", TEST_USERID), ERR_SCOPE_FONT_NOT_FOUND);
+    EXPECT_EQ(manager_->GetFontScope("file://test/cleanup_user_session.ttf",
+        "com.example.session", TEST_USERID), ERR_SCOPE_FONT_NOT_FOUND);
 }
 
 /**
@@ -1110,8 +1112,10 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest049, TestSize.Level1)
     }
 
     manager_->CleanupAppScopeFontsByUser(TEST_USERID);
-    EXPECT_EQ(manager_->GetFontScope("file://test/keep_session_app.ttf", "com.example.app", TEST_USERID), ERR_SCOPE_FONT_NOT_FOUND);
-    EXPECT_EQ(manager_->GetFontScope("file://test/keep_session_sess.ttf", "com.example.session", TEST_USERID), FONT_SCOPE_SESSION);
+    EXPECT_EQ(manager_->GetFontScope("file://test/keep_session_app.ttf",
+        "com.example.app", TEST_USERID), ERR_SCOPE_FONT_NOT_FOUND);
+    EXPECT_EQ(manager_->GetFontScope("file://test/keep_session_sess.ttf",
+        "com.example.session", TEST_USERID), FONT_SCOPE_SESSION);
 }
 
 /**
@@ -1173,8 +1177,10 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest051, TestSize.Level1)
     }
 
     manager_->CleanupScopeFontsByUser(TEST_USERID);
-    EXPECT_EQ(manager_->GetFontScope("file://test/no_global_cleanup_app.ttf", "com.example.app", TEST_USERID), ERR_SCOPE_FONT_NOT_FOUND);
-    EXPECT_EQ(manager_->GetFontScope("file://test/no_global_cleanup_session.ttf", "com.example.session", TEST_USERID), ERR_SCOPE_FONT_NOT_FOUND);
+    EXPECT_EQ(manager_->GetFontScope("file://test/no_global_cleanup_app.ttf",
+        "com.example.app", TEST_USERID), ERR_SCOPE_FONT_NOT_FOUND);
+    EXPECT_EQ(manager_->GetFontScope("file://test/no_global_cleanup_session.ttf",
+        "com.example.session", TEST_USERID), ERR_SCOPE_FONT_NOT_FOUND);
 }
 
 /**
