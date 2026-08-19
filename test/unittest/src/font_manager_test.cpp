@@ -958,7 +958,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest043, TestSize.Level1)
     int ret;
     manager_->UninstallScopeFont("file://test/uninstall_scope.ttf", "com.example.app", TEST_USERID);
     ret = manager_->GetFontScope("file://test/uninstall_scope.ttf", "com.example.app", TEST_USERID);
-    EXPECT_EQ(ret, ERR_UNINSTALL_FILE_NOT_EXISTS);
+    EXPECT_EQ(ret, ERR_SCOPE_FONT_NOT_FOUND);
 }
 
 /**
@@ -969,18 +969,18 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest043, TestSize.Level1)
 HWTEST_F(FontManagerTest, FontManagerFuncTest044, TestSize.Level1)
 {
     int ret = manager_->UninstallScopeFont("file://test/non_existent.ttf", "com.example.app", TEST_USERID);
-    EXPECT_EQ(ret, ERR_UNINSTALL_FILE_NOT_EXISTS);
+    EXPECT_EQ(ret, ERR_SCOPE_FONT_NOT_FOUND);
 }
 
 /**
  * @tc.name: FontManagerFuncTest045
- * @tc.desc: Test GetFontScope returns ERR_UNINSTALL_FILE_NOT_EXISTS for non-existent
+ * @tc.desc: Test GetFontScope returns ERR_SCOPE_FONT_NOT_FOUND for non-existent
  * @tc.type: FUNC
  */
 HWTEST_F(FontManagerTest, FontManagerFuncTest045, TestSize.Level1)
 {
     int ret = manager_->GetFontScope("file://test/not_installed.ttf", "com.example.app", TEST_USERID);
-    EXPECT_EQ(ret, ERR_UNINSTALL_FILE_NOT_EXISTS);
+    EXPECT_EQ(ret, ERR_SCOPE_FONT_NOT_FOUND);
 }
 
 /**
@@ -1032,7 +1032,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest047, TestSize.Level1)
 
     manager_->CleanupAppScopeFonts("app_cleanup_001", TEST_USERID);
     int ret = manager_->GetFontScope("file://test/cleanup_app.ttf", "com.example.cleanup", TEST_USERID);
-    EXPECT_EQ(ret, ERR_UNINSTALL_FILE_NOT_EXISTS);
+    EXPECT_EQ(ret, ERR_SCOPE_FONT_NOT_FOUND);
 }
 
 /**
@@ -1070,8 +1070,8 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest048, TestSize.Level1)
     }
 
     manager_->CleanupScopeFontsByUser(TEST_USERID);
-    EXPECT_EQ(manager_->GetFontScope("file://test/cleanup_user_app.ttf", "com.example.app", TEST_USERID), ERR_UNINSTALL_FILE_NOT_EXISTS);
-    EXPECT_EQ(manager_->GetFontScope("file://test/cleanup_user_session.ttf", "com.example.session", TEST_USERID), ERR_UNINSTALL_FILE_NOT_EXISTS);
+    EXPECT_EQ(manager_->GetFontScope("file://test/cleanup_user_app.ttf", "com.example.app", TEST_USERID), ERR_SCOPE_FONT_NOT_FOUND);
+    EXPECT_EQ(manager_->GetFontScope("file://test/cleanup_user_session.ttf", "com.example.session", TEST_USERID), ERR_SCOPE_FONT_NOT_FOUND);
 }
 
 /**
@@ -1110,7 +1110,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest049, TestSize.Level1)
     }
 
     manager_->CleanupAppScopeFontsByUser(TEST_USERID);
-    EXPECT_EQ(manager_->GetFontScope("file://test/keep_session_app.ttf", "com.example.app", TEST_USERID), ERR_UNINSTALL_FILE_NOT_EXISTS);
+    EXPECT_EQ(manager_->GetFontScope("file://test/keep_session_app.ttf", "com.example.app", TEST_USERID), ERR_SCOPE_FONT_NOT_FOUND);
     EXPECT_EQ(manager_->GetFontScope("file://test/keep_session_sess.ttf", "com.example.session", TEST_USERID), FONT_SCOPE_SESSION);
 }
 
@@ -1173,8 +1173,8 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest051, TestSize.Level1)
     }
 
     manager_->CleanupScopeFontsByUser(TEST_USERID);
-    EXPECT_EQ(manager_->GetFontScope("file://test/no_global_cleanup_app.ttf", "com.example.app", TEST_USERID), ERR_UNINSTALL_FILE_NOT_EXISTS);
-    EXPECT_EQ(manager_->GetFontScope("file://test/no_global_cleanup_session.ttf", "com.example.session", TEST_USERID), ERR_UNINSTALL_FILE_NOT_EXISTS);
+    EXPECT_EQ(manager_->GetFontScope("file://test/no_global_cleanup_app.ttf", "com.example.app", TEST_USERID), ERR_SCOPE_FONT_NOT_FOUND);
+    EXPECT_EQ(manager_->GetFontScope("file://test/no_global_cleanup_session.ttf", "com.example.session", TEST_USERID), ERR_SCOPE_FONT_NOT_FOUND);
 }
 
 /**

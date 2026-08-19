@@ -436,7 +436,7 @@ void FontManagerServer::InstallScopeFontInner(const int32_t fd, int32_t scope,
     int32_t tokenId = static_cast<int32_t>(IPCSkeleton::GetCallingTokenID());
     int32_t userId = GetCallingUserId();
     if (userId < 0) {
-        outValue = ERR_INSTALL_FAIL;
+        outValue = ERR_SYSTEM_ERROR;
         return;
     }
     if (scope == FONT_SCOPE_APP && !FontClientRegistry::GetInstance()->IsClientRegistered(tokenId)) {
@@ -471,7 +471,7 @@ void FontManagerServer::UninstallScopeFontInner(const std::string &srcPath, int3
     if (outValue != ERR_OK) return;
     int32_t userId = GetCallingUserId();
     if (userId < 0) {
-        outValue = ERR_UNINSTALL_FAIL;
+        outValue = ERR_SYSTEM_ERROR;
         return;
     }
     std::string bundleName = GetBundleNameByToken();

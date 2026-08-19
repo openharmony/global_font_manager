@@ -42,11 +42,9 @@ static const std::unordered_map<uint32_t, std::string> g_ScopeFontErrMsgMap = {
     {ERR_COPY_FAIL, "Failed to copy the font file."},
     {ERR_INSTALLED_ALRADY, "The font file is installed."},
     {ERR_MAX_FILE_COUNT, "Exceeded the maximum number of installed files."},
-    {ERR_INSTALL_FAIL, "The system ability works abnormally."},
-    {ERR_UNINSTALL_FILE_NOT_EXISTS, "The font file does not exist."},
     {ERR_UNINSTALL_REMOVE_FAIL, "Failed to delete the font file."},
-    {ERR_UNINSTALL_FAIL, "The system ability works abnormally."},
     {ERR_SYSTEM_ERROR, "Call failed due to system error."},
+    {ERR_SCOPE_FONT_NOT_FOUND, "The scope font is not found."},
     {ERR_SCOPE_FONT_REPEATED_REGISTER, "Font observer already registered."},
     {ERR_SCOPE_FONT_EXCEED_REGISTER_LIMIT, "Exceeded maximum number of font observers."},
     {ERR_SCOPE_FONT_NOT_REGISTERED, "Font observer not registered."}

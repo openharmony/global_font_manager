@@ -240,7 +240,7 @@ int32_t FontManagerClient::InstallScopeFont(const std::string &fontPath, int32_t
     sptr<IFontService> service = FontServiceLoadManager::GetInstance()->GetFontServiceAbility(FONT_SA_ID);
     if (service == nullptr) {
         FONT_LOGE("InstallScopeFont: Service is null");
-        outValue = ERR_INSTALL_FAIL;
+        outValue = ERR_SYSTEM_ERROR;
         (void)fclose(fp);
         return ERR_OK;
     }
@@ -254,7 +254,7 @@ int32_t FontManagerClient::UninstallScopeFont(const std::string &srcPath, int32_
     sptr<IFontService> service = FontServiceLoadManager::GetInstance()->GetFontServiceAbility(FONT_SA_ID);
     if (service == nullptr) {
         FONT_LOGE("UninstallScopeFont: Service is null");
-        outValue = ERR_UNINSTALL_FAIL;
+        outValue = ERR_SYSTEM_ERROR;
         return ERR_OK;
     }
     return service->UninstallScopeFont(srcPath, outValue);
