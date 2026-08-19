@@ -31,6 +31,36 @@ static const char *FONT_BUNDLE_NAME = "bundleName";
 static const char *FONT_VERSION = "version";
 static const int32_t VERSION = 1;
 
+static bool SafeAddStringToObject(cJSON *object, const char *name, const std::string &value)
+{
+    cJSON *item = cJSON_CreateString(value.c_str());
+    if (item == nullptr) {
+        FONT_LOGE("SafeAddStringToObject: CreateString failed for %{public}s", name);
+        return false;
+    }
+    if (!cJSON_AddItemToObject(object, name, item)) {
+        cJSON_Delete(item);
+        FONT_LOGE("SafeAddStringToObject: AddItemToObject failed for %{public}s", name);
+        return false;
+    }
+    return true;
+}
+
+static bool SafeAddNumberToObject(cJSON *object, const char *name, double value)
+{
+    cJSON *item = cJSON_CreateNumber(value);
+    if (item == nullptr) {
+        FONT_LOGE("SafeAddNumberToObject: CreateNumber failed for %{public}s", name);
+        return false;
+    }
+    if (!cJSON_AddItemToObject(object, name, item)) {
+        cJSON_Delete(item);
+        FONT_LOGE("SafeAddNumberToObject: AddItemToObject failed for %{public}s", name);
+        return false;
+    }
+    return true;
+}
+
 
 std::string FontConfig::SandBoxPathToRealPath(const std::string &path)
 {
@@ -67,7 +97,11 @@ bool FontConfig::InsertFontRecord(const std::string &fontPath, const std::vector
         cJSON_Delete(jsonValue);
         return false;
     }
-    cJSON_AddItemToArray(fontList, insertValue);
+    if (!cJSON_AddItemToArray(fontList, insertValue)) {
+        cJSON_Delete(insertValue);
+        cJSON_Delete(jsonValue);
+        return false;
+    }
     char *fileData = cJSON_Print(jsonValue);
     cJSON_Delete(jsonValue);
     return WriteToFile(fileData);
@@ -253,16 +287,34 @@ cJSON *FontConfig::ConstructCJSON(const std::string &fontFullPath, const std::ve
     if (jsonData == nullptr) {
         return nullptr;
     }
-    cJSON_AddStringToObject(jsonData, FONT_PATH, fontFullPath.c_str());
+    if (!SafeAddStringToObject(jsonData, FONT_PATH, fontFullPath)) {
+        cJSON_Delete(jsonData);
+        return nullptr;
+    }
     cJSON *fullNameJson = cJSON_CreateArray();
     if (fullNameJson == nullptr) {
         cJSON_Delete(jsonData);
         return nullptr;
     }
     for (const auto &name : fullName) {
-        cJSON_AddItemToArray(fullNameJson, cJSON_CreateString(name.c_str()));
+        cJSON *nameItem = cJSON_CreateString(name.c_str());
+        if (nameItem == nullptr) {
+            cJSON_Delete(fullNameJson);
+            cJSON_Delete(jsonData);
+            return nullptr;
+        }
+        if (!cJSON_AddItemToArray(fullNameJson, nameItem)) {
+            cJSON_Delete(nameItem);
+            cJSON_Delete(fullNameJson);
+            cJSON_Delete(jsonData);
+            return nullptr;
+        }
     }
-    cJSON_AddItemToObject(jsonData, FONT_FULL_NAME, fullNameJson);
+    if (!cJSON_AddItemToObject(jsonData, FONT_FULL_NAME, fullNameJson)) {
+        cJSON_Delete(fullNameJson);
+        cJSON_Delete(jsonData);
+        return nullptr;
+    }
     return jsonData;
 }
 
@@ -275,16 +327,28 @@ cJSON *FontConfig::ConstructScopeCJSON(const FontRecordInfo &record)
         return nullptr;
     }
     if (record.scope >= 0) {
-        cJSON_AddNumberToObject(item, FONT_SCOPE, record.scope);
+        if (!SafeAddNumberToObject(item, FONT_SCOPE, record.scope)) {
+            cJSON_Delete(item);
+            return nullptr;
+        }
     }
     if (!record.srcPath.empty()) {
-        cJSON_AddStringToObject(item, FONT_SRC_PATH, record.srcPath.c_str());
+        if (!SafeAddStringToObject(item, FONT_SRC_PATH, record.srcPath)) {
+            cJSON_Delete(item);
+            return nullptr;
+        }
     }
     if (!record.appIdentifier.empty()) {
-        cJSON_AddStringToObject(item, FONT_APP_IDENTIFIER, record.appIdentifier.c_str());
+        if (!SafeAddStringToObject(item, FONT_APP_IDENTIFIER, record.appIdentifier)) {
+            cJSON_Delete(item);
+            return nullptr;
+        }
     }
     if (!record.bundleName.empty()) {
-        cJSON_AddStringToObject(item, FONT_BUNDLE_NAME, record.bundleName.c_str());
+        if (!SafeAddStringToObject(item, FONT_BUNDLE_NAME, record.bundleName)) {
+            cJSON_Delete(item);
+            return nullptr;
+        }
     }
     return item;
 }
@@ -343,7 +407,11 @@ bool FontConfig::InsertScopeFontRecord(const FontRecordInfo &record)
         cJSON_Delete(jsonValue);
         return false;
     }
-    cJSON_AddItemToArray(fontList, insertValue);
+    if (!cJSON_AddItemToArray(fontList, insertValue)) {
+        cJSON_Delete(insertValue);
+        cJSON_Delete(jsonValue);
+        return false;
+    }
     char *fileData = cJSON_Print(jsonValue);
     cJSON_Delete(jsonValue);
     return WriteToFile(fileData);
@@ -556,14 +624,26 @@ bool FontConfig::CheckAndUpdateFontRecord()
         }
         if (cJSON_IsNumber(versionJson) && versionJson->valueint == VERSION) {
             // upgrade v1 -> v7: old records get scope=-1 (absent), version -> "7.0"
-            cJSON_ReplaceItemInObject(jsonValue, FONT_VERSION, cJSON_CreateString(FONT_CONFIG_VERSION_7.c_str()));
+            cJSON *newVersion = cJSON_CreateString(FONT_CONFIG_VERSION_7.c_str());
+            if (newVersion == nullptr) {
+                cJSON_Delete(jsonValue);
+                return false;
+            }
+            if (!cJSON_ReplaceItemInObject(jsonValue, FONT_VERSION, newVersion)) {
+                cJSON_Delete(newVersion);
+                cJSON_Delete(jsonValue);
+                return false;
+            }
             char *fileData = cJSON_Print(jsonValue);
             cJSON_Delete(jsonValue);
             return WriteToFile(fileData);
         }
     }
     // no version field: set to 7.0
-    cJSON_AddStringToObject(jsonValue, FONT_VERSION, FONT_CONFIG_VERSION_7.c_str());
+    if (!SafeAddStringToObject(jsonValue, FONT_VERSION, FONT_CONFIG_VERSION_7)) {
+        cJSON_Delete(jsonValue);
+        return false;
+    }
     char *fileData = cJSON_Print(jsonValue);
     cJSON_Delete(jsonValue);
     return WriteToFile(fileData);
