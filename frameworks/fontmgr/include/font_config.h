@@ -71,6 +71,7 @@ private:
     cJSON *ConstructScopeCJSON(const FontRecordInfo &record);
     bool WriteToFile(char *jsonData);
     std::string SandBoxPathToRealPath(const std::string &path);
+    void RefreshFullNames(cJSON *jsonValue);
 private:
     std::string ConfigPath_;
     std::mutex configLock_;

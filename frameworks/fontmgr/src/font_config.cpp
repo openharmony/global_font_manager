@@ -69,6 +69,33 @@ std::string FontConfig::SandBoxPathToRealPath(const std::string &path)
     return directory + fileName;
 }
 
+void FontConfig::RefreshFullNames(cJSON *jsonValue)
+{
+    cJSON *fontList = cJSON_GetObjectItem(jsonValue, "fontlist");
+    if (!cJSON_IsArray(fontList)) {
+        return;
+    }
+    int sz = cJSON_GetArraySize(fontList);
+    for (int i = 0; i < sz; i++) {
+        cJSON *item = cJSON_GetArrayItem(fontList, i);
+        cJSON *pathVal = cJSON_GetObjectItem(item, FONT_PATH);
+        if (!pathVal || !cJSON_IsString(pathVal)) {
+            continue;
+        }
+        std::string realPath = SandBoxPathToRealPath(pathVal->valuestring);
+        std::vector<std::string> freshNames = FontManagerUtils::GetFullNamesByPath(realPath);
+        cJSON *newNameArr = cJSON_CreateArray();
+        if (newNameArr == nullptr) {
+            continue;
+        }
+        for (const auto &name : freshNames) {
+            cJSON_AddItemToArray(newNameArr, cJSON_CreateString(name.c_str()));
+        }
+        cJSON_DeleteItemFromObject(item, FONT_FULL_NAME);
+        cJSON_AddItemToObject(item, FONT_FULL_NAME, newNameArr);
+    }
+}
+
 bool FontConfig::InsertFontRecord(const std::string &fontPath, const std::vector<std::string> &fullNames)
 {
     std::lock_guard<std::mutex> lock(configLock_);
@@ -623,7 +650,8 @@ bool FontConfig::CheckAndUpdateFontRecord()
             return true;
         }
         if (cJSON_IsNumber(versionJson) && versionJson->valueint == VERSION) {
-            // upgrade v1 -> v7: old records get scope=-1 (absent), version -> "7.0"
+            // upgrade v1 -> v7: refresh fullname from disk, then version -> "7.0"
+            RefreshFullNames(jsonValue);
             cJSON *newVersion = cJSON_CreateString(FONT_CONFIG_VERSION_7.c_str());
             if (newVersion == nullptr) {
                 cJSON_Delete(jsonValue);
@@ -639,7 +667,8 @@ bool FontConfig::CheckAndUpdateFontRecord()
             return WriteToFile(fileData);
         }
     }
-    // no version field: set to 7.0
+    // no version field: refresh fullname from disk, then set version to 7.0
+    RefreshFullNames(jsonValue);
     if (!SafeAddStringToObject(jsonValue, FONT_VERSION, FONT_CONFIG_VERSION_7)) {
         cJSON_Delete(jsonValue);
         return false;

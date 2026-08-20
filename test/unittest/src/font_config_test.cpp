@@ -25,12 +25,16 @@
 #include <string>
 #include <vector>
 #include <cstdlib>
+#include <fcntl.h>
+#include <unistd.h>
 #include "securec.h"
 
 namespace {
 const std::string INSTALL_PATH_TEST = "/data/service/el1/100/for-all-app/fonts/";
 const std::string FONT_CONFIG_FILE_TEST = INSTALL_PATH_TEST + "install_fontconfig.json";
 const std::string INIT_FONT_CONFIG_CONTENT = R"({"fontlist":[],"version":1})";
+const std::string FONT_PATH = "/data/test/NotoSansVai-Regular.ttf";
+const std::string FONT_FULL_NAME = "Noto Sans Vai Regular";
 }
 
 using testing::ext::TestSize;
@@ -1015,6 +1019,32 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest057, TestSize.Level1)
     auto result = this->config_.GetFontRecordByName("DummyFont");
     EXPECT_FALSE(result.has_value());
     FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
+}
+
+/**
+ * @tc.name: FontConfigFuncTest058
+ * @tc.desc: Test CheckAndUpdateFontRecord refreshes fullname from disk on v1 migration
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest058, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    ASSERT_GE(fd, 0);
+    std::string realFontPath = INSTALL_PATH_TEST + "NotoSansVai-Regular.ttf";
+    EXPECT_TRUE(FontManagerUtils::CopyFile(fd, realFontPath));
+    close(fd);
+
+    std::string v1Json = R"({"fontlist":[{"fontfullpath":")" +
+        std::string(INSTALL_PATH_APP) + R"(NotoSansVai-Regular.ttf","fullname":["WrongName"]}],"version":1})";
+    FontManagerUtils::CreateFileWithPermission(FONT_CONFIG_FILE_TEST, v1Json);
+
+    EXPECT_TRUE(this->config_.CheckAndUpdateFontRecord());
+
+    EXPECT_EQ(this->config_.GetFontFileByName("WrongName"), "");
+    EXPECT_EQ(this->config_.GetFontFileByName(FONT_FULL_NAME),
+        std::string(INSTALL_PATH_APP) + "NotoSansVai-Regular.ttf");
+
+    FontManagerUtils::RemoveFile(realFontPath);
 }
 
 }  // namespace FontManager
