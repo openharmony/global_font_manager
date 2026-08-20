@@ -46,6 +46,22 @@ public:
     }
 };
 
+class MockFontClientObserverFail : public IRemoteStub<IFontClientObserver> {
+public:
+    ErrCode OnServiceDied() override
+    {
+        return ERR_OK;
+    }
+    bool AddDeathRecipient(const sptr<DeathRecipient> &recipient) override
+    {
+        return false;
+    }
+    bool RemoveDeathRecipient(const sptr<DeathRecipient> &recipient) override
+    {
+        return false;
+    }
+};
+
 class FontClientRegistryTest : public testing::Test {
 public:
     FontClientRegistryTest() {}
@@ -192,6 +208,79 @@ HWTEST_F(FontClientRegistryTest, FontClientRegistryTest009, TestSize.Level1)
     registry_->RegisterClient(obs1->AsObject(), "com.example.app1", 100, 600001);
     registry_->RegisterClient(obs2->AsObject(), "com.example.app2", 101, 600002);
     EXPECT_EQ(registry_->GetClientCount(), 2);
+}
+
+/**
+ * @tc.name: FontClientRegistryTest010
+ * @tc.desc: Test RegisterClient with null binder returns ERR_SYSTEM_ERROR
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontClientRegistryTest, FontClientRegistryTest010, TestSize.Level1)
+{
+    int32_t ret = registry_->RegisterClient(nullptr, "com.example.app", 100, 700001);
+    EXPECT_EQ(ret, ERR_SYSTEM_ERROR);
+    EXPECT_EQ(registry_->GetClientCount(), 0);
+}
+
+/**
+ * @tc.name: FontClientRegistryTest011
+ * @tc.desc: Test RegisterClient with AddDeathRecipient failure returns ERR_SYSTEM_ERROR
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontClientRegistryTest, FontClientRegistryTest011, TestSize.Level1)
+{
+    sptr<MockFontClientObserverFail> observer = new MockFontClientObserverFail();
+    int32_t ret = registry_->RegisterClient(observer->AsObject(), "com.example.app", 100, 700002);
+    EXPECT_EQ(ret, ERR_SYSTEM_ERROR);
+    EXPECT_EQ(registry_->GetClientCount(), 0);
+}
+
+/**
+ * @tc.name: FontClientRegistryTest012
+ * @tc.desc: Test RegisterClient sets appIdentifier to app_<tokenId> format
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontClientRegistryTest, FontClientRegistryTest012, TestSize.Level1)
+{
+    sptr<MockFontClientObserver> observer = new MockFontClientObserver();
+    int32_t tokenId = 700003;
+    registry_->RegisterClient(observer->AsObject(), "com.example.app", 100, tokenId);
+    auto it = registry_->clients_.find(tokenId);
+    ASSERT_NE(it, registry_->clients_.end());
+    EXPECT_EQ(it->second.appIdentifier, "app_" + std::to_string(tokenId));
+}
+
+/**
+ * @tc.name: FontClientRegistryTest013
+ * @tc.desc: Test UnregisterClient with null binder and recipient skips RemoveDeathRecipient
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontClientRegistryTest, FontClientRegistryTest013, TestSize.Level1)
+{
+    sptr<MockFontClientObserver> observer = new MockFontClientObserver();
+    int32_t tokenId = 700004;
+    registry_->RegisterClient(observer->AsObject(), "com.example.app", 100, tokenId);
+    registry_->clients_[tokenId].binder = nullptr;
+    registry_->clients_[tokenId].recipient = nullptr;
+    int32_t ret = registry_->UnregisterClient(tokenId);
+    EXPECT_EQ(ret, ERR_OK);
+    EXPECT_EQ(registry_->IsClientRegistered(tokenId), false);
+}
+
+/**
+ * @tc.name: FontClientRegistryTest014
+ * @tc.desc: Test OnClientDied with empty appIdentifier skips cleanup
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontClientRegistryTest, FontClientRegistryTest014, TestSize.Level1)
+{
+    sptr<MockFontClientObserver> observer = new MockFontClientObserver();
+    int32_t tokenId = 700005;
+    registry_->RegisterClient(observer->AsObject(), "com.example.app", 100, tokenId);
+    registry_->clients_[tokenId].appIdentifier = "";
+    registry_->OnClientDied(tokenId);
+    EXPECT_EQ(registry_->IsClientRegistered(tokenId), false);
+    EXPECT_EQ(registry_->GetClientCount(), 0);
 }
 } // namespace FontManager
 } // namespace Global

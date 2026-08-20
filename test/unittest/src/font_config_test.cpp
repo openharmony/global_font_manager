@@ -898,6 +898,125 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest048, TestSize.Level1)
     EXPECT_EQ(this->config_.GetFontFileByName(""), "");
 }
 
+/**
+ * @tc.name: FontConfigFuncTest049
+ * @tc.desc: Test GetFontRecordByName not found returns nullopt
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest049, TestSize.Level1)
+{
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
+    auto result = this->config_.GetFontRecordByName("NonExistentFont");
+    EXPECT_FALSE(result.has_value());
+}
+
+/**
+ * @tc.name: FontConfigFuncTest050
+ * @tc.desc: Test DeleteScopeFontRecordByUrl with non-existent srcPath returns false
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest050, TestSize.Level1)
+{
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
+    EXPECT_FALSE(this->config_.DeleteScopeFontRecordByUrl("file://test/nonexistent.ttf"));
+}
+
+/**
+ * @tc.name: FontConfigFuncTest051
+ * @tc.desc: Test DeleteScopeFontRecordByAppId with non-existent app returns false
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest051, TestSize.Level1)
+{
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
+    EXPECT_FALSE(this->config_.DeleteScopeFontRecordByAppId("app_nonexistent"));
+}
+
+/**
+ * @tc.name: FontConfigFuncTest052
+ * @tc.desc: Test InsertScopeFontRecord with missing config file returns false
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest052, TestSize.Level1)
+{
+    FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
+    FontRecordInfo record;
+    record.fontPath = INSTALL_PATH_TEST + "app_100/font.ttf";
+    record.fullNames = {"TestFont"};
+    record.scope = FONT_SCOPE_APP;
+    record.srcPath = "file://test/font.ttf";
+    record.appIdentifier = "app_100";
+    EXPECT_FALSE(this->config_.InsertScopeFontRecord(record));
+}
+
+/**
+ * @tc.name: FontConfigFuncTest053
+ * @tc.desc: Test InsertScopeFontRecord with invalid JSON returns false
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest053, TestSize.Level1)
+{
+    FontManagerUtils::CreateFileWithPermission(FONT_CONFIG_FILE_TEST, "invalid_json");
+    FontRecordInfo record;
+    record.fontPath = INSTALL_PATH_TEST + "app_100/font.ttf";
+    record.fullNames = {"TestFont"};
+    record.scope = FONT_SCOPE_APP;
+    record.srcPath = "file://test/font.ttf";
+    record.appIdentifier = "app_100";
+    EXPECT_FALSE(this->config_.InsertScopeFontRecord(record));
+    FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
+}
+
+/**
+ * @tc.name: FontConfigFuncTest054
+ * @tc.desc: Test GetFontRecordByUrl with missing config returns nullopt
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest054, TestSize.Level1)
+{
+    FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
+    auto result = this->config_.GetFontRecordByUrl("file://test/font.ttf");
+    EXPECT_FALSE(result.has_value());
+}
+
+/**
+ * @tc.name: FontConfigFuncTest055
+ * @tc.desc: Test GetTotalInstalledFontsNum with missing config returns 0
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest055, TestSize.Level1)
+{
+    FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
+    EXPECT_EQ(this->config_.GetTotalInstalledFontsNum(), 0);
+}
+
+/**
+ * @tc.name: FontConfigFuncTest056
+ * @tc.desc: Test GetScopeFontRecords with fontList not array returns empty
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest056, TestSize.Level1)
+{
+    FontManagerUtils::CreateFileWithPermission(FONT_CONFIG_FILE_TEST, R"({"fontlist":"notarray"})");
+    auto result = this->config_.GetScopeFontRecords();
+    EXPECT_EQ(result.size(), 0u);
+    FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
+}
+
+/**
+ * @tc.name: FontConfigFuncTest057
+ * @tc.desc: Test GetFontRecordByName skips items with missing fullname array
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest057, TestSize.Level1)
+{
+    std::string badConfig = R"({"fontlist":[{"fontfullpath":"/data/test/dummy.ttf"}],"version":"7.0"})";
+    FontManagerUtils::CreateFileWithPermission(FONT_CONFIG_FILE_TEST, badConfig);
+    auto result = this->config_.GetFontRecordByName("DummyFont");
+    EXPECT_FALSE(result.has_value());
+    FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
+}
+
 }  // namespace FontManager
 }  // namespace Global
 }  // namespace OHOS
