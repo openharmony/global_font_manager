@@ -1034,8 +1034,9 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest058, TestSize.Level1)
     EXPECT_TRUE(FontManagerUtils::CopyFile(fd, realFontPath));
     close(fd);
 
-    std::string v1Json = R"({"fontlist":[{"fontfullpath":")" +
-        std::string(INSTALL_PATH_APP) + R"(NotoSansVai-Regular.ttf","fullname":["WrongName"]}],"version":1})";
+    std::string fontFullPath = std::string(INSTALL_PATH_APP) + "NotoSansVai-Regular.ttf";
+    std::string v1Json = "{\"fontlist\":[{\"fontfullpath\":\"" + fontFullPath +
+        "\",\"fullname\":[\"WrongName\"]}],\"version\":1}";
     FontManagerUtils::CreateFileWithPermission(FONT_CONFIG_FILE_TEST, v1Json);
 
     EXPECT_TRUE(this->config_.CheckAndUpdateFontRecord());
