@@ -30,26 +30,6 @@ int32_t FontManagerInnerApi::UninstallFont(const std::string &fontName, int32_t 
 {
     return DelayedRefSingleton<FontManagerClient>::GetInstance().UninstallFontWithUserId(fontName, userId);
 }
-
-int32_t FontManagerInnerApi::InstallScopeFont(const std::string &fontPath, int32_t scope, int32_t userId)
-{
-    int32_t outValue = 0;
-    int32_t ret = DelayedRefSingleton<FontManagerClient>::GetInstance().InstallScopeFont(fontPath, scope, outValue);
-    if (ret != ERR_OK) {
-        return ret;
-    }
-    return outValue;
-}
-
-int32_t FontManagerInnerApi::UninstallScopeFont(const std::string &srcPath, int32_t userId)
-{
-    int32_t outValue = 0;
-    int32_t ret = DelayedRefSingleton<FontManagerClient>::GetInstance().UninstallScopeFont(srcPath, outValue);
-    if (ret != ERR_OK) {
-        return ret;
-    }
-    return outValue;
-}
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS

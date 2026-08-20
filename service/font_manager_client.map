@@ -17,8 +17,6 @@
       "OHOS::Global::FontManager::FontManagerKits::GetInstance()";
       "OHOS::Global::FontManager::FontManagerInnerApi::InstallFont(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, int)";
       "OHOS::Global::FontManager::FontManagerInnerApi::UninstallFont(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, int)";
-      "OHOS::Global::FontManager::FontManagerInnerApi::InstallScopeFont(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, int, int)";
-      "OHOS::Global::FontManager::FontManagerInnerApi::UninstallScopeFont(std::__h::basic_string<char, std::__h::char_traits<char>, std::__h::allocator<char>> const&, int)";
       "vtable for OHOS::Global::FontManager::FontServiceLoadManager";
       "OHOS::Global::FontManager::FontServiceLoadManager::FontServiceLoadManager()";
       "OHOS::Global::FontManager::FontServiceLoadManager::GetFontServiceAbility(int)";

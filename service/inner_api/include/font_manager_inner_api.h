@@ -25,8 +25,6 @@ class FontManagerInnerApi {
 public:
     static int32_t InstallFont(const std::string &fontPath, int32_t userId);
     static int32_t UninstallFont(const std::string &fontName, int32_t userId);
-    static int32_t InstallScopeFont(const std::string &fontPath, int32_t scope, int32_t userId);
-    static int32_t UninstallScopeFont(const std::string &srcPath, int32_t userId);
 };
 } // namespace FontManager
 } // namespace Global
