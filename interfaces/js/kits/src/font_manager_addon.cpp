@@ -116,11 +116,7 @@ void FontManagerAddon::Complete(napi_env env, napi_status status, void* data)
 
     napi_value finalResult = nullptr;
     if (fontNapiCallback->isQuery_ && fontNapiCallback->success_) {
-        if (fontNapiCallback->queryResult_ < 0) {
-            napi_get_null(env, &finalResult);
-        } else {
-            napi_create_int32(env, fontNapiCallback->queryResult_, &finalResult);
-        }
+        napi_create_int32(env, fontNapiCallback->queryResult_, &finalResult);
     } else {
         napi_status ret = napi_create_int32(env, fontNapiCallback->errCode_, &finalResult);
         if (ret != napi_ok) {

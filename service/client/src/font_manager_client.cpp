@@ -265,8 +265,8 @@ int32_t FontManagerClient::GetFontScope(const std::string &srcPath, int32_t &out
     sptr<IFontService> service = FontServiceLoadManager::GetInstance()->GetFontServiceAbility(FONT_SA_ID);
     if (service == nullptr) {
         FONT_LOGE("GetFontScope: Service is null");
-        outValue = ERR_SYSTEM_ERROR;
-        return ERR_OK;
+        outValue = FONT_SCOPE_NONE;
+        return ERR_SYSTEM_ERROR;
     }
     return service->GetFontScope(srcPath, outValue);
 }
