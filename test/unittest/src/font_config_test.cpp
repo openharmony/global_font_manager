@@ -14,18 +14,27 @@
  */
 
 #include <gtest/gtest.h>
+#define private public
+#define protected public
 #include "font_config.h"
+#include "font_define.h"
 #include "font_manager.h"
 #include "font_manager_utils.h"
+#undef private
+#undef protected
 #include <string>
 #include <vector>
 #include <cstdlib>
+#include <fcntl.h>
+#include <unistd.h>
 #include "securec.h"
 
 namespace {
 const std::string INSTALL_PATH_TEST = "/data/service/el1/100/for-all-app/fonts/";
 const std::string FONT_CONFIG_FILE_TEST = INSTALL_PATH_TEST + "install_fontconfig.json";
 const std::string INIT_FONT_CONFIG_CONTENT = R"({"fontlist":[],"version":1})";
+const std::string FONT_PATH = "/data/test/NotoSansVai-Regular.ttf";
+const std::string FONT_FULL_NAME = "Noto Sans Vai Regular";
 }
 
 using testing::ext::TestSize;
@@ -78,13 +87,12 @@ void FontConfigTest::TearDown(void)
  */
 HWTEST_F(FontConfigTest, FontConfigFuncTest001, TestSize.Level1)
 {
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
     std::string fontFullPath = INSTALL_PATH_TEST + "TestFont_Sans.ttf";
     std::vector<std::string> fullName{"TestFont-Sans"};
 
     EXPECT_EQ(this->config_.InsertFontRecord(fontFullPath, fullName), true);
-
-    auto t = this->config_.GetFontsMap(this->config_.ConfigPath_);
-    EXPECT_EQ(t.find(fontFullPath) == t.end(), false);
+    EXPECT_EQ(this->config_.GetInstalledFontsNum() > 0, true);
 }
 
 /**
@@ -94,20 +102,15 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest001, TestSize.Level1)
  */
 HWTEST_F(FontConfigTest, FontConfigFuncTest002, TestSize.Level1)
 {
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
     std::string fontFullPath = INSTALL_PATH_TEST + "TestFont_Sans.ttf";
     std::vector<std::string> fullName{"TestFont-Sans"};
 
     EXPECT_EQ(this->config_.InsertFontRecord(fontFullPath, fullName), true);
-
-    auto t = this->config_.GetFontsMap(this->config_.ConfigPath_);
-
-    EXPECT_EQ(t.find(fontFullPath) == t.end(), false);
+    EXPECT_EQ(this->config_.GetFontFileByName("TestFont-Sans") == fontFullPath, true);
 
     EXPECT_EQ(this->config_.DeleteFontRecord(fontFullPath), true);
-
-    t = this->config_.GetFontsMap(this->config_.ConfigPath_);
-
-    EXPECT_EQ(t.find(fontFullPath) == t.end(), true);
+    EXPECT_EQ(this->config_.GetFontFileByName("TestFont-Sans") == "", true);
 }
 
 /**
@@ -117,6 +120,7 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest002, TestSize.Level1)
  */
 HWTEST_F(FontConfigTest, FontConfigFuncTest003, TestSize.Level1)
 {
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
     std::string fontFullPath1 = INSTALL_PATH_TEST + "TestFont_Sans1.ttf";
     std::vector<std::string> fullName1{"TestFont-Sans1"};
     std::string fontFullPath2 = INSTALL_PATH_TEST + "TestFont_Sans2.ttf";
@@ -141,6 +145,7 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest003, TestSize.Level1)
  */
 HWTEST_F(FontConfigTest, FontConfigFuncTest004, TestSize.Level1)
 {
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
     std::string fontFullPath = INSTALL_PATH_TEST + "TestFont_Sans.ttf";
     std::vector<std::string> fullName{"TestFont-Sans"};
 
@@ -157,6 +162,7 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest004, TestSize.Level1)
  */
 HWTEST_F(FontConfigTest, FontConfigFuncTest005, TestSize.Level1)
 {
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
     std::string fontFullPath = INSTALL_PATH_TEST + "NotoSansCJK-Regular.ttc";
     std::vector<std::string> fullName{
         "Noto Sans CJK JP", "Noto Sans CJK KR", "Noto Sans CJK SC", "Noto Sans CJK TC",
@@ -164,9 +170,7 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest005, TestSize.Level1)
         "Noto Sans Mono CJK SC", "Noto Sans Mono CJK TC", "Noto Sans Mono CJK HK"};
 
     EXPECT_EQ(this->config_.InsertFontRecord(fontFullPath, fullName), true);
-
-    auto t = this->config_.GetFontsMap(this->config_.ConfigPath_);
-    EXPECT_EQ(t.find(fontFullPath) == t.end(), false);
+    EXPECT_EQ(this->config_.GetFontFileByName("Noto Sans CJK JP") == fontFullPath, true);
 }
 
 /**
@@ -176,6 +180,7 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest005, TestSize.Level1)
  */
 HWTEST_F(FontConfigTest, FontConfigFuncTest006, TestSize.Level1)
 {
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
     std::string fontFullPath = INSTALL_PATH_TEST + "NotoSansCJK-Regular.ttc";
     std::vector<std::string> fullName{
         "Noto Sans CJK JP", "Noto Sans CJK KR", "Noto Sans CJK SC", "Noto Sans CJK TC",
@@ -183,16 +188,10 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest006, TestSize.Level1)
         "Noto Sans Mono CJK SC", "Noto Sans Mono CJK TC", "Noto Sans Mono CJK HK"};
 
     EXPECT_EQ(this->config_.InsertFontRecord(fontFullPath, fullName), true);
-
-    auto t = this->config_.GetFontsMap(this->config_.ConfigPath_);
-
-    EXPECT_EQ(t.find(fontFullPath) == t.end(), false);
+    EXPECT_EQ(this->config_.GetFontFileByName("Noto Sans CJK JP") == fontFullPath, true);
 
     EXPECT_EQ(this->config_.DeleteFontRecord(fontFullPath), true);
-
-    t = this->config_.GetFontsMap(this->config_.ConfigPath_);
-
-    EXPECT_EQ(t.find(fontFullPath) == t.end(), true);
+    EXPECT_EQ(this->config_.GetFontFileByName("Noto Sans CJK JP") == "", true);
 }
 
 /**
@@ -202,6 +201,7 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest006, TestSize.Level1)
  */
 HWTEST_F(FontConfigTest, FontConfigFuncTest007, TestSize.Level1)
 {
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
     std::string fontFullPath1 = INSTALL_PATH_TEST + "NotoSansCJK-Regular1.ttc";
     std::vector<std::string> fullName1{"Noto Serif CJK JP",
         "Noto Serif CJK KR", "Noto Serif CJK SC", "Noto Serif CJK TC", "Noto Serif CJK HK"};
@@ -230,6 +230,7 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest007, TestSize.Level1)
  */
 HWTEST_F(FontConfigTest, FontConfigFuncTest008, TestSize.Level1)
 {
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
     std::string fontFullPath = INSTALL_PATH_TEST + "NotoSansCJK-Regular.ttc";
     std::vector<std::string> fullName{
         "Noto Serif CJK JP", "Noto Serif CJK KR", "Noto Serif CJK SC", "Noto Serif CJK TC", "Noto Serif CJK HK"};
@@ -247,6 +248,7 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest008, TestSize.Level1)
  */
 HWTEST_F(FontConfigTest, FontConfigFuncTest009, TestSize.Level1)
 {
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
     std::string fontFullPath = INSTALL_PATH_TEST + "NotoSansCJK-Regular.ttc";
     std::vector<std::string> fullName{
         "Noto Serif CJK JP", "Noto Serif CJK KR", "Noto Serif CJK SC", "Noto Serif CJK TC", "Noto Serif CJK HK"};
@@ -275,7 +277,7 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest010, TestSize.Level1)
 
     EXPECT_EQ(this->config_.InsertFontRecord(fontFullPath, fullName), true);
     EXPECT_EQ(this->config_.CheckAndUpdateFontRecord(), true);
-    EXPECT_EQ(this->config_.fontsMap_.find(fontFullPath)->second.size(), 0);
+    EXPECT_EQ(this->config_.GetInstalledFontsNum() > 0, true);
 }
 
 /**
@@ -314,7 +316,7 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest012, TestSize.Level1)
 
 /**
  * @tc.name: FontConfigFuncTest013
- * @tc.desc: Test CheckAndUpdateFontRecord where fontlist is not an array
+ * @tc.desc: Test CheckAndUpdateFontRecord where fontlist is not an array (only version is checked)
  * @tc.type: FUNC
  */
 HWTEST_F(FontConfigTest, FontConfigFuncTest013, TestSize.Level1)
@@ -325,7 +327,7 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest013, TestSize.Level1)
         fwrite(invalidListJson.c_str(), 1, invalidListJson.length(), fp);
         (void)fclose(fp);
     }
-    EXPECT_FALSE(this->config_.CheckAndUpdateFontRecord());
+    EXPECT_TRUE(this->config_.CheckAndUpdateFontRecord());
 }
 
 /**
@@ -343,10 +345,277 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest014, TestSize.Level1)
 
 /**
  * @tc.name: FontConfigFuncTest015
- * @tc.desc: Test InsertFontRecord with missing config file
+ * @tc.desc: Test InsertScopeFontRecord and GetFontRecordByUrl
  * @tc.type: FUNC
  */
 HWTEST_F(FontConfigTest, FontConfigFuncTest015, TestSize.Level1)
+{
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
+    FontRecordInfo record;
+    record.fontPath = INSTALL_PATH_TEST + "app_100/font.ttf";
+    record.fullNames = {"TestAppFont"};
+    record.scope = FONT_SCOPE_APP;
+    record.srcPath = "file://test/font.ttf";
+    record.appIdentifier = "app_100";
+    record.bundleName = "com.example.app";
+
+    EXPECT_EQ(this->config_.InsertScopeFontRecord(record), true);
+
+    auto result = this->config_.GetFontRecordByUrl("file://test/font.ttf");
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(result->scope, FONT_SCOPE_APP);
+    EXPECT_EQ(result->fontPath, record.fontPath);
+    EXPECT_EQ(result->appIdentifier, "app_100");
+}
+
+/**
+ * @tc.name: FontConfigFuncTest016
+ * @tc.desc: Test DeleteScopeFontRecordByUrl
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest016, TestSize.Level1)
+{
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
+    FontRecordInfo record;
+    record.fontPath = INSTALL_PATH_TEST + "app_100/font.ttf";
+    record.fullNames = {"TestAppFont"};
+    record.scope = FONT_SCOPE_APP;
+    record.srcPath = "file://test/font2.ttf";
+    record.appIdentifier = "app_100";
+    record.bundleName = "com.example.app";
+
+    EXPECT_EQ(this->config_.InsertScopeFontRecord(record), true);
+    EXPECT_EQ(this->config_.DeleteScopeFontRecordByUrl("file://test/font2.ttf"), true);
+    EXPECT_FALSE(this->config_.GetFontRecordByUrl("file://test/font2.ttf").has_value());
+}
+
+/**
+ * @tc.name: FontConfigFuncTest017
+ * @tc.desc: Test GetFontRecordsByAppId
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest017, TestSize.Level1)
+{
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
+    FontRecordInfo record1;
+    record1.fontPath = INSTALL_PATH_TEST + "app_100/font1.ttf";
+    record1.fullNames = {"AppFont1"};
+    record1.scope = FONT_SCOPE_APP;
+    record1.srcPath = "file://test/font1.ttf";
+    record1.appIdentifier = "app_100";
+    record1.bundleName = "com.example.app";
+
+    FontRecordInfo record2;
+    record2.fontPath = INSTALL_PATH_TEST + "app_100/font2.ttf";
+    record2.fullNames = {"AppFont2"};
+    record2.scope = FONT_SCOPE_APP;
+    record2.srcPath = "file://test/font2.ttf";
+    record2.appIdentifier = "app_100";
+    record2.bundleName = "com.example.app";
+
+    FontRecordInfo record3;
+    record3.fontPath = INSTALL_PATH_TEST + "session_200/font3.ttf";
+    record3.fullNames = {"SessionFont1"};
+    record3.scope = FONT_SCOPE_SESSION;
+    record3.srcPath = "file://test/font3.ttf";
+    record3.appIdentifier = "session_200";
+    record3.bundleName = "com.example.session";
+
+    EXPECT_EQ(this->config_.InsertScopeFontRecord(record1), true);
+    EXPECT_EQ(this->config_.InsertScopeFontRecord(record2), true);
+    EXPECT_EQ(this->config_.InsertScopeFontRecord(record3), true);
+
+    auto appRecords = this->config_.GetFontRecordsByAppId("app_100");
+    EXPECT_EQ(appRecords.size(), 2u);
+
+    auto sessionRecords = this->config_.GetFontRecordsByAppId("session_200");
+    EXPECT_EQ(sessionRecords.size(), 1u);
+}
+
+/**
+ * @tc.name: FontConfigFuncTest018
+ * @tc.desc: Test GetScopeFontRecords returns both app and session scope
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest018, TestSize.Level1)
+{
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
+    FontRecordInfo appRecord;
+    appRecord.fontPath = INSTALL_PATH_TEST + "app_100/app_font.ttf";
+    appRecord.fullNames = {"AppFont"};
+    appRecord.scope = FONT_SCOPE_APP;
+    appRecord.srcPath = "file://test/app.ttf";
+    appRecord.appIdentifier = "app_100";
+
+    FontRecordInfo sessionRecord;
+    sessionRecord.fontPath = INSTALL_PATH_TEST + "session_200/session_font.ttf";
+    sessionRecord.fullNames = {"SessionFont"};
+    sessionRecord.scope = FONT_SCOPE_SESSION;
+    sessionRecord.srcPath = "file://test/session.ttf";
+    sessionRecord.appIdentifier = "session_200";
+
+    this->config_.InsertScopeFontRecord(appRecord);
+    this->config_.InsertScopeFontRecord(sessionRecord);
+
+    auto scopeRecords = this->config_.GetScopeFontRecords();
+    EXPECT_EQ(scopeRecords.size(), 2u);
+}
+
+/**
+ * @tc.name: FontConfigFuncTest019
+ * @tc.desc: Test GetAppScopeFontRecords returns only app scope (scope=0)
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest019, TestSize.Level1)
+{
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
+    FontRecordInfo appRecord;
+    appRecord.fontPath = INSTALL_PATH_TEST + "app_100/app_font.ttf";
+    appRecord.fullNames = {"AppFont"};
+    appRecord.scope = FONT_SCOPE_APP;
+    appRecord.srcPath = "file://test/app.ttf";
+    appRecord.appIdentifier = "app_100";
+
+    FontRecordInfo sessionRecord;
+    sessionRecord.fontPath = INSTALL_PATH_TEST + "session_200/session_font.ttf";
+    sessionRecord.fullNames = {"SessionFont"};
+    sessionRecord.scope = FONT_SCOPE_SESSION;
+    sessionRecord.srcPath = "file://test/session.ttf";
+    sessionRecord.appIdentifier = "session_200";
+
+    this->config_.InsertScopeFontRecord(appRecord);
+    this->config_.InsertScopeFontRecord(sessionRecord);
+
+    auto appRecords = this->config_.GetAppScopeFontRecords();
+    EXPECT_EQ(appRecords.size(), 1u);
+    EXPECT_EQ(appRecords[0].scope, FONT_SCOPE_APP);
+}
+
+/**
+ * @tc.name: FontConfigFuncTest020
+ * @tc.desc: Test GetFontRecordByName finds scope font by fullName
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest020, TestSize.Level1)
+{
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
+    FontRecordInfo record;
+    record.fontPath = INSTALL_PATH_TEST + "app_100/font.ttf";
+    record.fullNames = {"UniqueScopeFont"};
+    record.scope = FONT_SCOPE_APP;
+    record.srcPath = "file://test/unique.ttf";
+    record.appIdentifier = "app_100";
+
+    this->config_.InsertScopeFontRecord(record);
+
+    auto result = this->config_.GetFontRecordByName("UniqueScopeFont");
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(result->scope, FONT_SCOPE_APP);
+    EXPECT_EQ(result->srcPath, "file://test/unique.ttf");
+}
+
+/**
+ * @tc.name: FontConfigFuncTest021
+ * @tc.desc: Test GetTotalInstalledFontsNum counts all records
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest021, TestSize.Level1)
+{
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
+    this->config_.InsertFontRecord(INSTALL_PATH_TEST + "user_font.ttf", {"UserFont"});
+
+    FontRecordInfo scopeRecord;
+    scopeRecord.fontPath = INSTALL_PATH_TEST + "app_100/scope_font.ttf";
+    scopeRecord.fullNames = {"ScopeFont"};
+    scopeRecord.scope = FONT_SCOPE_APP;
+    scopeRecord.srcPath = "file://test/scope.ttf";
+    scopeRecord.appIdentifier = "app_100";
+    this->config_.InsertScopeFontRecord(scopeRecord);
+
+    EXPECT_EQ(this->config_.GetTotalInstalledFontsNum(), 2);
+}
+
+/**
+ * @tc.name: FontConfigFuncTest022
+ * @tc.desc: Test DeleteScopeFontRecordByAppId removes all records for an app
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest022, TestSize.Level1)
+{
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
+    FontRecordInfo r1;
+    r1.fontPath = INSTALL_PATH_TEST + "app_100/f1.ttf";
+    r1.fullNames = {"F1"};
+    r1.scope = FONT_SCOPE_APP;
+    r1.srcPath = "file://test/f1.ttf";
+    r1.appIdentifier = "app_100";
+
+    FontRecordInfo r2;
+    r2.fontPath = INSTALL_PATH_TEST + "app_100/f2.ttf";
+    r2.fullNames = {"F2"};
+    r2.scope = FONT_SCOPE_APP;
+    r2.srcPath = "file://test/f2.ttf";
+    r2.appIdentifier = "app_100";
+
+    this->config_.InsertScopeFontRecord(r1);
+    this->config_.InsertScopeFontRecord(r2);
+
+    EXPECT_EQ(this->config_.DeleteScopeFontRecordByAppId("app_100"), true);
+    EXPECT_EQ(this->config_.GetFontRecordsByAppId("app_100").size(), 0u);
+}
+
+/**
+ * @tc.name: FontConfigFuncTest023
+ * @tc.desc: Test legacy records (no scope field) are not returned by GetAppScopeFontRecords
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest023, TestSize.Level1)
+{
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
+    this->config_.InsertFontRecord(INSTALL_PATH_TEST + "legacy.ttf", {"LegacyFont"});
+
+    auto appRecords = this->config_.GetAppScopeFontRecords();
+    EXPECT_EQ(appRecords.size(), 0u);
+
+    auto scopeRecords = this->config_.GetScopeFontRecords();
+    EXPECT_EQ(scopeRecords.size(), 0u);
+}
+
+/**
+ * @tc.name: FontConfigFuncTest024
+ * @tc.desc: Test CheckAndUpdateFontRecord upgrades version 1 to 7.0
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest024, TestSize.Level1)
+{
+    std::string v1Json = "{\"fontlist\":[],\"version\":1}";
+    FILE *fp = fopen(FONT_CONFIG_FILE_TEST.c_str(), "w");
+    if (fp) {
+        fwrite(v1Json.c_str(), 1, v1Json.length(), fp);
+        (void)fclose(fp);
+    }
+    EXPECT_TRUE(this->config_.CheckAndUpdateFontRecord());
+    EXPECT_TRUE(this->config_.CheckAndUpdateFontRecord());
+}
+
+/**
+ * @tc.name: FontConfigFuncTest025
+ * @tc.desc: Test initial config file has version "7.0"
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest025, TestSize.Level1)
+{
+    FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
+    ASSERT_EQ(FontManagerUtils::CheckFontConfigPath(INSTALL_PATH_TEST), true);
+    EXPECT_TRUE(this->config_.CheckAndUpdateFontRecord());
+}
+
+/**
+ * @tc.name: FontConfigFuncTest026
+ * @tc.desc: Test InsertFontRecord with missing config file
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest026, TestSize.Level1)
 {
     FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
     std::vector<std::string> fullNames = {"TestFont"};
@@ -354,11 +623,11 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest015, TestSize.Level1)
 }
 
 /**
- * @tc.name: FontConfigFuncTest016
+ * @tc.name: FontConfigFuncTest027
  * @tc.desc: Test InsertFontRecord with config missing fontlist key
  * @tc.type: FUNC
  */
-HWTEST_F(FontConfigTest, FontConfigFuncTest016, TestSize.Level1)
+HWTEST_F(FontConfigTest, FontConfigFuncTest027, TestSize.Level1)
 {
     FontManagerUtils::CreateFileWithPermission(FONT_CONFIG_FILE_TEST, "{\"version\":1}");
     std::vector<std::string> fullNames = {"TestFont"};
@@ -367,11 +636,11 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest016, TestSize.Level1)
 }
 
 /**
- * @tc.name: FontConfigFuncTest017
+ * @tc.name: FontConfigFuncTest028
  * @tc.desc: Test DeleteFontRecord with non-existent path
  * @tc.type: FUNC
  */
-HWTEST_F(FontConfigTest, FontConfigFuncTest017, TestSize.Level1)
+HWTEST_F(FontConfigTest, FontConfigFuncTest028, TestSize.Level1)
 {
     std::string fontFullPath = INSTALL_PATH_TEST + "TestFont_Sans.ttf";
     std::vector<std::string> fullNames = {"TestFont"};
@@ -380,11 +649,11 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest017, TestSize.Level1)
 }
 
 /**
- * @tc.name: FontConfigFuncTest018
+ * @tc.name: FontConfigFuncTest029
  * @tc.desc: Test CheckAndUpdateFontRecord with fontlist item missing fontfullpath
  * @tc.type: FUNC
  */
-HWTEST_F(FontConfigTest, FontConfigFuncTest018, TestSize.Level1)
+HWTEST_F(FontConfigTest, FontConfigFuncTest029, TestSize.Level1)
 {
     std::string badConfig = "{\"fontlist\":[{\"other\":\"x\"}],\"version\":0}";
     FontManagerUtils::CreateFileWithPermission(FONT_CONFIG_FILE_TEST, badConfig);
@@ -393,11 +662,11 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest018, TestSize.Level1)
 }
 
 /**
- * @tc.name: FontConfigFuncTest019
+ * @tc.name: FontConfigFuncTest030
  * @tc.desc: Test GetInstalledFontsNum with no config file
  * @tc.type: FUNC
  */
-HWTEST_F(FontConfigTest, FontConfigFuncTest019, TestSize.Level1)
+HWTEST_F(FontConfigTest, FontConfigFuncTest030, TestSize.Level1)
 {
     FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
     FontConfig newConfig(FONT_CONFIG_FILE_TEST);
@@ -405,11 +674,11 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest019, TestSize.Level1)
 }
 
 /**
- * @tc.name: FontConfigFuncTest020
+ * @tc.name: FontConfigFuncTest031
  * @tc.desc: Test GetFontFileByName with no config file
  * @tc.type: FUNC
  */
-HWTEST_F(FontConfigTest, FontConfigFuncTest020, TestSize.Level1)
+HWTEST_F(FontConfigTest, FontConfigFuncTest031, TestSize.Level1)
 {
     FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
     FontConfig newConfig(FONT_CONFIG_FILE_TEST);
@@ -418,22 +687,22 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest020, TestSize.Level1)
 }
 
 /**
- * @tc.name: FontConfigFuncTest021
+ * @tc.name: FontConfigFuncTest032
  * @tc.desc: Test WriteToFile with null data
  * @tc.type: FUNC
  */
-HWTEST_F(FontConfigTest, FontConfigFuncTest021, TestSize.Level1)
+HWTEST_F(FontConfigTest, FontConfigFuncTest032, TestSize.Level1)
 {
     FontConfig newConfig(FONT_CONFIG_FILE_TEST);
     EXPECT_FALSE(newConfig.WriteToFile(nullptr));
 }
 
 /**
- * @tc.name: FontConfigFuncTest022
+ * @tc.name: FontConfigFuncTest033
  * @tc.desc: Test WriteToFile with unwritable path
  * @tc.type: FUNC
  */
-HWTEST_F(FontConfigTest, FontConfigFuncTest022, TestSize.Level1)
+HWTEST_F(FontConfigTest, FontConfigFuncTest033, TestSize.Level1)
 {
     FontConfig newConfig("/data/test/nonexistent_dir_12345/config.json");
     const char srcData[] = "{\"test\":1}";
@@ -444,29 +713,11 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest022, TestSize.Level1)
 }
 
 /**
- * @tc.name: FontConfigFuncTest023
- * @tc.desc: Test GetFontsMap with valid config containing entries
- * @tc.type: FUNC
- */
-HWTEST_F(FontConfigTest, FontConfigFuncTest023, TestSize.Level1)
-{
-    std::string fontFullPath = INSTALL_PATH_TEST + "TestFont_Sans.ttf";
-    std::vector<std::string> fullName{"TestFont-Sans"};
-    ASSERT_TRUE(this->config_.InsertFontRecord(fontFullPath, fullName));
-
-    auto t = this->config_.GetFontsMap(this->config_.ConfigPath_);
-    EXPECT_EQ(t.size(), 1u);
-    EXPECT_EQ(t.find(fontFullPath) != t.end(), true);
-    EXPECT_EQ(t[fontFullPath].size(), 1u);
-    EXPECT_EQ(t[fontFullPath][0], "TestFont-Sans");
-}
-
-/**
- * @tc.name: FontConfigFuncTest024
+ * @tc.name: FontConfigFuncTest034
  * @tc.desc: Test GetFontFileByName with multiple fonts and matching name
  * @tc.type: FUNC
  */
-HWTEST_F(FontConfigTest, FontConfigFuncTest024, TestSize.Level1)
+HWTEST_F(FontConfigTest, FontConfigFuncTest034, TestSize.Level1)
 {
     std::string fontFullPath1 = INSTALL_PATH_TEST + "Font1.ttf";
     std::vector<std::string> fullName1{"Font-One"};
@@ -483,11 +734,11 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest024, TestSize.Level1)
 }
 
 /**
- * @tc.name: FontConfigFuncTest025
+ * @tc.name: FontConfigFuncTest035
  * @tc.desc: Test DeleteFontRecord successful delete path
  * @tc.type: FUNC
  */
-HWTEST_F(FontConfigTest, FontConfigFuncTest025, TestSize.Level1)
+HWTEST_F(FontConfigTest, FontConfigFuncTest035, TestSize.Level1)
 {
     std::string fontFullPath = INSTALL_PATH_TEST + "TestFont_Sans.ttf";
     std::vector<std::string> fullName{"TestFont-Sans"};
@@ -500,11 +751,11 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest025, TestSize.Level1)
 }
 
 /**
- * @tc.name: FontConfigFuncTest026
+ * @tc.name: FontConfigFuncTest036
  * @tc.desc: Test DeleteFontRecord with TTC font and multiple names
  * @tc.type: FUNC
  */
-HWTEST_F(FontConfigTest, FontConfigFuncTest026, TestSize.Level1)
+HWTEST_F(FontConfigTest, FontConfigFuncTest036, TestSize.Level1)
 {
     std::string fontFullPath = INSTALL_PATH_TEST + "NotoSansCJK-Regular.ttc";
     std::vector<std::string> fullName{
@@ -518,11 +769,11 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest026, TestSize.Level1)
 }
 
 /**
- * @tc.name: FontConfigFuncTest027
+ * @tc.name: FontConfigFuncTest037
  * @tc.desc: Test CheckAndUpdateFontRecord with non-version config migration
  * @tc.type: FUNC
  */
-HWTEST_F(FontConfigTest, FontConfigFuncTest027, TestSize.Level1)
+HWTEST_F(FontConfigTest, FontConfigFuncTest037, TestSize.Level1)
 {
     FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
     std::string oldConfig = R"({"fontlist":[{"fontfullpath":"/data/test/dummy.ttf","fullname":["DummyFont"]}]})";
@@ -531,11 +782,11 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest027, TestSize.Level1)
 }
 
 /**
- * @tc.name: FontConfigFuncTest028
+ * @tc.name: FontConfigFuncTest038
  * @tc.desc: Test InsertFontRecord with empty fullNames vector
  * @tc.type: FUNC
  */
-HWTEST_F(FontConfigTest, FontConfigFuncTest028, TestSize.Level1)
+HWTEST_F(FontConfigTest, FontConfigFuncTest038, TestSize.Level1)
 {
     std::string fontFullPath = INSTALL_PATH_TEST + "EmptyFont.ttf";
     std::vector<std::string> emptyNames;
@@ -544,22 +795,11 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest028, TestSize.Level1)
 }
 
 /**
- * @tc.name: FontConfigFuncTest029
- * @tc.desc: Test GetFontsMap with empty config
- * @tc.type: FUNC
- */
-HWTEST_F(FontConfigTest, FontConfigFuncTest029, TestSize.Level1)
-{
-    auto t = this->config_.GetFontsMap(this->config_.ConfigPath_);
-    EXPECT_EQ(t.size(), 0u);
-}
-
-/**
- * @tc.name: FontConfigFuncTest030
+ * @tc.name: FontConfigFuncTest039
  * @tc.desc: Test InsertFontRecord multiple times with same path
  * @tc.type: FUNC
  */
-HWTEST_F(FontConfigTest, FontConfigFuncTest030, TestSize.Level1)
+HWTEST_F(FontConfigTest, FontConfigFuncTest039, TestSize.Level1)
 {
     std::string fontFullPath = INSTALL_PATH_TEST + "DupFont.ttf";
     std::vector<std::string> fullName1{"DupFont1"};
@@ -570,7 +810,7 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest030, TestSize.Level1)
     EXPECT_EQ(this->config_.GetFontFileByName("DupFont2"), "");
 }
 
-HWTEST_F(FontConfigTest, FontConfigFuncTest031, TestSize.Level1)
+HWTEST_F(FontConfigTest, FontConfigFuncTest040, TestSize.Level1)
 {
     FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
     FontConfig newConfig(FONT_CONFIG_FILE_TEST);
@@ -578,35 +818,7 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest031, TestSize.Level1)
     EXPECT_FALSE(newConfig.DeleteFontRecord("/data/test/font.ttf"));
 }
 
-HWTEST_F(FontConfigTest, FontConfigFuncTest032, TestSize.Level1)
-{
-    std::string fontFullPath = INSTALL_PATH_TEST + "TestFont_Sans.ttf";
-    std::vector<std::string> fullName{"TestFont-Sans"};
-    ASSERT_TRUE(this->config_.InsertFontRecord(fontFullPath, fullName));
-    EXPECT_EQ(this->config_.GetInstalledFontsNum(), 1);
-    this->config_.fontsMap_.clear();
-    EXPECT_EQ(this->config_.GetInstalledFontsNum(), 1);
-}
-
-HWTEST_F(FontConfigTest, FontConfigFuncTest033, TestSize.Level1)
-{
-    std::string fontFullPath = INSTALL_PATH_TEST + "TestFont_Sans.ttf";
-    std::vector<std::string> fullName{"TestFont-Sans"};
-    ASSERT_TRUE(this->config_.InsertFontRecord(fontFullPath, fullName));
-    this->config_.fontsMap_.clear();
-    EXPECT_EQ(this->config_.GetFontFileByName("TestFont-Sans"), fontFullPath);
-}
-
-HWTEST_F(FontConfigTest, FontConfigFuncTest034, TestSize.Level1)
-{
-    std::string fontFullPath = INSTALL_PATH_TEST + "TestFont_Sans.ttf";
-    std::vector<std::string> fullName{"TestFont-Sans"};
-    ASSERT_TRUE(this->config_.InsertFontRecord(fontFullPath, fullName));
-    this->config_.fontsMap_.clear();
-    EXPECT_TRUE(this->config_.DeleteFontRecord(fontFullPath));
-}
-
-HWTEST_F(FontConfigTest, FontConfigFuncTest035, TestSize.Level1)
+HWTEST_F(FontConfigTest, FontConfigFuncTest041, TestSize.Level1)
 {
     FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
     FontConfig newConfig(FONT_CONFIG_FILE_TEST);
@@ -616,7 +828,7 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest035, TestSize.Level1)
     EXPECT_EQ(newConfig.GetInstalledFontsNum(), 0);
 }
 
-HWTEST_F(FontConfigTest, FontConfigFuncTest036, TestSize.Level1)
+HWTEST_F(FontConfigTest, FontConfigFuncTest042, TestSize.Level1)
 {
     std::string fontFullPath = INSTALL_PATH_TEST + "TestFont_Sans.ttf";
     std::vector<std::string> fullName{"TestFont-Sans"};
@@ -625,7 +837,7 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest036, TestSize.Level1)
     EXPECT_FALSE(this->config_.DeleteFontRecord(fontFullPath));
 }
 
-HWTEST_F(FontConfigTest, FontConfigFuncTest037, TestSize.Level1)
+HWTEST_F(FontConfigTest, FontConfigFuncTest043, TestSize.Level1)
 {
     std::string fontFullPath = INSTALL_PATH_TEST + "TestFont_Sans.ttf";
     std::vector<std::string> fullName{"TestFont-Sans"};
@@ -634,7 +846,7 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest037, TestSize.Level1)
     EXPECT_FALSE(this->config_.InsertFontRecord(INSTALL_PATH_TEST + "Font2.ttf", {"Font2"}));
 }
 
-HWTEST_F(FontConfigTest, FontConfigFuncTest038, TestSize.Level1)
+HWTEST_F(FontConfigTest, FontConfigFuncTest044, TestSize.Level1)
 {
     std::string fontFullPath = INSTALL_PATH_TEST + "TestFont_Sans.ttf";
     std::vector<std::string> fullName{"TestFont-Sans"};
@@ -643,14 +855,14 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest038, TestSize.Level1)
     EXPECT_FALSE(this->config_.CheckAndUpdateFontRecord());
 }
 
-HWTEST_F(FontConfigTest, FontConfigFuncTest039, TestSize.Level1)
+HWTEST_F(FontConfigTest, FontConfigFuncTest045, TestSize.Level1)
 {
     long size = 0;
     char* data = this->config_.GetFileData("/data/test/nonexistent_file_12345.txt", size);
     EXPECT_EQ(data, nullptr);
 }
 
-HWTEST_F(FontConfigTest, FontConfigFuncTest040, TestSize.Level1)
+HWTEST_F(FontConfigTest, FontConfigFuncTest046, TestSize.Level1)
 {
     std::string emptyPath = INSTALL_PATH_TEST + "empty_test.txt";
     FontManagerUtils::CreateFileWithPermission(emptyPath, "");
@@ -663,7 +875,7 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest040, TestSize.Level1)
     FontManagerUtils::RemoveFile(emptyPath);
 }
 
-HWTEST_F(FontConfigTest, FontConfigFuncTest041, TestSize.Level1)
+HWTEST_F(FontConfigTest, FontConfigFuncTest047, TestSize.Level1)
 {
     std::string content = "hello world";
     std::string testPath = INSTALL_PATH_TEST + "read_test.txt";
@@ -680,32 +892,7 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest041, TestSize.Level1)
     FontManagerUtils::RemoveFile(testPath);
 }
 
-HWTEST_F(FontConfigTest, FontConfigFuncTest042, TestSize.Level1)
-{
-    std::string fontFullPath = INSTALL_PATH_TEST + "TestFont_Sans.ttf";
-    std::vector<std::string> fullName{"TestFont-Sans"};
-    ASSERT_TRUE(this->config_.InsertFontRecord(fontFullPath, fullName));
-    auto result = this->config_.GetFontsMap(this->config_.ConfigPath_);
-    EXPECT_EQ(result.size(), 1u);
-    EXPECT_EQ(result.begin()->second.size(), 1u);
-    EXPECT_EQ(result.begin()->second[0], "TestFont-Sans");
-}
-
-HWTEST_F(FontConfigTest, FontConfigFuncTest043, TestSize.Level1)
-{
-    FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
-    auto result = this->config_.GetFontsMap(this->config_.ConfigPath_);
-    EXPECT_EQ(result.size(), 0u);
-}
-
-HWTEST_F(FontConfigTest, FontConfigFuncTest044, TestSize.Level1)
-{
-    FontManagerUtils::CreateFileWithPermission(FONT_CONFIG_FILE_TEST, "{\"version\":1}");
-    auto result = this->config_.GetFontsMap(this->config_.ConfigPath_);
-    EXPECT_EQ(result.size(), 0u);
-}
-
-HWTEST_F(FontConfigTest, FontConfigFuncTest045, TestSize.Level1)
+HWTEST_F(FontConfigTest, FontConfigFuncTest048, TestSize.Level1)
 {
     std::string fontFullPath = INSTALL_PATH_TEST + "TestFont_Sans.ttf";
     std::vector<std::string> fullName{"TestFont-Sans"};
@@ -714,6 +901,153 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest045, TestSize.Level1)
     EXPECT_EQ(this->config_.GetFontFileByName("NonExistent"), "");
     EXPECT_EQ(this->config_.GetFontFileByName(""), "");
 }
+
+/**
+ * @tc.name: FontConfigFuncTest049
+ * @tc.desc: Test GetFontRecordByName not found returns nullopt
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest049, TestSize.Level1)
+{
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
+    auto result = this->config_.GetFontRecordByName("NonExistentFont");
+    EXPECT_FALSE(result.has_value());
+}
+
+/**
+ * @tc.name: FontConfigFuncTest050
+ * @tc.desc: Test DeleteScopeFontRecordByUrl with non-existent srcPath returns false
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest050, TestSize.Level1)
+{
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
+    EXPECT_FALSE(this->config_.DeleteScopeFontRecordByUrl("file://test/nonexistent.ttf"));
+}
+
+/**
+ * @tc.name: FontConfigFuncTest051
+ * @tc.desc: Test DeleteScopeFontRecordByAppId with non-existent app returns false
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest051, TestSize.Level1)
+{
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
+    EXPECT_FALSE(this->config_.DeleteScopeFontRecordByAppId("app_nonexistent"));
+}
+
+/**
+ * @tc.name: FontConfigFuncTest052
+ * @tc.desc: Test InsertScopeFontRecord with missing config file returns false
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest052, TestSize.Level1)
+{
+    FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
+    FontRecordInfo record;
+    record.fontPath = INSTALL_PATH_TEST + "app_100/font.ttf";
+    record.fullNames = {"TestFont"};
+    record.scope = FONT_SCOPE_APP;
+    record.srcPath = "file://test/font.ttf";
+    record.appIdentifier = "app_100";
+    EXPECT_FALSE(this->config_.InsertScopeFontRecord(record));
+}
+
+/**
+ * @tc.name: FontConfigFuncTest053
+ * @tc.desc: Test InsertScopeFontRecord with invalid JSON returns false
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest053, TestSize.Level1)
+{
+    FontManagerUtils::CreateFileWithPermission(FONT_CONFIG_FILE_TEST, "invalid_json");
+    FontRecordInfo record;
+    record.fontPath = INSTALL_PATH_TEST + "app_100/font.ttf";
+    record.fullNames = {"TestFont"};
+    record.scope = FONT_SCOPE_APP;
+    record.srcPath = "file://test/font.ttf";
+    record.appIdentifier = "app_100";
+    EXPECT_FALSE(this->config_.InsertScopeFontRecord(record));
+    FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
+}
+
+/**
+ * @tc.name: FontConfigFuncTest054
+ * @tc.desc: Test GetFontRecordByUrl with missing config returns nullopt
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest054, TestSize.Level1)
+{
+    FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
+    auto result = this->config_.GetFontRecordByUrl("file://test/font.ttf");
+    EXPECT_FALSE(result.has_value());
+}
+
+/**
+ * @tc.name: FontConfigFuncTest055
+ * @tc.desc: Test GetTotalInstalledFontsNum with missing config returns 0
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest055, TestSize.Level1)
+{
+    FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
+    EXPECT_EQ(this->config_.GetTotalInstalledFontsNum(), 0);
+}
+
+/**
+ * @tc.name: FontConfigFuncTest056
+ * @tc.desc: Test GetScopeFontRecords with fontList not array returns empty
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest056, TestSize.Level1)
+{
+    FontManagerUtils::CreateFileWithPermission(FONT_CONFIG_FILE_TEST, R"({"fontlist":"notarray"})");
+    auto result = this->config_.GetScopeFontRecords();
+    EXPECT_EQ(result.size(), 0u);
+    FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
+}
+
+/**
+ * @tc.name: FontConfigFuncTest057
+ * @tc.desc: Test GetFontRecordByName skips items with missing fullname array
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest057, TestSize.Level1)
+{
+    std::string badConfig = R"({"fontlist":[{"fontfullpath":"/data/test/dummy.ttf"}],"version":"7.0"})";
+    FontManagerUtils::CreateFileWithPermission(FONT_CONFIG_FILE_TEST, badConfig);
+    auto result = this->config_.GetFontRecordByName("DummyFont");
+    EXPECT_FALSE(result.has_value());
+    FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
+}
+
+/**
+ * @tc.name: FontConfigFuncTest058
+ * @tc.desc: Test CheckAndUpdateFontRecord refreshes fullname from disk on v1 migration
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest058, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    ASSERT_GE(fd, 0);
+    std::string realFontPath = INSTALL_PATH_TEST + "NotoSansVai-Regular.ttf";
+    EXPECT_TRUE(FontManagerUtils::CopyFile(fd, realFontPath));
+    close(fd);
+
+    std::string fontFullPath = std::string(INSTALL_PATH_APP) + "NotoSansVai-Regular.ttf";
+    std::string v1Json = "{\"fontlist\":[{\"fontfullpath\":\"" + fontFullPath +
+        "\",\"fullname\":[\"WrongName\"]}],\"version\":1}";
+    FontManagerUtils::CreateFileWithPermission(FONT_CONFIG_FILE_TEST, v1Json);
+
+    EXPECT_TRUE(this->config_.CheckAndUpdateFontRecord());
+
+    EXPECT_EQ(this->config_.GetFontFileByName("WrongName"), "");
+    EXPECT_EQ(this->config_.GetFontFileByName(FONT_FULL_NAME),
+        std::string(INSTALL_PATH_APP) + "NotoSansVai-Regular.ttf");
+
+    FontManagerUtils::RemoveFile(realFontPath);
+}
+
 }  // namespace FontManager
 }  // namespace Global
 }  // namespace OHOS

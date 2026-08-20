@@ -37,11 +37,30 @@ export default namespace fontManager {
     onResult(result: int): void;
   }
 
+  export enum FontScope {
+    app = 0,
+    session = 1,
+  }
+
+  export interface FontClientObserver {
+    onServiceDied(): void;
+  }
+
   native function nativeInstallFont(path: string): int;
 
   native function nativeUninstallFont(fullName: string): int;
 
   export native function dataMigration(callback: DataMigrationCallback): int;
+
+  export native function onFontObserver(observer: FontClientObserver): int;
+
+  export native function offFontObserver(observer: FontClientObserver): int;
+
+  native function nativeInstallScopeFont(url: string, scope: int): int;
+
+  native function nativeUninstallScopeFont(url: string): int;
+
+  native function nativeGetFontScope(url: string): int;
 
   export function installFont(path: string): Promise<int> {
     return new Promise<int>((resolve, reject) => {
@@ -54,7 +73,6 @@ export default namespace fontManager {
       });
     });
   };
-  
 
   export function uninstallFont(fullName: string): Promise<int> {
     return new Promise<int>((resolve, reject) => {
@@ -62,6 +80,43 @@ export default namespace fontManager {
           return nativeUninstallFont(fullName);
       }).then((content: Any) => {
           resolve(content as int);
+      }, (err: Error): void => {
+          reject(err);
+      });
+    });
+  };
+
+  export function installScopeFont(url: string, scope: FontScope): Promise<int> {
+    return new Promise<int>((resolve, reject) => {
+      taskpool.execute((): int => {
+          return nativeInstallScopeFont(url, scope);
+      }).then((content: Any) => {
+          resolve(content as int);
+      }, (err: Error): void => {
+          reject(err);
+      });
+    });
+  };
+
+  export function uninstallScopeFont(url: string): Promise<int> {
+    return new Promise<int>((resolve, reject) => {
+      taskpool.execute((): int => {
+          return nativeUninstallScopeFont(url);
+      }).then((content: Any) => {
+          resolve(content as int);
+      }, (err: Error): void => {
+          reject(err);
+      });
+    });
+  };
+
+  export function getFontScope(url: string): Promise<FontScope> {
+    return new Promise<FontScope>((resolve, reject) => {
+      taskpool.execute((): int => {
+          return nativeGetFontScope(url);
+      }).then((content: Any) => {
+          let result: int = content as int;
+          resolve(result as FontScope);
       }, (err: Error): void => {
           reject(err);
       });

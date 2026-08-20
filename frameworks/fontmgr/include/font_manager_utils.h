@@ -26,6 +26,7 @@ namespace FontManager {
 class FontManagerUtils {
 public:
     static bool CheckAndInitInstallPath(const std::string &installPath);
+    static bool CheckAndInitScopeFontPath(const std::string &installPath);
     static bool CheckPathExist(const std::string &pathName);
     static bool CheckFontConfigPath(const std::string &installPath);
     static bool CreateDirWithPermission(const std::string &fileDir);
@@ -39,6 +40,9 @@ public:
     static void DeleteDir(const std::string &rootPath, bool isDeleteRootDir);
     static std::vector<int32_t> GetAllCreatedUserIds();
     static void ClearAllTempFileDir();
+    static void CleanupScopeFontDirs();
+    static void CleanupAllScopeFontDirs();
+    static void CleanupAppScopeFontDirs();
     static std::vector<std::string> GetFullNamesByFd(const int32_t &fd);
     static std::vector<std::string> GetFullNamesByPath(const std::string &path);
 private:

@@ -54,6 +54,22 @@ bool FontManagerUtils::CheckAndInitInstallPath(const std::string &installPath)
     return CheckFontConfigPath(installPath);
 }
 
+bool FontManagerUtils::CheckAndInitScopeFontPath(const std::string &installPath)
+{
+    if (!CheckPathExist(installPath)) {
+        if (!CreateDirWithPermission(installPath)) {
+            return false;
+        }
+    }
+    std::string installTempPath = installPath + TEMP_FILE;
+    if (!CheckPathExist(installTempPath)) {
+        if (!CreateDirWithPermission(installTempPath)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void FontManagerUtils::ClearAllTempFileDir()
 {
     FONT_LOGI("FontManagerUtils::ClearAllTempFileDir begin.");
@@ -66,6 +82,97 @@ void FontManagerUtils::ClearAllTempFileDir()
     }
 }
 
+void FontManagerUtils::CleanupScopeFontDirs()
+{
+    FONT_LOGI("FontManagerUtils::CleanupScopeFontDirs begin.");
+    auto userIds = GetAllCreatedUserIds();
+    for (const auto &userId : userIds) {
+        std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX;
+        if (!CheckPathExist(installPath)) {
+            continue;
+        }
+        std::vector<std::string> dirsToRemove;
+        std::error_code ec;
+        for (const auto &entry : std::filesystem::directory_iterator(installPath, ec)) {
+            if (!entry.is_directory()) {
+                continue;
+            }
+            std::string dirName = entry.path().filename().string();
+            if (dirName.rfind(APP_FONT_DIR_PREFIX, 0) != 0 && dirName.rfind(SESSION_FONT_DIR_PREFIX, 0) != 0) {
+                continue;
+            }
+            std::string dirPath = entry.path().string();
+            std::string tempPath = dirPath + "/" + TEMP_FILE;
+            if (CheckPathExist(tempPath)) {
+                DeleteDir(tempPath, true);
+            }
+            if (std::filesystem::is_empty(entry.path(), ec)) {
+                dirsToRemove.push_back(dirPath);
+                FONT_LOGI("CleanupScopeFontDirs will remove empty dir: %{public}s", dirName.c_str());
+            }
+        }
+        for (const auto &dirPath : dirsToRemove) {
+            std::filesystem::remove(dirPath, ec);
+        }
+    }
+}
+
+void FontManagerUtils::CleanupAllScopeFontDirs()
+{
+    FONT_LOGI("FontManagerUtils::CleanupAllScopeFontDirs begin.");
+    auto userIds = GetAllCreatedUserIds();
+    for (const auto &userId : userIds) {
+        std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX;
+        if (!CheckPathExist(installPath)) {
+            continue;
+        }
+        std::vector<std::string> dirsToRemove;
+        std::error_code ec;
+        for (const auto &entry : std::filesystem::directory_iterator(installPath, ec)) {
+            if (!entry.is_directory()) {
+                continue;
+            }
+            std::string dirName = entry.path().filename().string();
+            if (dirName.rfind(APP_FONT_DIR_PREFIX, 0) != 0 && dirName.rfind(SESSION_FONT_DIR_PREFIX, 0) != 0) {
+                continue;
+            }
+            dirsToRemove.push_back(entry.path().string());
+            FONT_LOGI("CleanupAllScopeFontDirs will remove dir: %{public}s", dirName.c_str());
+        }
+        for (const auto &dirPath : dirsToRemove) {
+            DeleteDir(dirPath, true);
+        }
+    }
+}
+
+void FontManagerUtils::CleanupAppScopeFontDirs()
+{
+    FONT_LOGI("FontManagerUtils::CleanupAppScopeFontDirs begin.");
+    auto userIds = GetAllCreatedUserIds();
+    for (const auto &userId : userIds) {
+        std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX;
+        if (!CheckPathExist(installPath)) {
+            continue;
+        }
+        std::vector<std::string> dirsToRemove;
+        std::error_code ec;
+        for (const auto &entry : std::filesystem::directory_iterator(installPath, ec)) {
+            if (!entry.is_directory()) {
+                continue;
+            }
+            std::string dirName = entry.path().filename().string();
+            if (dirName.rfind(APP_FONT_DIR_PREFIX, 0) != 0) {
+                continue;
+            }
+            dirsToRemove.push_back(entry.path().string());
+            FONT_LOGI("CleanupAppScopeFontDirs will remove dir: %{public}s", dirName.c_str());
+        }
+        for (const auto &dirPath : dirsToRemove) {
+            DeleteDir(dirPath, true);
+        }
+    }
+}
+
 bool FontManagerUtils::CheckFontConfigPath(const std::string &installPath)
 {
     if (FontManagerUtils::CheckPathExist(installPath + FONT_CONFIG_FILE)) {
@@ -73,7 +180,7 @@ bool FontManagerUtils::CheckFontConfigPath(const std::string &installPath)
     }
     std::string font_list = R"({
         "fontlist": [],
-        "version": 1
+        "version": "7.0"
     })";
     return CreateFileWithPermission(installPath + FONT_CONFIG_FILE, font_list);
 }
@@ -343,10 +450,19 @@ bool FontManagerUtils::RemoveAll(const std::filesystem::path &path)
 std::vector<std::string> FontManagerUtils::GetFullNamesByFd(const int32_t &fd)
 {
     std::vector<std::string> fullNames;
+    struct stat sourceStat;
+    if (fstat(fd, &sourceStat) < 0) {
+        FONT_LOGE("GetFullNamesByFd: fstat failed, errno: %{public}d", errno);
+        return fullNames;
+    }
+    if (sourceStat.st_size < 0 || static_cast<size_t>(sourceStat.st_size) > MAX_FONT_FILE_SIZE) {
+        FONT_LOGE("GetFullNamesByFd: file too large, size: %{public}lld", static_cast<long long>(sourceStat.st_size));
+        return fullNames;
+    }
     auto& fontToolSet = OHOS::Rosen::FontToolSet::GetInstance();
     fullNames = fontToolSet.GetFontFullName(fd);
     if (fullNames.empty()) {
-        FONT_LOGE("GetFullNamesByPath FullNameList is empty.");
+        FONT_LOGE("GetFullNamesByFd FullNameList is empty.");
     }
     return fullNames;
 }

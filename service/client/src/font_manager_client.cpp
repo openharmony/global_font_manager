@@ -24,6 +24,15 @@
 namespace OHOS {
 namespace Global {
 namespace FontManager {
+
+void FontServiceDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &remote)
+{
+    FONT_LOGI("Font service died");
+    if (observer_ != nullptr) {
+        observer_->OnServiceDied();
+    }
+}
+
 FontManagerClient::FontManagerClient() {}
 FontManagerClient::~FontManagerClient() {}
 
@@ -156,6 +165,110 @@ int32_t FontManagerClient::UninstallFontWithUserId(const std::string &fontName, 
     }
     int32_t ret = service->UninstallFontWithUserId(fontName, userId);
     return ret;
+}
+
+int32_t FontManagerClient::OnFontObserver(const sptr<IFontClientObserver>& observer)
+{
+    sptr<IFontService> service = FontServiceLoadManager::GetInstance()->GetFontServiceAbility(FONT_SA_ID);
+    if (service == nullptr) {
+        FONT_LOGE("OnFontObserver: Service is null");
+        return ERR_SYSTEM_ERROR;
+    }
+    {
+        std::lock_guard<std::mutex> lock(observerLock_);
+        if (saBinder_ != nullptr && saDeathRecipient_ != nullptr) {
+            saBinder_->RemoveDeathRecipient(saDeathRecipient_);
+        }
+        saBinder_ = service->AsObject();
+        saDeathRecipient_ = sptr<FontServiceDeathRecipient>::MakeSptr(observer);
+        if (saDeathRecipient_ != nullptr && saBinder_ != nullptr) {
+            saBinder_->AddDeathRecipient(saDeathRecipient_);
+        }
+    }
+    int32_t ret = service->OnFontObserver(observer);
+    if (ret != ERR_OK && ret != ERR_SCOPE_FONT_REPEATED_REGISTER) {
+        std::lock_guard<std::mutex> lock(observerLock_);
+        if (saBinder_ != nullptr && saDeathRecipient_ != nullptr) {
+            saBinder_->RemoveDeathRecipient(saDeathRecipient_);
+        }
+        saBinder_ = nullptr;
+        saDeathRecipient_ = nullptr;
+    }
+    return ret;
+}
+
+int32_t FontManagerClient::OffFontObserver(const sptr<IFontClientObserver>& observer)
+{
+    sptr<IFontService> service = FontServiceLoadManager::GetInstance()->GetFontServiceAbility(FONT_SA_ID);
+    if (service == nullptr) {
+        FONT_LOGE("OffFontObserver: Service is null");
+        return ERR_SYSTEM_ERROR;
+    }
+    int32_t ret = service->OffFontObserver(observer);
+    {
+        std::lock_guard<std::mutex> lock(observerLock_);
+        if (saBinder_ != nullptr && saDeathRecipient_ != nullptr) {
+            saBinder_->RemoveDeathRecipient(saDeathRecipient_);
+        }
+        saBinder_ = nullptr;
+        saDeathRecipient_ = nullptr;
+    }
+    return ret;
+}
+
+int32_t FontManagerClient::InstallScopeFont(const std::string &fontPath, int32_t scope, int32_t &outValue)
+{
+    std::string realPath;
+    if (!PathToRealPath(fontPath, realPath)) {
+        FONT_LOGE("InstallScopeFont: failed to get real path");
+        outValue = ERR_FILE_NOT_EXISTS;
+        return ERR_OK;
+    }
+    FILE* fp = fopen(realPath.c_str(), "rb");
+    if (!fp) {
+        FONT_LOGE("InstallScopeFont: open file failed");
+        outValue = ERR_FILE_NOT_EXISTS;
+        return ERR_OK;
+    }
+    int fd = fileno(fp);
+    if (fd < 0) {
+        FONT_LOGE("InstallScopeFont: fileno failed");
+        outValue = ERR_FILE_NOT_EXISTS;
+        (void)fclose(fp);
+        return ERR_OK;
+    }
+    sptr<IFontService> service = FontServiceLoadManager::GetInstance()->GetFontServiceAbility(FONT_SA_ID);
+    if (service == nullptr) {
+        FONT_LOGE("InstallScopeFont: Service is null");
+        outValue = ERR_SYSTEM_ERROR;
+        (void)fclose(fp);
+        return ERR_OK;
+    }
+    int32_t ret = service->InstallScopeFont(fd, scope, realPath, outValue);
+    (void)fclose(fp);
+    return ret;
+}
+
+int32_t FontManagerClient::UninstallScopeFont(const std::string &srcPath, int32_t &outValue)
+{
+    sptr<IFontService> service = FontServiceLoadManager::GetInstance()->GetFontServiceAbility(FONT_SA_ID);
+    if (service == nullptr) {
+        FONT_LOGE("UninstallScopeFont: Service is null");
+        outValue = ERR_SYSTEM_ERROR;
+        return ERR_OK;
+    }
+    return service->UninstallScopeFont(srcPath, outValue);
+}
+
+int32_t FontManagerClient::GetFontScope(const std::string &srcPath, int32_t &outValue)
+{
+    sptr<IFontService> service = FontServiceLoadManager::GetInstance()->GetFontServiceAbility(FONT_SA_ID);
+    if (service == nullptr) {
+        FONT_LOGE("GetFontScope: Service is null");
+        outValue = FONT_SCOPE_NONE;
+        return ERR_SYSTEM_ERROR;
+    }
+    return service->GetFontScope(srcPath, outValue);
 }
 } // namespace FontManager
 } // namespace Global

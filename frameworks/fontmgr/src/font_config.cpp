@@ -15,6 +15,7 @@
 
 #include "font_config.h"
 #include "font_hilog.h"
+#include "font_define.h"
 #include "securec.h"
 #include "font_manager_utils.h"
 
@@ -23,86 +24,43 @@ namespace Global {
 namespace FontManager {
 static const char *FONT_PATH = "fontfullpath";
 static const char *FONT_FULL_NAME = "fullname";
+static const char *FONT_SCOPE = "scope";
+static const char *FONT_SRC_PATH = "srcPath";
+static const char *FONT_APP_IDENTIFIER = "appIdentifier";
+static const char *FONT_BUNDLE_NAME = "bundleName";
+static const char *FONT_VERSION = "version";
 static const int32_t VERSION = 1;
 
-bool FontConfig::CheckAndUpdateFontRecord()
+static bool SafeAddStringToObject(cJSON *object, const char *name, const std::string &value)
 {
-    std::lock_guard<std::mutex> lock(fontsMapLock_);
-    cJSON *jsonValue = cJSON_Parse(CheckConfigFile(ConfigPath_).c_str());
-    if (jsonValue == nullptr) {
-        FONT_LOGE("CheckAndUpdateFontRecord Parse config file failed");
+    cJSON *item = cJSON_CreateString(value.c_str());
+    if (item == nullptr) {
+        FONT_LOGE("SafeAddStringToObject: CreateString failed for %{public}s", name);
         return false;
     }
-    cJSON *versionJson = cJSON_GetObjectItem(jsonValue, "version");
-    if (cJSON_IsNumber(versionJson)) {
-        cJSON_Delete(jsonValue);
-        return true;
-    }
-    cJSON *fontList = cJSON_GetObjectItem(jsonValue, "fontlist");
-    if (!cJSON_IsArray(fontList)) {
-        cJSON_Delete(jsonValue);
+    if (!cJSON_AddItemToObject(object, name, item)) {
+        cJSON_Delete(item);
+        FONT_LOGE("SafeAddStringToObject: AddItemToObject failed for %{public}s", name);
         return false;
     }
-    std::unordered_map<std::string, std::vector<std::string>> fontsMap;
-    int fontSize = cJSON_GetArraySize(fontList);
-    for (int i = 0; i < fontSize; i++) {
-        cJSON *fontFullPath = cJSON_GetObjectItem(cJSON_GetArrayItem(fontList, i), FONT_PATH);
-        if (fontFullPath && cJSON_IsString(fontFullPath)) {
-            std::string path = fontFullPath->valuestring;
-            fontsMap.emplace(path, FontManagerUtils::GetFullNamesByPath(SandBoxPathToRealPath(path)));
-        }
-    }
-    cJSON *cJsonData = cJSON_CreateObject();
-    if (!cJsonData) {
-        cJSON_Delete(jsonValue);
-        return false;
-    }
-    cJSON *fontData = CovertFontMapToJsonArray(fontsMap);
-    if (!fontData) {
-        cJSON_Delete(jsonValue);
-        cJSON_Delete(cJsonData);
-        return false;
-    }
-    cJSON_AddItemToObject(cJsonData, "fontlist", fontData);
-    cJSON_AddNumberToObject(cJsonData, "version", VERSION);
-    char *fileData = cJSON_Print(cJsonData);
-    if (!fileData) {
-        cJSON_Delete(jsonValue);
-        cJSON_Delete(cJsonData);
-        return false;
-    }
-    cJSON_Delete(jsonValue);
-    cJSON_Delete(cJsonData);
-    fontsMap_ = std::move(fontsMap);
-    return WriteToFile(fileData);
+    return true;
 }
 
-cJSON* FontConfig::CovertFontMapToJsonArray(const std::unordered_map<std::string, std::vector<std::string>>& fontsMap)
+static bool SafeAddNumberToObject(cJSON *object, const char *name, double value)
 {
-    cJSON *fontData = cJSON_CreateArray();
-    if (fontData == nullptr) {
-        return nullptr;
+    cJSON *item = cJSON_CreateNumber(value);
+    if (item == nullptr) {
+        FONT_LOGE("SafeAddNumberToObject: CreateNumber failed for %{public}s", name);
+        return false;
     }
-
-    for (const auto &info : fontsMap) {
-        cJSON *item = cJSON_CreateObject();
-        if (item == nullptr) {
-            continue;
-        }
-        cJSON_AddStringToObject(item, FONT_PATH, info.first.c_str());
-        cJSON *arrData = cJSON_CreateArray();
-        if (arrData == nullptr) {
-            cJSON_Delete(item);
-            continue;
-        }
-        for (const auto &name : info.second) {
-            cJSON_AddItemToArray(arrData, cJSON_CreateString(name.c_str()));
-        }
-        cJSON_AddItemToObject(item, FONT_FULL_NAME, arrData);
-        cJSON_AddItemToArray(fontData, item);
+    if (!cJSON_AddItemToObject(object, name, item)) {
+        cJSON_Delete(item);
+        FONT_LOGE("SafeAddNumberToObject: AddItemToObject failed for %{public}s", name);
+        return false;
     }
-    return fontData;
+    return true;
 }
+
 
 std::string FontConfig::SandBoxPathToRealPath(const std::string &path)
 {
@@ -111,9 +69,36 @@ std::string FontConfig::SandBoxPathToRealPath(const std::string &path)
     return directory + fileName;
 }
 
+void FontConfig::RefreshFullNames(cJSON *jsonValue)
+{
+    cJSON *fontList = cJSON_GetObjectItem(jsonValue, "fontlist");
+    if (!cJSON_IsArray(fontList)) {
+        return;
+    }
+    int sz = cJSON_GetArraySize(fontList);
+    for (int i = 0; i < sz; i++) {
+        cJSON *item = cJSON_GetArrayItem(fontList, i);
+        cJSON *pathVal = cJSON_GetObjectItem(item, FONT_PATH);
+        if (!pathVal || !cJSON_IsString(pathVal)) {
+            continue;
+        }
+        std::string realPath = SandBoxPathToRealPath(pathVal->valuestring);
+        std::vector<std::string> freshNames = FontManagerUtils::GetFullNamesByPath(realPath);
+        cJSON *newNameArr = cJSON_CreateArray();
+        if (newNameArr == nullptr) {
+            continue;
+        }
+        for (const auto &name : freshNames) {
+            cJSON_AddItemToArray(newNameArr, cJSON_CreateString(name.c_str()));
+        }
+        cJSON_DeleteItemFromObject(item, FONT_FULL_NAME);
+        cJSON_AddItemToObject(item, FONT_FULL_NAME, newNameArr);
+    }
+}
+
 bool FontConfig::InsertFontRecord(const std::string &fontPath, const std::vector<std::string> &fullNames)
 {
-    std::lock_guard<std::mutex> lock(fontsMapLock_);
+    std::lock_guard<std::mutex> lock(configLock_);
     cJSON *jsonValue = cJSON_Parse(CheckConfigFile(ConfigPath_).c_str());
     if (jsonValue == nullptr) {
         FONT_LOGE("heck config file failed");
@@ -125,73 +110,115 @@ bool FontConfig::InsertFontRecord(const std::string &fontPath, const std::vector
         cJSON_Delete(jsonValue);
         return false;
     }
+    int arrSize = cJSON_GetArraySize(fontList);
+    for (int i = 0; i < arrSize; i++) {
+        cJSON *item = cJSON_GetArrayItem(fontList, i);
+        cJSON *pathVal = cJSON_GetObjectItem(item, FONT_PATH);
+        if (pathVal != nullptr && cJSON_IsString(pathVal) && fontPath == pathVal->valuestring) {
+            cJSON_Delete(jsonValue);
+            return true;
+        }
+    }
     cJSON *insertValue = ConstructCJSON(fontPath, fullNames);
     if (insertValue == nullptr) {
         cJSON_Delete(jsonValue);
         return false;
     }
-    cJSON_AddItemToArray(fontList, insertValue);
+    if (!cJSON_AddItemToArray(fontList, insertValue)) {
+        cJSON_Delete(insertValue);
+        cJSON_Delete(jsonValue);
+        return false;
+    }
     char *fileData = cJSON_Print(jsonValue);
     cJSON_Delete(jsonValue);
-    fontsMap_.insert(std::make_pair(fontPath, fullNames));
     return WriteToFile(fileData);
 }
 
 bool FontConfig::DeleteFontRecord(const std::string &fontPath)
 {
-    std::lock_guard<std::mutex> lock(fontsMapLock_);
-    if (fontsMap_.size() == 0) {
-        fontsMap_ = GetFontsMap(ConfigPath_);
-    }
-    if (fontsMap_.find(fontPath) == fontsMap_.end()) {
-        return false;
-    }
-    fontsMap_.erase(fontPath);
-    cJSON *fontData = CovertFontMapToJsonArray(fontsMap_);
-    if (!fontData) {
-        FONT_LOGE("DeleteFontRecord CovertFontMapToJsonArray failed");
-        return false;
-    }
+    std::lock_guard<std::mutex> lock(configLock_);
     cJSON *jsonValue = cJSON_Parse(CheckConfigFile(ConfigPath_).c_str());
     if (jsonValue == nullptr) {
-        FONT_LOGE("Parse config file failed");
-        cJSON_Delete(fontData);
+        FONT_LOGE("DeleteFontRecord parse config failed");
         return false;
     }
-    cJSON_ReplaceItemInObject(jsonValue, "fontlist", fontData);
-    char *fileData = cJSON_Print(jsonValue);
+    cJSON *fontList = cJSON_GetObjectItem(jsonValue, "fontlist");
+    if (!cJSON_IsArray(fontList)) {
+        cJSON_Delete(jsonValue);
+        return false;
+    }
+    int sz = cJSON_GetArraySize(fontList);
+    for (int i = 0; i < sz; i++) {
+        cJSON *item = cJSON_GetArrayItem(fontList, i);
+        cJSON *pathVal = cJSON_GetObjectItem(item, FONT_PATH);
+        if (pathVal && cJSON_IsString(pathVal) && fontPath == pathVal->valuestring) {
+            cJSON_DeleteItemFromArray(fontList, i);
+            char *fileData = cJSON_Print(jsonValue);
+            cJSON_Delete(jsonValue);
+            return WriteToFile(fileData);
+        }
+    }
     cJSON_Delete(jsonValue);
-    return WriteToFile(fileData);
+    return false;
 }
 
 int FontConfig::GetInstalledFontsNum()
 {
-    std::lock_guard<std::mutex> lock(fontsMapLock_);
-    if (fontsMap_.size() == 0) {
-        fontsMap_ = GetFontsMap(ConfigPath_);
+    std::lock_guard<std::mutex> lock(configLock_);
+    cJSON *jsonValue = cJSON_Parse(CheckConfigFile(ConfigPath_).c_str());
+    if (jsonValue == nullptr) {
+        return 0;
     }
-    return fontsMap_.size();
+    cJSON *fontList = cJSON_GetObjectItem(jsonValue, "fontlist");
+    int count = cJSON_IsArray(fontList) ? cJSON_GetArraySize(fontList) : 0;
+    cJSON_Delete(jsonValue);
+    return count;
 }
  
-std::string FontConfig::GetFontFileByName(const std::string &fullName)
+static std::string FindFontPathByName(cJSON *fontList, const std::string &fullName)
 {
-    std::lock_guard<std::mutex> lock(fontsMapLock_);
-    if (fontsMap_.size() == 0) {
-        fontsMap_ = GetFontsMap(ConfigPath_);
-    }
-    for (const auto &font : fontsMap_) {
-        for (const auto &name : font.second) {
-            if (name == fullName) {
-                return font.first;
+    int sz = cJSON_GetArraySize(fontList);
+    for (int i = 0; i < sz; i++) {
+        cJSON *item = cJSON_GetArrayItem(fontList, i);
+        cJSON *nameArr = cJSON_GetObjectItem(item, FONT_FULL_NAME);
+        if (!cJSON_IsArray(nameArr)) {
+            continue;
+        }
+        int nameSz = cJSON_GetArraySize(nameArr);
+        for (int j = 0; j < nameSz; j++) {
+            cJSON *nameItem = cJSON_GetArrayItem(nameArr, j);
+            if (!nameItem || !cJSON_IsString(nameItem) || fullName != nameItem->valuestring) {
+                continue;
             }
+            cJSON *pathVal = cJSON_GetObjectItem(item, FONT_PATH);
+            if (pathVal && cJSON_IsString(pathVal)) {
+                return pathVal->valuestring;
+            }
+            return "";
         }
     }
     return "";
 }
 
-char *FontConfig::GetFileData(const std::string &filePath, long &size)
+std::string FontConfig::GetFontFileByName(const std::string &fullName)
 {
     std::lock_guard<std::mutex> lock(configLock_);
+    cJSON *jsonValue = cJSON_Parse(CheckConfigFile(ConfigPath_).c_str());
+    if (jsonValue == nullptr) {
+        return "";
+    }
+    cJSON *fontList = cJSON_GetObjectItem(jsonValue, "fontlist");
+    if (!cJSON_IsArray(fontList)) {
+        cJSON_Delete(jsonValue);
+        return "";
+    }
+    std::string result = FindFontPathByName(fontList, fullName);
+    cJSON_Delete(jsonValue);
+    return result;
+}
+
+char *FontConfig::GetFileData(const std::string &filePath, long &size)
+{
     FILE *fp = std::fopen(filePath.c_str(), "r");
     if (fp == nullptr) {
         FONT_LOGE("failed open the filePath = %{public}s", filePath.c_str());
@@ -238,7 +265,6 @@ char *FontConfig::GetFileData(const std::string &filePath, long &size)
 
 bool FontConfig::WriteToFile(char *fileData)
 {
-    std::lock_guard<std::mutex> lock(configLock_);
     if (fileData == nullptr) {
         return false;
     }
@@ -266,6 +292,9 @@ bool FontConfig::WriteToFile(char *fileData)
 
 std::string FontConfig::CheckConfigFile(const std::string &fontPath)
 {
+    if (!FontManagerUtils::CheckPathExist(fontPath)) {
+        return "";
+    }
     long size = 0;
     char *data = GetFileData(fontPath, size);
     if (data == nullptr) {
@@ -285,51 +314,381 @@ cJSON *FontConfig::ConstructCJSON(const std::string &fontFullPath, const std::ve
     if (jsonData == nullptr) {
         return nullptr;
     }
-    cJSON_AddStringToObject(jsonData, FONT_PATH, fontFullPath.c_str());
+    if (!SafeAddStringToObject(jsonData, FONT_PATH, fontFullPath)) {
+        cJSON_Delete(jsonData);
+        return nullptr;
+    }
     cJSON *fullNameJson = cJSON_CreateArray();
     if (fullNameJson == nullptr) {
         cJSON_Delete(jsonData);
         return nullptr;
     }
     for (const auto &name : fullName) {
-        cJSON_AddItemToArray(fullNameJson, cJSON_CreateString(name.c_str()));
+        cJSON *nameItem = cJSON_CreateString(name.c_str());
+        if (nameItem == nullptr) {
+            cJSON_Delete(fullNameJson);
+            cJSON_Delete(jsonData);
+            return nullptr;
+        }
+        if (!cJSON_AddItemToArray(fullNameJson, nameItem)) {
+            cJSON_Delete(nameItem);
+            cJSON_Delete(fullNameJson);
+            cJSON_Delete(jsonData);
+            return nullptr;
+        }
     }
-    cJSON_AddItemToObject(jsonData, FONT_FULL_NAME, fullNameJson);
+    if (!cJSON_AddItemToObject(jsonData, FONT_FULL_NAME, fullNameJson)) {
+        cJSON_Delete(fullNameJson);
+        cJSON_Delete(jsonData);
+        return nullptr;
+    }
     return jsonData;
 }
 
-std::unordered_map<std::string, std::vector<std::string>> FontConfig::GetFontsMap(const std::string &configPath)
+// ===== Scope font methods =====
+
+cJSON *FontConfig::ConstructScopeCJSON(const FontRecordInfo &record)
 {
-    cJSON *jsonData = cJSON_Parse(CheckConfigFile(configPath).c_str());
-    if (jsonData == nullptr) {
-        FONT_LOGE("heck config file failed");
-        return std::unordered_map<std::string, std::vector<std::string>>();
+    cJSON *item = ConstructCJSON(record.fontPath, record.fullNames);
+    if (item == nullptr) {
+        return nullptr;
     }
-    cJSON *fontList = cJSON_GetObjectItem(jsonData, "fontlist");
-    if (fontList == nullptr) {
-        cJSON_Delete(jsonData);
-        return std::unordered_map<std::string, std::vector<std::string>>();
+    if (record.scope >= 0) {
+        if (!SafeAddNumberToObject(item, FONT_SCOPE, record.scope)) {
+            cJSON_Delete(item);
+            return nullptr;
+        }
     }
-    std::unordered_map<std::string, std::vector<std::string>> fontsMap;
-    int fontSize = cJSON_GetArraySize(fontList);
-    for (int i = 0; i < fontSize; i++) {
-        cJSON *arrItem = cJSON_GetArrayItem(fontList, i);
-        cJSON *fullNameValue = cJSON_GetObjectItem(arrItem, FONT_FULL_NAME);
-        int fullNameSize = cJSON_GetArraySize(fullNameValue);
-        std::vector<std::string> fullNames;
-        for (int j = 0; j < fullNameSize; j++) {
-            cJSON *fullNameItem = cJSON_GetArrayItem(fullNameValue, j);
-            if (fullNameItem != nullptr && cJSON_IsString(fullNameItem)) {
-                fullNames.emplace_back(fullNameItem->valuestring);
+    if (!record.srcPath.empty()) {
+        if (!SafeAddStringToObject(item, FONT_SRC_PATH, record.srcPath)) {
+            cJSON_Delete(item);
+            return nullptr;
+        }
+    }
+    if (!record.appIdentifier.empty()) {
+        if (!SafeAddStringToObject(item, FONT_APP_IDENTIFIER, record.appIdentifier)) {
+            cJSON_Delete(item);
+            return nullptr;
+        }
+    }
+    if (!record.bundleName.empty()) {
+        if (!SafeAddStringToObject(item, FONT_BUNDLE_NAME, record.bundleName)) {
+            cJSON_Delete(item);
+            return nullptr;
+        }
+    }
+    return item;
+}
+
+static FontRecordInfo ParseScopeRecord(cJSON *arrItem)
+{
+    FontRecordInfo info;
+    cJSON *pathVal = cJSON_GetObjectItem(arrItem, FONT_PATH);
+    if (pathVal && cJSON_IsString(pathVal)) {
+        info.fontPath = pathVal->valuestring;
+    }
+    cJSON *nameArr = cJSON_GetObjectItem(arrItem, FONT_FULL_NAME);
+    if (nameArr && cJSON_IsArray(nameArr)) {
+        int sz = cJSON_GetArraySize(nameArr);
+        for (int j = 0; j < sz; j++) {
+            cJSON *n = cJSON_GetArrayItem(nameArr, j);
+            if (n && cJSON_IsString(n)) {
+                info.fullNames.emplace_back(n->valuestring);
             }
         }
-        cJSON *fontFullPathValue = cJSON_GetObjectItem(arrItem, FONT_PATH);
-        if (fontFullPathValue != nullptr && cJSON_IsString(fontFullPathValue)) {
-            fontsMap.insert(std::make_pair(fontFullPathValue->valuestring, fullNames));
+    }
+    cJSON *scopeVal = cJSON_GetObjectItem(arrItem, FONT_SCOPE);
+    if (scopeVal && cJSON_IsNumber(scopeVal)) {
+        info.scope = scopeVal->valueint;
+    }
+    cJSON *srcVal = cJSON_GetObjectItem(arrItem, FONT_SRC_PATH);
+    if (srcVal && cJSON_IsString(srcVal)) {
+        info.srcPath = srcVal->valuestring;
+    }
+    cJSON *appIdVal = cJSON_GetObjectItem(arrItem, FONT_APP_IDENTIFIER);
+    if (appIdVal && cJSON_IsString(appIdVal)) {
+        info.appIdentifier = appIdVal->valuestring;
+    }
+    cJSON *bnVal = cJSON_GetObjectItem(arrItem, FONT_BUNDLE_NAME);
+    if (bnVal && cJSON_IsString(bnVal)) {
+        info.bundleName = bnVal->valuestring;
+    }
+    return info;
+}
+
+bool FontConfig::InsertScopeFontRecord(const FontRecordInfo &record)
+{
+    std::lock_guard<std::mutex> lock(configLock_);
+    cJSON *jsonValue = cJSON_Parse(CheckConfigFile(ConfigPath_).c_str());
+    if (jsonValue == nullptr) {
+        FONT_LOGE("InsertScopeFontRecord parse config failed");
+        return false;
+    }
+    cJSON *fontList = cJSON_GetObjectItem(jsonValue, "fontlist");
+    if (fontList == nullptr) {
+        cJSON_Delete(jsonValue);
+        return false;
+    }
+    cJSON *insertValue = ConstructScopeCJSON(record);
+    if (insertValue == nullptr) {
+        cJSON_Delete(jsonValue);
+        return false;
+    }
+    if (!cJSON_AddItemToArray(fontList, insertValue)) {
+        cJSON_Delete(insertValue);
+        cJSON_Delete(jsonValue);
+        return false;
+    }
+    char *fileData = cJSON_Print(jsonValue);
+    cJSON_Delete(jsonValue);
+    return WriteToFile(fileData);
+}
+
+bool FontConfig::DeleteScopeFontRecordByUrl(const std::string &srcPath)
+{
+    std::lock_guard<std::mutex> lock(configLock_);
+    cJSON *jsonValue = cJSON_Parse(CheckConfigFile(ConfigPath_).c_str());
+    if (jsonValue == nullptr) {
+        return false;
+    }
+    cJSON *fontList = cJSON_GetObjectItem(jsonValue, "fontlist");
+    if (!cJSON_IsArray(fontList)) {
+        cJSON_Delete(jsonValue);
+        return false;
+    }
+    int sz = cJSON_GetArraySize(fontList);
+    for (int i = 0; i < sz; i++) {
+        cJSON *item = cJSON_GetArrayItem(fontList, i);
+        cJSON *srcVal = cJSON_GetObjectItem(item, FONT_SRC_PATH);
+        if (srcVal && cJSON_IsString(srcVal) && srcPath == srcVal->valuestring) {
+            cJSON_DeleteItemFromArray(fontList, i);
+            char *fileData = cJSON_Print(jsonValue);
+            cJSON_Delete(jsonValue);
+            return WriteToFile(fileData);
         }
     }
-    cJSON_Delete(jsonData);
-    return fontsMap;
+    cJSON_Delete(jsonValue);
+    return false;
+}
+
+bool FontConfig::DeleteScopeFontRecordByAppId(const std::string &appIdentifier)
+{
+    std::lock_guard<std::mutex> lock(configLock_);
+    cJSON *jsonValue = cJSON_Parse(CheckConfigFile(ConfigPath_).c_str());
+    if (jsonValue == nullptr) {
+        return false;
+    }
+    cJSON *fontList = cJSON_GetObjectItem(jsonValue, "fontlist");
+    if (!cJSON_IsArray(fontList)) {
+        cJSON_Delete(jsonValue);
+        return false;
+    }
+    bool changed = false;
+    int sz = cJSON_GetArraySize(fontList);
+    for (int i = sz - 1; i >= 0; i--) {
+        cJSON *item = cJSON_GetArrayItem(fontList, i);
+        cJSON *appIdVal = cJSON_GetObjectItem(item, FONT_APP_IDENTIFIER);
+        if (appIdVal && cJSON_IsString(appIdVal) && appIdentifier == appIdVal->valuestring) {
+            cJSON_DeleteItemFromArray(fontList, i);
+            changed = true;
+        }
+    }
+    if (changed) {
+        char *fileData = cJSON_Print(jsonValue);
+        cJSON_Delete(jsonValue);
+        return WriteToFile(fileData);
+    }
+    cJSON_Delete(jsonValue);
+    return false;
+}
+
+std::optional<FontRecordInfo> FontConfig::GetFontRecordByUrl(const std::string &srcPath)
+{
+    std::lock_guard<std::mutex> lock(configLock_);
+    cJSON *jsonValue = cJSON_Parse(CheckConfigFile(ConfigPath_).c_str());
+    if (jsonValue == nullptr) {
+        return std::nullopt;
+    }
+    cJSON *fontList = cJSON_GetObjectItem(jsonValue, "fontlist");
+    if (!cJSON_IsArray(fontList)) {
+        cJSON_Delete(jsonValue);
+        return std::nullopt;
+    }
+    int sz = cJSON_GetArraySize(fontList);
+    for (int i = 0; i < sz; i++) {
+        cJSON *item = cJSON_GetArrayItem(fontList, i);
+        cJSON *srcVal = cJSON_GetObjectItem(item, FONT_SRC_PATH);
+        if (srcVal && cJSON_IsString(srcVal) && srcPath == srcVal->valuestring) {
+            FontRecordInfo info = ParseScopeRecord(item);
+            cJSON_Delete(jsonValue);
+            return info;
+        }
+    }
+    cJSON_Delete(jsonValue);
+    return std::nullopt;
+}
+
+std::optional<FontRecordInfo> FontConfig::GetFontRecordByName(const std::string &fullName)
+{
+    std::lock_guard<std::mutex> lock(configLock_);
+    cJSON *jsonValue = cJSON_Parse(CheckConfigFile(ConfigPath_).c_str());
+    if (jsonValue == nullptr) {
+        return std::nullopt;
+    }
+    cJSON *fontList = cJSON_GetObjectItem(jsonValue, "fontlist");
+    if (!cJSON_IsArray(fontList)) {
+        cJSON_Delete(jsonValue);
+        return std::nullopt;
+    }
+    int sz = cJSON_GetArraySize(fontList);
+    for (int i = 0; i < sz; i++) {
+        cJSON *item = cJSON_GetArrayItem(fontList, i);
+        cJSON *nameArr = cJSON_GetObjectItem(item, FONT_FULL_NAME);
+        if (!nameArr || !cJSON_IsArray(nameArr)) {
+            continue;
+        }
+        int nameSz = cJSON_GetArraySize(nameArr);
+        for (int j = 0; j < nameSz; j++) {
+            cJSON *n = cJSON_GetArrayItem(nameArr, j);
+            if (n && cJSON_IsString(n) && fullName == n->valuestring) {
+                FontRecordInfo info = ParseScopeRecord(item);
+                cJSON_Delete(jsonValue);
+                return info;
+            }
+        }
+    }
+    cJSON_Delete(jsonValue);
+    return std::nullopt;
+}
+
+std::vector<FontRecordInfo> FontConfig::GetFontRecordsByAppId(const std::string &appIdentifier)
+{
+    std::vector<FontRecordInfo> result;
+    std::lock_guard<std::mutex> lock(configLock_);
+    cJSON *jsonValue = cJSON_Parse(CheckConfigFile(ConfigPath_).c_str());
+    if (jsonValue == nullptr) {
+        return result;
+    }
+    cJSON *fontList = cJSON_GetObjectItem(jsonValue, "fontlist");
+    if (!cJSON_IsArray(fontList)) {
+        cJSON_Delete(jsonValue);
+        return result;
+    }
+    int sz = cJSON_GetArraySize(fontList);
+    for (int i = 0; i < sz; i++) {
+        cJSON *item = cJSON_GetArrayItem(fontList, i);
+        cJSON *appIdVal = cJSON_GetObjectItem(item, FONT_APP_IDENTIFIER);
+        if (appIdVal && cJSON_IsString(appIdVal) && appIdentifier == appIdVal->valuestring) {
+            result.push_back(ParseScopeRecord(item));
+        }
+    }
+    cJSON_Delete(jsonValue);
+    return result;
+}
+
+std::vector<FontRecordInfo> FontConfig::GetScopeFontRecords()
+{
+    std::vector<FontRecordInfo> result;
+    std::lock_guard<std::mutex> lock(configLock_);
+    cJSON *jsonValue = cJSON_Parse(CheckConfigFile(ConfigPath_).c_str());
+    if (jsonValue == nullptr) {
+        return result;
+    }
+    cJSON *fontList = cJSON_GetObjectItem(jsonValue, "fontlist");
+    if (!cJSON_IsArray(fontList)) {
+        cJSON_Delete(jsonValue);
+        return result;
+    }
+    int sz = cJSON_GetArraySize(fontList);
+    for (int i = 0; i < sz; i++) {
+        cJSON *item = cJSON_GetArrayItem(fontList, i);
+        cJSON *scopeVal = cJSON_GetObjectItem(item, FONT_SCOPE);
+        if (scopeVal && cJSON_IsNumber(scopeVal) && scopeVal->valueint >= 0) {
+            result.push_back(ParseScopeRecord(item));
+        }
+    }
+    cJSON_Delete(jsonValue);
+    return result;
+}
+
+std::vector<FontRecordInfo> FontConfig::GetAppScopeFontRecords()
+{
+    std::vector<FontRecordInfo> result;
+    std::lock_guard<std::mutex> lock(configLock_);
+    cJSON *jsonValue = cJSON_Parse(CheckConfigFile(ConfigPath_).c_str());
+    if (jsonValue == nullptr) {
+        return result;
+    }
+    cJSON *fontList = cJSON_GetObjectItem(jsonValue, "fontlist");
+    if (!cJSON_IsArray(fontList)) {
+        cJSON_Delete(jsonValue);
+        return result;
+    }
+    int sz = cJSON_GetArraySize(fontList);
+    for (int i = 0; i < sz; i++) {
+        cJSON *item = cJSON_GetArrayItem(fontList, i);
+        cJSON *scopeVal = cJSON_GetObjectItem(item, FONT_SCOPE);
+        if (scopeVal && cJSON_IsNumber(scopeVal) && scopeVal->valueint == FONT_SCOPE_APP) {
+            result.push_back(ParseScopeRecord(item));
+        }
+    }
+    cJSON_Delete(jsonValue);
+    return result;
+}
+
+bool FontConfig::CheckAndUpdateFontRecord()
+{
+    std::lock_guard<std::mutex> lock(configLock_);
+    cJSON *jsonValue = cJSON_Parse(CheckConfigFile(ConfigPath_).c_str());
+    if (jsonValue == nullptr) {
+        return false;
+    }
+    cJSON *versionJson = cJSON_GetObjectItem(jsonValue, FONT_VERSION);
+    if (versionJson != nullptr) {
+        if (cJSON_IsString(versionJson) && FONT_CONFIG_VERSION_7 == versionJson->valuestring) {
+            cJSON_Delete(jsonValue);
+            return true;
+        }
+        if (cJSON_IsNumber(versionJson) && versionJson->valueint == VERSION) {
+            // upgrade v1 -> v7: refresh fullname from disk, then version -> "7.0"
+            RefreshFullNames(jsonValue);
+            cJSON *newVersion = cJSON_CreateString(FONT_CONFIG_VERSION_7.c_str());
+            if (newVersion == nullptr) {
+                cJSON_Delete(jsonValue);
+                return false;
+            }
+            if (!cJSON_ReplaceItemInObject(jsonValue, FONT_VERSION, newVersion)) {
+                cJSON_Delete(newVersion);
+                cJSON_Delete(jsonValue);
+                return false;
+            }
+            char *fileData = cJSON_Print(jsonValue);
+            cJSON_Delete(jsonValue);
+            return WriteToFile(fileData);
+        }
+    }
+    // no version field: refresh fullname from disk, then set version to 7.0
+    RefreshFullNames(jsonValue);
+    if (!SafeAddStringToObject(jsonValue, FONT_VERSION, FONT_CONFIG_VERSION_7)) {
+        cJSON_Delete(jsonValue);
+        return false;
+    }
+    char *fileData = cJSON_Print(jsonValue);
+    cJSON_Delete(jsonValue);
+    return WriteToFile(fileData);
+}
+
+int FontConfig::GetTotalInstalledFontsNum()
+{
+    std::lock_guard<std::mutex> lock(configLock_);
+    cJSON *jsonValue = cJSON_Parse(CheckConfigFile(ConfigPath_).c_str());
+    if (jsonValue == nullptr) {
+        return 0;
+    }
+    cJSON *fontList = cJSON_GetObjectItem(jsonValue, "fontlist");
+    int count = cJSON_IsArray(fontList) ? cJSON_GetArraySize(fontList) : 0;
+    cJSON_Delete(jsonValue);
+    return count;
 }
 }  // namespace FontManager
 }  // namespace Global

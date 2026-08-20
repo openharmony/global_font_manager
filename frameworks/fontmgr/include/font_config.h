@@ -16,6 +16,7 @@
 #ifndef FONT_MANAGER_FONT_CONFIG_H
 #define FONT_MANAGER_FONT_CONFIG_H
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -25,19 +26,23 @@
 namespace OHOS {
 namespace Global {
 namespace FontManager {
+struct FontRecordInfo {
+    std::string fontPath;
+    std::vector<std::string> fullNames;
+    int32_t scope = -1;           // -1 = user-level (legacy), 0 = app-level, 1 = session-level
+    std::string srcPath;
+    std::string appIdentifier;
+    std::string bundleName;
+};
+
 class FontConfig {
 public:
     DISALLOW_COPY(FontConfig);
-    // 构造函数
     FontConfig(const std::string &configPath) : ConfigPath_(configPath){};
-    // 移动构造函数
-    FontConfig(FontConfig&& other) noexcept : fontsMap_(std::move(other.fontsMap_)),
-        ConfigPath_(std::move(other.ConfigPath_)) {};
-    // 移动赋值操作符
+    FontConfig(FontConfig&& other) noexcept : ConfigPath_(std::move(other.ConfigPath_)) {};
     FontConfig& operator = (FontConfig&& other) noexcept
     {
         if (this != &other) {
-            fontsMap_ = std::move(other.fontsMap_);
             ConfigPath_ = std::move(other.ConfigPath_);
         }
         return *this;
@@ -47,20 +52,29 @@ public:
     bool DeleteFontRecord(const std::string &fontPath);
     int GetInstalledFontsNum();
     std::string GetFontFileByName(const std::string &fullName);
+
+    // Scope font methods
+    bool InsertScopeFontRecord(const FontRecordInfo &record);
+    bool DeleteScopeFontRecordByUrl(const std::string &srcPath);
+    bool DeleteScopeFontRecordByAppId(const std::string &appIdentifier);
+    std::optional<FontRecordInfo> GetFontRecordByUrl(const std::string &srcPath);
+    std::optional<FontRecordInfo> GetFontRecordByName(const std::string &fullName);
+    std::vector<FontRecordInfo> GetFontRecordsByAppId(const std::string &appIdentifier);
+    std::vector<FontRecordInfo> GetScopeFontRecords();
+    std::vector<FontRecordInfo> GetAppScopeFontRecords();
     bool CheckAndUpdateFontRecord();
+    int GetTotalInstalledFontsNum();
 private:
     char *GetFileData(const std::string &filePath, long &size);
     std::string CheckConfigFile(const std::string &fontPath);
     cJSON *ConstructCJSON(const std::string &fontFullPath, const std::vector<std::string> &fullName);
-    std::unordered_map<std::string, std::vector<std::string>> GetFontsMap(const std::string &filePath);
+    cJSON *ConstructScopeCJSON(const FontRecordInfo &record);
     bool WriteToFile(char *jsonData);
-    cJSON* CovertFontMapToJsonArray(const std::unordered_map<std::string, std::vector<std::string>>& fontsMap);
     std::string SandBoxPathToRealPath(const std::string &path);
+    void RefreshFullNames(cJSON *jsonValue);
 private:
-    std::unordered_map<std::string, std::vector<std::string>> fontsMap_;
     std::string ConfigPath_;
     std::mutex configLock_;
-    std::mutex fontsMapLock_;
 };
 } // namespace FontManager
 } // namespace Global

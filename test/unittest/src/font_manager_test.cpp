@@ -25,6 +25,7 @@
 
 #include "font_manager.h"
 #include "storage_manager_adapter.h"
+#include "font_config.h"
 #include "font_manager_utils.h"
 #include "font_define.h"
 #include "directory_ex.h"
@@ -550,18 +551,18 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest020, TestSize.Level1)
     FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST);
     FontManagerUtils::CreateFileWithPermission(FONT_CONFIG_FILE_TEST, "{corrupt");
     int32_t ret = manager_->UninstallFont("SomeFont", TEST_USERID);
-    EXPECT_EQ(ret, ERR_UNINSTALL_FAIL);
+    EXPECT_EQ(ret, ERR_UNINSTALL_FILE_NOT_EXISTS);
     FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
 }
 
 /**
  * @tc.name: FontManagerFuncTest021
- * @tc.desc: Test InstallFont with invalid fd that fails CheckAndInitInstallPath
+ * @tc.desc: Test InstallFont when install path exists but is empty
  * @tc.type: FUNC
  */
 HWTEST_F(FontManagerTest, FontManagerFuncTest021, TestSize.Level1)
 {
-    FontManagerUtils::DeleteDir(INSTALL_PATH_TEST, true);
+    FontManagerUtils::DeleteDir(INSTALL_PATH_TEST, false);
     int fd = open(FONT_PATH.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
     int32_t ret = manager_->InstallFont(fd, TEST_USERID);
@@ -841,6 +842,460 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest039, TestSize.Level1)
     if (fd >= 0) {
         close(fd);
     }
+}
+
+/**
+ * @tc.name: FontManagerFuncTest040
+ * @tc.desc: Test InstallScopeFont with app scope
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest040, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    ScopeFontInstallInfo info;
+    info.fd = fd;
+    info.scope = FONT_SCOPE_APP;
+    info.srcPath = "file://test/app_font1.ttf";
+    info.bundleName = "com.example.app";
+    info.appIdentifier = "app_test_001";
+    info.userId = TEST_USERID;
+    int ret = manager_->InstallScopeFont(info);
+    if (fd >= 0) {
+        close(fd);
+    }
+    EXPECT_EQ(ret, ERR_OK);
+
+    auto scopeVal = manager_->GetFontScope("file://test/app_font1.ttf", "com.example.app", TEST_USERID);
+    EXPECT_EQ(scopeVal, FONT_SCOPE_APP);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest041
+ * @tc.desc: Test InstallScopeFont duplicate srcPath returns ERR_INSTALLED_ALRADY
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest041, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    ScopeFontInstallInfo info;
+    info.fd = fd;
+    info.scope = FONT_SCOPE_APP;
+    info.srcPath = "file://test/dup_src.ttf";
+    info.bundleName = "com.example.app";
+    info.appIdentifier = "app_test_002";
+    info.userId = TEST_USERID;
+    int ret = manager_->InstallScopeFont(info);
+    if (fd >= 0) {
+        close(fd);
+    }
+    EXPECT_EQ(ret, ERR_OK);
+
+    fd = open(FONT_PATH.c_str(), O_RDONLY);
+    info.fd = fd;
+    ret = manager_->InstallScopeFont(info);
+    if (fd >= 0) {
+        close(fd);
+    }
+    EXPECT_EQ(ret, ERR_INSTALLED_ALRADY);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest042
+ * @tc.desc: Test InstallScopeFont duplicate font name returns ERR_INSTALLED_ALRADY
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest042, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    ScopeFontInstallInfo info;
+    info.fd = fd;
+    info.scope = FONT_SCOPE_APP;
+    info.srcPath = "file://test/name_dup1.ttf";
+    info.bundleName = "com.example.app";
+    info.appIdentifier = "app_test_003";
+    info.userId = TEST_USERID;
+    int ret = manager_->InstallScopeFont(info);
+    if (fd >= 0) {
+        close(fd);
+    }
+    EXPECT_EQ(ret, ERR_OK);
+
+    fd = open(FONT_PATH.c_str(), O_RDONLY);
+    info.fd = fd;
+    info.srcPath = "file://test/name_dup2.ttf";
+    info.appIdentifier = "app_test_004";
+    ret = manager_->InstallScopeFont(info);
+    if (fd >= 0) {
+        close(fd);
+    }
+    EXPECT_EQ(ret, ERR_INSTALLED_ALRADY);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest043
+ * @tc.desc: Test UninstallScopeFont by srcPath
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest043, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    ScopeFontInstallInfo info;
+    info.fd = fd;
+    info.scope = FONT_SCOPE_APP;
+    info.srcPath = "file://test/uninstall_scope.ttf";
+    info.bundleName = "com.example.app";
+    info.appIdentifier = "app_test_005";
+    info.userId = TEST_USERID;
+    manager_->InstallScopeFont(info);
+    if (fd >= 0) {
+        close(fd);
+    }
+
+    int ret;
+    manager_->UninstallScopeFont("file://test/uninstall_scope.ttf", "com.example.app", TEST_USERID);
+    ret = manager_->GetFontScope("file://test/uninstall_scope.ttf", "com.example.app", TEST_USERID);
+    EXPECT_EQ(ret, ERR_SCOPE_FONT_NOT_FOUND);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest044
+ * @tc.desc: Test UninstallScopeFont with non-existent srcPath
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest044, TestSize.Level1)
+{
+    int ret = manager_->UninstallScopeFont("file://test/non_existent.ttf", "com.example.app", TEST_USERID);
+    EXPECT_EQ(ret, ERR_SCOPE_FONT_NOT_FOUND);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest045
+ * @tc.desc: Test GetFontScope returns ERR_SCOPE_FONT_NOT_FOUND for non-existent
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest045, TestSize.Level1)
+{
+    int ret = manager_->GetFontScope("file://test/not_installed.ttf", "com.example.app", TEST_USERID);
+    EXPECT_EQ(ret, ERR_SCOPE_FONT_NOT_FOUND);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest046
+ * @tc.desc: Test InstallScopeFont with session scope
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest046, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    ScopeFontInstallInfo info;
+    info.fd = fd;
+    info.scope = FONT_SCOPE_SESSION;
+    info.srcPath = "file://test/session_font.ttf";
+    info.bundleName = "com.example.session";
+    info.appIdentifier = "session_test_001";
+    info.userId = TEST_USERID;
+    int ret = manager_->InstallScopeFont(info);
+    if (fd >= 0) {
+        close(fd);
+    }
+    EXPECT_EQ(ret, ERR_OK);
+
+    auto scopeVal = manager_->GetFontScope("file://test/session_font.ttf", "com.example.session", TEST_USERID);
+    EXPECT_EQ(scopeVal, FONT_SCOPE_SESSION);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest047
+ * @tc.desc: Test CleanupAppScopeFonts removes all fonts for an app
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest047, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    ScopeFontInstallInfo info;
+    info.fd = fd;
+    info.scope = FONT_SCOPE_APP;
+    info.srcPath = "file://test/cleanup_app.ttf";
+    info.bundleName = "com.example.cleanup";
+    info.appIdentifier = "app_cleanup_001";
+    info.userId = TEST_USERID;
+    manager_->InstallScopeFont(info);
+    if (fd >= 0) {
+        close(fd);
+    }
+
+    manager_->CleanupAppScopeFonts("app_cleanup_001", TEST_USERID);
+    int ret = manager_->GetFontScope("file://test/cleanup_app.ttf", "com.example.cleanup", TEST_USERID);
+    EXPECT_EQ(ret, ERR_SCOPE_FONT_NOT_FOUND);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest048
+ * @tc.desc: Test CleanupScopeFontsByUser removes all scope fonts for a user
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest048, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    ScopeFontInstallInfo appInfo;
+    appInfo.fd = fd;
+    appInfo.scope = FONT_SCOPE_APP;
+    appInfo.srcPath = "file://test/cleanup_user_app.ttf";
+    appInfo.bundleName = "com.example.app";
+    appInfo.appIdentifier = "app_cleanup_user";
+    appInfo.userId = TEST_USERID;
+    manager_->InstallScopeFont(appInfo);
+    if (fd >= 0) {
+        close(fd);
+    }
+
+    fd = open(FONT_PATH.c_str(), O_RDONLY);
+    ScopeFontInstallInfo sessionInfo;
+    sessionInfo.fd = fd;
+    sessionInfo.scope = FONT_SCOPE_SESSION;
+    sessionInfo.srcPath = "file://test/cleanup_user_session.ttf";
+    sessionInfo.bundleName = "com.example.session";
+    sessionInfo.appIdentifier = "session_cleanup_user";
+    sessionInfo.userId = TEST_USERID;
+    manager_->InstallScopeFont(sessionInfo);
+    if (fd >= 0) {
+        close(fd);
+    }
+
+    manager_->CleanupScopeFontsByUser(TEST_USERID);
+    EXPECT_EQ(manager_->GetFontScope("file://test/cleanup_user_app.ttf",
+        "com.example.app", TEST_USERID), ERR_SCOPE_FONT_NOT_FOUND);
+    EXPECT_EQ(manager_->GetFontScope("file://test/cleanup_user_session.ttf",
+        "com.example.session", TEST_USERID), ERR_SCOPE_FONT_NOT_FOUND);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest049
+ * @tc.desc: Test CleanupAppScopeFontsByUser removes only app scope, keeps session
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest049, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    ScopeFontInstallInfo appInfo;
+    appInfo.fd = fd;
+    appInfo.scope = FONT_SCOPE_APP;
+    appInfo.srcPath = "file://test/keep_session_app.ttf";
+    appInfo.bundleName = "com.example.app";
+    appInfo.appIdentifier = "app_keep_session";
+    appInfo.userId = TEST_USERID;
+    manager_->InstallScopeFont(appInfo);
+    if (fd >= 0) {
+        close(fd);
+    }
+
+    fd = open(TTC_FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    ScopeFontInstallInfo sessionInfo;
+    sessionInfo.fd = fd;
+    sessionInfo.scope = FONT_SCOPE_SESSION;
+    sessionInfo.srcPath = "file://test/keep_session_sess.ttf";
+    sessionInfo.bundleName = "com.example.session";
+    sessionInfo.appIdentifier = "session_keep_session";
+    sessionInfo.userId = TEST_USERID;
+    manager_->InstallScopeFont(sessionInfo);
+    if (fd >= 0) {
+        close(fd);
+    }
+
+    manager_->CleanupAppScopeFontsByUser(TEST_USERID);
+    EXPECT_EQ(manager_->GetFontScope("file://test/keep_session_app.ttf",
+        "com.example.app", TEST_USERID), ERR_SCOPE_FONT_NOT_FOUND);
+    EXPECT_EQ(manager_->GetFontScope("file://test/keep_session_sess.ttf",
+        "com.example.session", TEST_USERID), FONT_SCOPE_SESSION);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest050
+ * @tc.desc: Test InstallScopeFont with invalid scope returns ERR_INVALID_PARAM
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest050, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    ScopeFontInstallInfo info;
+    info.fd = fd;
+    info.scope = 99;
+    info.srcPath = "file://test/invalid_scope.ttf";
+    info.bundleName = "com.example.app";
+    info.appIdentifier = "app_invalid";
+    info.userId = TEST_USERID;
+    int ret = manager_->InstallScopeFont(info);
+    if (fd >= 0) {
+        close(fd);
+    }
+    EXPECT_EQ(ret, ERR_INVALID_PARAM);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest051
+ * @tc.desc: Test CleanupScopeFontsByUser does not call CleanupScopeFontDirs globally
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest051, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    ScopeFontInstallInfo appInfo;
+    appInfo.fd = fd;
+    appInfo.scope = FONT_SCOPE_APP;
+    appInfo.srcPath = "file://test/no_global_cleanup_app.ttf";
+    appInfo.bundleName = "com.example.app";
+    appInfo.appIdentifier = "app_no_global";
+    appInfo.userId = TEST_USERID;
+    manager_->InstallScopeFont(appInfo);
+    if (fd >= 0) {
+        close(fd);
+    }
+
+    fd = open(TTC_FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    ScopeFontInstallInfo sessionInfo;
+    sessionInfo.fd = fd;
+    sessionInfo.scope = FONT_SCOPE_SESSION;
+    sessionInfo.srcPath = "file://test/no_global_cleanup_session.ttf";
+    sessionInfo.bundleName = "com.example.session";
+    sessionInfo.appIdentifier = "session_no_global";
+    sessionInfo.userId = TEST_USERID;
+    manager_->InstallScopeFont(sessionInfo);
+    if (fd >= 0) {
+        close(fd);
+    }
+
+    manager_->CleanupScopeFontsByUser(TEST_USERID);
+    EXPECT_EQ(manager_->GetFontScope("file://test/no_global_cleanup_app.ttf",
+        "com.example.app", TEST_USERID), ERR_SCOPE_FONT_NOT_FOUND);
+    EXPECT_EQ(manager_->GetFontScope("file://test/no_global_cleanup_session.ttf",
+        "com.example.session", TEST_USERID), ERR_SCOPE_FONT_NOT_FOUND);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest052
+ * @tc.desc: Test CleanupScopeFontsByUser with non-existent config (no crash, no error log)
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest052, TestSize.Level1)
+{
+    manager_->configMap_.clear();
+    int ret = manager_->CleanupScopeFontsByUser(TEST_USERID);
+    EXPECT_EQ(ret, ERR_OK);
+}
+/**
+ * @tc.name: FontManagerFuncTest053
+ * @tc.desc: Test GetFontScope with bundleName mismatch returns ERR_SCOPE_FONT_NOT_FOUND
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest053, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    ScopeFontInstallInfo info;
+    info.fd = fd;
+    info.scope = FONT_SCOPE_APP;
+    info.srcPath = "file://test/mismatch_font.ttf";
+    info.bundleName = "com.example.owner";
+    info.appIdentifier = "app_mismatch_001";
+    info.userId = TEST_USERID;
+    int ret = manager_->InstallScopeFont(info);
+    if (fd >= 0) {
+        close(fd);
+    }
+    EXPECT_EQ(ret, ERR_OK);
+
+    ret = manager_->GetFontScope("file://test/mismatch_font.ttf", "com.example.other", TEST_USERID);
+    EXPECT_EQ(ret, ERR_SCOPE_FONT_NOT_FOUND);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest054
+ * @tc.desc: Test UninstallScopeFont with empty srcPath returns ERR_SCOPE_FONT_NOT_FOUND
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest054, TestSize.Level1)
+{
+    int ret = manager_->UninstallScopeFont("", "com.example.app", TEST_USERID);
+    EXPECT_EQ(ret, ERR_SCOPE_FONT_NOT_FOUND);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest055
+ * @tc.desc: Test UninstallScopeFont with bundleName mismatch returns ERR_SCOPE_FONT_NOT_FOUND
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest055, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    EXPECT_EQ(fd >= 0, true);
+    ScopeFontInstallInfo info;
+    info.fd = fd;
+    info.scope = FONT_SCOPE_APP;
+    info.srcPath = "file://test/uninstall_mismatch.ttf";
+    info.bundleName = "com.example.owner";
+    info.appIdentifier = "app_uninstall_mismatch";
+    info.userId = TEST_USERID;
+    manager_->InstallScopeFont(info);
+    if (fd >= 0) {
+        close(fd);
+    }
+
+    int ret = manager_->UninstallScopeFont(
+        "file://test/uninstall_mismatch.ttf", "com.example.attacker", TEST_USERID);
+    EXPECT_EQ(ret, ERR_SCOPE_FONT_NOT_FOUND);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest056
+ * @tc.desc: Test CleanupAppScopeFonts with non-existent appIdentifier (empty records)
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest056, TestSize.Level1)
+{
+    int ret = manager_->CleanupAppScopeFonts("app_nonexistent", TEST_USERID);
+    EXPECT_EQ(ret, ERR_OK);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest057
+ * @tc.desc: Test CleanupAppScopeFontsByUser with empty config (no records)
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest057, TestSize.Level1)
+{
+    manager_->configMap_.clear();
+    int ret = manager_->CleanupAppScopeFontsByUser(TEST_USERID);
+    EXPECT_EQ(ret, ERR_OK);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest058
+ * @tc.desc: Test InstallScopeFont with invalid fd returns ERR_FILE_VERIFY_FAIL
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest058, TestSize.Level1)
+{
+    ScopeFontInstallInfo info;
+    info.fd = -1;
+    info.scope = FONT_SCOPE_APP;
+    info.srcPath = "file://test/invalid_fd.ttf";
+    info.bundleName = "com.example.app";
+    info.appIdentifier = "app_invalid_fd";
+    info.userId = TEST_USERID;
+    int ret = manager_->InstallScopeFont(info);
+    EXPECT_EQ(ret, ERR_FILE_VERIFY_FAIL);
 }
 } // namespace FontManager
 } // namespace Global

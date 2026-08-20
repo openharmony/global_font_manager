@@ -54,9 +54,11 @@ void DataMigrationManager::DataMigration(const sptr<IDataMigrationCallback>& cal
         FONT_LOGE("FontManager DataMigration err.ErrCode:%{public}d", ret);
     }
     CheckAndUpdateAllFontRecord();
-    for (const auto& userId : userIds_) {
-        std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX;
-        StorageManagerAdapter::GetInstance()->ReportFontBundleStats(userId, installPath);
+    if (ret == ERR_OK) {
+        for (const auto& userId : userIds_) {
+            std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX;
+            StorageManagerAdapter::GetInstance()->ReportFontBundleStats(userId, installPath);
+        }
     }
     isDataMigrationing_ = false;
     EventDataResult(ret);
@@ -186,18 +188,12 @@ void DataMigrationManager::StartHeartBeatTask()
     std::weak_ptr<DataMigrationManager> weakPtr = shared_from_this();
     std::thread([weakPtr]() {
         FONT_LOGI("DataMigrationManager HeartBeat thread started.");
-        bool shouldRun = true;
-        while (shouldRun) {
-            {
-                auto self = weakPtr.lock();
-                if (!self || !self->isDataMigrationing_.load()) {
-                    shouldRun = false;
-                    continue;
-                }
-                FONT_LOGI("DataMigrationManager HeartBeat....");
-                self->EventDataHeartBeat();
-            }
+        auto self = weakPtr.lock();
+        while (self && self->isDataMigrationing_.load()) {
+            FONT_LOGI("DataMigrationManager HeartBeat....");
+            self->EventDataHeartBeat();
             std::this_thread::sleep_for(std::chrono::seconds(HEARTBEAT_INTERVAL));
+            self = weakPtr.lock();
         }
         FONT_LOGI("DataMigrationManager HeartBeat thread stopped.");
     }).detach();

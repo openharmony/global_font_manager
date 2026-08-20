@@ -32,6 +32,13 @@ public:
     static napi_value UninstallFont(napi_env env, napi_callback_info info);
     static napi_value DataMigration(napi_env env, napi_callback_info info);
 
+    static napi_value OnFontObserver(napi_env env, napi_callback_info info);
+    static napi_value OffFontObserver(napi_env env, napi_callback_info info);
+    static napi_value InstallScopeFont(napi_env env, napi_callback_info info);
+    static napi_value UninstallScopeFont(napi_env env, napi_callback_info info);
+    static napi_value GetFontScope(napi_env env, napi_callback_info info);
+    static napi_value CreateFontScopeEnum(napi_env env);
+
 private:
     static napi_value ProcessFontByValue(
         napi_env env, napi_callback_info info, const std::string &name, napi_async_execute_callback execute);
@@ -43,6 +50,10 @@ private:
         const std::string &name, napi_async_execute_callback execute);
     napi_value DataMigrationInner(napi_env env, AbilityRuntime::NapiCallbackInfo& info);
     std::string GetDataMigrationErrMsg(int32_t errCode);
+    static napi_value ProcessScopeFont(napi_env env, napi_callback_info info,
+        const std::string &name, napi_async_execute_callback execute, bool hasScopeArg);
+    static napi_value ProcessScopeFontQuery(napi_env env, napi_callback_info info,
+        const std::string &name, napi_async_execute_callback execute);
 };
 } // namespace FontManager
 } // namespace Global

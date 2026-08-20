@@ -39,16 +39,23 @@ ohos_prebuilt_etc("fontManager_etc") {
 ohos_shared_library("fontManager_ani") {
   public_configs = [ ":fontmgr_ani_config" ]
   public_configs += [ "../../service:font_client_config" ]
+
   sources = [
     "src/font_manager_ani.cpp",
-    "src/ani_data_migration_listener.cpp"
+    "src/ani_data_migration_listener.cpp",
+    "../../service/client/src/font_client_observer_agent.cpp",
+    "$root_gen_dir/base/global/font_manager/service/font_client_observer_stub.cpp",
   ]
 
-  deps = [ "../../service:font_manager_client" ]
+  deps = [
+    "../../service:font_service_interface",
+    "../../service:font_manager_client",
+  ]
 
   version_script = "fontManager_ani.map"
 
   external_deps = [
+    "c_utils:utils",
     "hilog:libhilog",
     "ipc:ipc_core",
     "runtime_core:ani",

@@ -21,6 +21,7 @@
 #include "font_hilog.h"
 #include "font_define.h"
 #include "font_manager_kits.h"
+#include "font_client_observer_agent.h"
 #include "ani_data_migration_listener.h"
 
 namespace OHOS {
@@ -45,6 +46,10 @@ static const std::unordered_map<int, std::string> errorMsg = {
     {ERR_UNINSTALL_FAIL, "The system ability works abnormally."},
     {ERR_SYSTEM_ERROR, "Call failed due to system error."},
     {ERR_DATA_MIGRATIONING, "Data migration is in progress."},
+    {ERR_SCOPE_FONT_NOT_FOUND, "The scope font is not found."},
+    {ERR_SCOPE_FONT_REPEATED_REGISTER, "Font observer already registered."},
+    {ERR_SCOPE_FONT_EXCEED_REGISTER_LIMIT, "Exceeded maximum number of font observers."},
+    {ERR_SCOPE_FONT_NOT_REGISTERED, "Font observer not registered."},
 };
 
 ani_int FontManagerAni::InstallFont(ani_env* env, ani_string ani_path)
@@ -94,6 +99,155 @@ ani_int FontManagerAni::DataMigration(ani_env* env, ani_object callback)
         ThrowError(env, ret);
     }
     return ret;
+}
+
+class AniObserverRef {
+public:
+    AniObserverRef(ani_env* env, ani_object observer) : vm_(nullptr), observerRef_(nullptr)
+    {
+        if (env == nullptr || observer == nullptr) {
+            return;
+        }
+        if (env->GetVM(&vm_) != ANI_OK) {
+            FONT_LOGE("AniObserverRef: GetVM failed");
+            return;
+        }
+        if (env->GlobalReference_Create(observer, &observerRef_) != ANI_OK) {
+            FONT_LOGE("AniObserverRef: GlobalReference_Create failed");
+        }
+    }
+    ~AniObserverRef()
+    {
+        if (vm_ == nullptr || observerRef_ == nullptr) {
+            return;
+        }
+        ani_env* env = nullptr;
+        bool isAttached = false;
+        if (vm_->GetEnv(ANI_VERSION_1, &env) != ANI_OK) {
+            if (vm_->AttachCurrentThread(nullptr, ANI_VERSION_1, &env) == ANI_OK) {
+                isAttached = true;
+            } else {
+                FONT_LOGE("AniObserverRef: Failed to attach thread, global reference leaked.");
+                return;
+            }
+        }
+        if (env->GlobalReference_Delete(observerRef_) != ANI_OK) {
+            FONT_LOGE("AniObserverRef: Failed to delete global reference.");
+        }
+        if (isAttached) {
+            vm_->DetachCurrentThread();
+        }
+    }
+    void CallOnServiceDied()
+    {
+        if (vm_ == nullptr || observerRef_ == nullptr) {
+            return;
+        }
+        ani_env* env = nullptr;
+        bool isAttached = false;
+        if (vm_->GetEnv(ANI_VERSION_1, &env) != ANI_OK) {
+            if (vm_->AttachCurrentThread(nullptr, ANI_VERSION_1, &env) != ANI_OK) {
+                FONT_LOGE("AniObserverRef: AttachCurrentThread failed");
+                return;
+            }
+            isAttached = true;
+        }
+        ani_status status = env->Object_CallMethodByName_Void(
+            static_cast<ani_object>(observerRef_), "onServiceDied", ":");
+        if (status != ANI_OK) {
+            FONT_LOGE("AniObserverRef: Object_CallMethodByName_Void failed: %{public}d", status);
+        }
+        if (isAttached) {
+            vm_->DetachCurrentThread();
+        }
+    }
+    bool IsValid() const { return vm_ != nullptr && observerRef_ != nullptr; }
+
+private:
+    ani_vm* vm_;
+    ani_ref observerRef_;
+};
+
+ani_int FontManagerAni::OnFontObserver(ani_env* env, ani_object observer)
+{
+    if (observer == nullptr) {
+        ThrowError(env, ERR_INVALID_PARAM);
+        return ERR_INVALID_PARAM;
+    }
+    auto aniRef = std::make_shared<AniObserverRef>(env, observer);
+    if (!aniRef->IsValid()) {
+        ThrowError(env, ERR_SYSTEM_ERROR);
+        return ERR_SYSTEM_ERROR;
+    }
+    auto agent = sptr<FontClientObserverAgent>::MakeSptr([aniRef]() {
+        aniRef->CallOnServiceDied();
+    });
+    if (agent == nullptr) {
+        ThrowError(env, ERR_SYSTEM_ERROR);
+        return ERR_SYSTEM_ERROR;
+    }
+    int32_t ret = FontManagerKits::GetInstance().OnFontObserver(agent);
+    if (ret != ERR_OK) {
+        ThrowError(env, ret);
+    }
+    return ret;
+}
+
+ani_int FontManagerAni::OffFontObserver(ani_env* env, ani_object observer)
+{
+    auto dummyAgent = sptr<FontClientObserverAgent>::MakeSptr([](){});
+    if (dummyAgent == nullptr) {
+        ThrowError(env, ERR_SYSTEM_ERROR);
+        return ERR_SYSTEM_ERROR;
+    }
+    int32_t ret = FontManagerKits::GetInstance().OffFontObserver(dummyAgent);
+    if (ret != ERR_OK) {
+        ThrowError(env, ret);
+    }
+    return ret;
+}
+
+ani_int FontManagerAni::InstallScopeFont(ani_env* env, ani_string ani_url, ani_int ani_scope)
+{
+    std::string url = ANIStringToStdString(env, ani_url);
+    int32_t scope = ani_scope;
+    int32_t outValue = 0;
+    int32_t ret = FontManagerKits::GetInstance().InstallScopeFont(url, scope, outValue);
+    if (ret != ERR_OK) {
+        ThrowError(env, ret);
+        return ret;
+    }
+    if (outValue != ERR_OK) {
+        ThrowError(env, outValue);
+    }
+    return outValue;
+}
+
+ani_int FontManagerAni::UninstallScopeFont(ani_env* env, ani_string ani_url)
+{
+    std::string url = ANIStringToStdString(env, ani_url);
+    int32_t outValue = 0;
+    int32_t ret = FontManagerKits::GetInstance().UninstallScopeFont(url, outValue);
+    if (ret != ERR_OK) {
+        ThrowError(env, ret);
+        return ret;
+    }
+    if (outValue != ERR_OK) {
+        ThrowError(env, outValue);
+    }
+    return outValue;
+}
+
+ani_int FontManagerAni::GetFontScope(ani_env* env, ani_string ani_url)
+{
+    std::string url = ANIStringToStdString(env, ani_url);
+    int32_t outValue = 0;
+    int32_t ret = FontManagerKits::GetInstance().GetFontScope(url, outValue);
+    if (ret != ERR_OK) {
+        ThrowError(env, ret);
+        return ret;
+    }
+    return outValue;
 }
 
 std::string FontManagerAni::ANIStringToStdString(ani_env *env, ani_string ani_str)
@@ -171,6 +325,11 @@ ani_status FontManagerAni::Init(ani_env* env)
         ani_native_function { "nativeInstallFont", nullptr, reinterpret_cast<void*>(InstallFont) },
         ani_native_function { "nativeUninstallFont", nullptr, reinterpret_cast<void*>(UninstallFont) },
         ani_native_function { "dataMigration", nullptr, reinterpret_cast<void*>(DataMigration) },
+        ani_native_function { "onFontObserver", nullptr, reinterpret_cast<void*>(OnFontObserver) },
+        ani_native_function { "offFontObserver", nullptr, reinterpret_cast<void*>(OffFontObserver) },
+        ani_native_function { "nativeInstallScopeFont", nullptr, reinterpret_cast<void*>(InstallScopeFont) },
+        ani_native_function { "nativeUninstallScopeFont", nullptr, reinterpret_cast<void*>(UninstallScopeFont) },
+        ani_native_function { "nativeGetFontScope", nullptr, reinterpret_cast<void*>(GetFontScope) },
     };
 
     if (ANI_OK != env->Namespace_BindNativeFunctions(ns, nsMethods.data(), nsMethods.size())) {

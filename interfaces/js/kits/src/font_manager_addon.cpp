@@ -18,6 +18,7 @@
 #include "font_define.h"
 #include "font_hilog.h"
 #include "font_manager_kits.h"
+#include "font_client_observer_agent.h"
 #include "js_data_migration_listener.h"
 
 namespace OHOS {
@@ -32,9 +33,31 @@ static const std::unordered_map<uint32_t, std::string> g_DataMigrationErrMsgMap 
     {ERR_DATA_MIGRATIONING, "Data migration is in progress."},
     {ERR_SYSTEM_ERROR, "Call failed due to system error."}
 };
+static const std::unordered_map<uint32_t, std::string> g_ScopeFontErrMsgMap = {
+    {ERR_NO_PERMISSION, "Permission verification failed. The application does not "
+        "have the permission required to call the API."},
+    {ERR_NOT_SYSTEM_APP, "Permission verification failed. A non-system application calls a system API."},
+    {ERR_INVALID_PARAM, "Parameter error."},
+    {ERR_FILE_NOT_EXISTS, "The font does not exist."},
+    {ERR_FILE_VERIFY_FAIL, "The font is not supported."},
+    {ERR_COPY_FAIL, "Failed to copy the font file."},
+    {ERR_INSTALLED_ALRADY, "The font file is installed."},
+    {ERR_MAX_FILE_COUNT, "Exceeded the maximum number of installed files."},
+    {ERR_INSTALL_FAIL, "The system ability works abnormally."},
+    {ERR_UNINSTALL_FILE_NOT_EXISTS, "The font file does not exist."},
+    {ERR_UNINSTALL_REMOVE_FAIL, "Failed to delete the font file."},
+    {ERR_UNINSTALL_FAIL, "The system ability works abnormally."},
+    {ERR_SYSTEM_ERROR, "Call failed due to system error."},
+    {ERR_DATA_MIGRATIONING, "Data migration is in progress."},
+    {ERR_SCOPE_FONT_NOT_FOUND, "The scope font is not found."},
+    {ERR_SCOPE_FONT_REPEATED_REGISTER, "Font observer already registered."},
+    {ERR_SCOPE_FONT_EXCEED_REGISTER_LIMIT, "Exceeded maximum number of font observers."},
+    {ERR_SCOPE_FONT_NOT_REGISTERED, "Font observer not registered."}
+};
 static constexpr int32_t ARRAY_SUBCRIPTOR_ZERO = 0;
 static constexpr int32_t ARGS_ZERO = 0;
 static constexpr int32_t ARGS_SIZE_ONE = 1;
+static constexpr int32_t ARGS_SIZE_TWO = 2;
 }
 FontManagerAddon::FontManagerAddon()
 {
@@ -56,6 +79,13 @@ napi_value FontManagerAddonInit(napi_env env, napi_value exports)
     BindNativeFunction(env, exports, "installFont", moduleName, FontManagerAddon::InstallFont);
     BindNativeFunction(env, exports, "uninstallFont", moduleName, FontManagerAddon::UninstallFont);
     BindNativeFunction(env, exports, "dataMigration", moduleName, FontManagerAddon::DataMigration);
+    BindNativeFunction(env, exports, "onFontObserver", moduleName, FontManagerAddon::OnFontObserver);
+    BindNativeFunction(env, exports, "offFontObserver", moduleName, FontManagerAddon::OffFontObserver);
+    BindNativeFunction(env, exports, "installScopeFont", moduleName, FontManagerAddon::InstallScopeFont);
+    BindNativeFunction(env, exports, "uninstallScopeFont", moduleName, FontManagerAddon::UninstallScopeFont);
+    BindNativeFunction(env, exports, "getFontScope", moduleName, FontManagerAddon::GetFontScope);
+    napi_value fontScope = FontManagerAddon::CreateFontScopeEnum(env);
+    napi_set_named_property(env, exports, "FontScope", fontScope);
     return CreateJsUndefined(env);
 }
 
@@ -88,11 +118,16 @@ void FontManagerAddon::Complete(napi_env env, napi_status status, void* data)
     if (fontNapiCallback == nullptr) {
         return;
     }
+
     napi_value finalResult = nullptr;
-    napi_status ret = napi_create_int32(env, fontNapiCallback->errCode_, &finalResult);
-    if (ret != napi_ok) {
-        FONT_LOGE("InstallFont: create int result failed");
-        fontNapiCallback->success_ = false;
+    if (fontNapiCallback->isQuery_ && fontNapiCallback->success_) {
+        napi_create_int32(env, fontNapiCallback->queryResult_, &finalResult);
+    } else {
+        napi_status ret = napi_create_int32(env, fontNapiCallback->errCode_, &finalResult);
+        if (ret != napi_ok) {
+            FONT_LOGE("create int result failed");
+            fontNapiCallback->success_ = false;
+        }
     }
 
     napi_value result[] = { nullptr, nullptr };
@@ -156,7 +191,7 @@ auto installFontFunc = [](napi_env env, void* data) {
 
     FontNapiCallback *callback = static_cast<FontNapiCallback*>(data);
     if (callback->value_.empty()) {
-        callback->SetErrorMsg("invalid param", ERR_FILE_NOT_EXISTS);
+        callback->SetErrorMsg("The font does not exist.", ERR_FILE_NOT_EXISTS);
         return;
     }
     int ret = FontManagerKits::GetInstance().InstallFont(callback->value_, callback->errCode_);
@@ -211,7 +246,7 @@ auto uninstallFontFunc = [](napi_env env, void* data) {
 
     FontNapiCallback *callback = static_cast<FontNapiCallback*>(data);
     if (callback->value_.empty()) {
-        callback->SetErrorMsg("invalid param", ERR_UNINSTALL_FILE_NOT_EXISTS);
+        callback->SetErrorMsg("The font file does not exist.", ERR_UNINSTALL_FILE_NOT_EXISTS);
         return;
     }
     int ret = FontManagerKits::GetInstance().UninstallFont(callback->value_, callback->errCode_);
@@ -343,6 +378,197 @@ std::string FontManagerAddon::GetDataMigrationErrMsg(int32_t errCode)
         return g_DataMigrationErrMsgMap.at(errCode);
     }
     return g_DataMigrationErrMsgMap.at(ERR_SYSTEM_ERROR);
+}
+
+static std::string GetScopeFontErrMsg(int32_t errCode)
+{
+    auto it = g_ScopeFontErrMsgMap.find(errCode);
+    if (it != g_ScopeFontErrMsgMap.end()) {
+        return g_ScopeFontErrMsgMap.at(errCode);
+    }
+    return g_ScopeFontErrMsgMap.at(ERR_SYSTEM_ERROR);
+}
+
+napi_value FontManagerAddon::CreateFontScopeEnum(napi_env env)
+{
+    napi_value result = nullptr;
+    napi_create_object(env, &result);
+    napi_value appVal = nullptr;
+    napi_value sessionVal = nullptr;
+    napi_create_int32(env, FONT_SCOPE_APP, &appVal);
+    napi_create_int32(env, FONT_SCOPE_SESSION, &sessionVal);
+    napi_set_named_property(env, result, "app", appVal);
+    napi_set_named_property(env, result, "session", sessionVal);
+    return result;
+}
+
+napi_value FontManagerAddon::OnFontObserver(napi_env env, napi_callback_info info)
+{
+    size_t argc = ARGS_SIZE_ONE;
+    napi_value argv[ARGS_SIZE_ONE] = {nullptr};
+    napi_value thisVar = nullptr;
+    void *data = nullptr;
+    napi_get_cb_info(env, info, &argc, argv, &thisVar, &data);
+    if (argc != ARGS_SIZE_ONE) {
+        napi_throw(env, CreateJsError(env, ERR_INVALID_PARAM, GetScopeFontErrMsg(ERR_INVALID_PARAM)));
+        return CreateJsUndefined(env);
+    }
+    napi_value onDied = nullptr;
+    napi_get_named_property(env, argv[ARRAY_SUBCRIPTOR_ZERO], "onServiceDied", &onDied);
+    napi_valuetype type;
+    napi_typeof(env, onDied, &type);
+    if (type != napi_function) {
+        napi_throw(env, CreateJsError(env, ERR_INVALID_PARAM, GetScopeFontErrMsg(ERR_INVALID_PARAM)));
+        return CreateJsUndefined(env);
+    }
+    auto funcRef = std::make_shared<JsFuncRefHolder>(env, onDied);
+    auto agent = sptr<FontClientObserverAgent>::MakeSptr(
+        [env, funcRef]() {
+            auto task = [env, funcRef]() {
+                napi_value callback = nullptr;
+                napi_get_reference_value(env, funcRef->Get(), &callback);
+                if (callback != nullptr) {
+                    napi_value undefined = nullptr;
+                    napi_get_undefined(env, &undefined);
+                    napi_call_function(env, nullptr, callback, 0, &undefined, nullptr);
+                }
+            };
+            if (napi_send_event(env, task, napi_eprio_high) != napi_ok) {
+                FONT_LOGE("OnFontObserver: napi_send_event failed");
+            }
+        });
+    if (agent == nullptr) {
+        napi_throw(env, CreateJsError(env, ERR_SYSTEM_ERROR, GetScopeFontErrMsg(ERR_SYSTEM_ERROR)));
+        return CreateJsUndefined(env);
+    }
+    int32_t ret = FontManagerKits::GetInstance().OnFontObserver(agent);
+    if (ret != ERR_OK) {
+        napi_throw(env, CreateJsError(env, ret, GetScopeFontErrMsg(ret)));
+        return CreateJsUndefined(env);
+    }
+    return CreateJsUndefined(env);
+}
+
+napi_value FontManagerAddon::OffFontObserver(napi_env env, napi_callback_info info)
+{
+    size_t argc = ARGS_SIZE_ONE;
+    napi_value argv[ARGS_SIZE_ONE] = {nullptr};
+    napi_value thisVar = nullptr;
+    void *data = nullptr;
+    napi_get_cb_info(env, info, &argc, argv, &thisVar, &data);
+    if (argc != ARGS_SIZE_ONE) {
+        napi_throw(env, CreateJsError(env, ERR_INVALID_PARAM, GetScopeFontErrMsg(ERR_INVALID_PARAM)));
+        return CreateJsUndefined(env);
+    }
+    auto dummyAgent = sptr<FontClientObserverAgent>::MakeSptr([]() {});
+    if (dummyAgent == nullptr) {
+        napi_throw(env, CreateJsError(env, ERR_SYSTEM_ERROR, GetScopeFontErrMsg(ERR_SYSTEM_ERROR)));
+        return CreateJsUndefined(env);
+    }
+    int32_t ret = FontManagerKits::GetInstance().OffFontObserver(dummyAgent);
+    if (ret != ERR_OK) {
+        napi_throw(env, CreateJsError(env, ret, GetScopeFontErrMsg(ret)));
+        return CreateJsUndefined(env);
+    }
+    return CreateJsUndefined(env);
+}
+
+napi_value FontManagerAddon::ProcessScopeFont(napi_env env, napi_callback_info info,
+    const std::string &name, napi_async_execute_callback execute, bool hasScopeArg)
+{
+    size_t argc = hasScopeArg ? ARGS_SIZE_TWO : ARGS_SIZE_ONE;
+    napi_value argv[ARGS_SIZE_TWO] = {nullptr, nullptr};
+    napi_value thisVar = nullptr;
+    void *data = nullptr;
+    napi_get_cb_info(env, info, &argc, argv, &thisVar, &data);
+    std::unique_ptr<FontNapiCallback> callback = std::make_unique<FontNapiCallback>();
+    callback->value_ = GetResNameOrPath(env, 1, argv);
+    if (callback->value_.empty() && argc > 0) {
+        callback->SetErrorMsg(GetScopeFontErrMsg(ERR_INVALID_PARAM), ERR_INVALID_PARAM);
+    }
+    if (hasScopeArg && argc >= ARGS_SIZE_TWO) {
+        napi_valuetype type;
+        napi_typeof(env, argv[1], &type);
+        if (type == napi_number) {
+            napi_get_value_int32(env, argv[1], &callback->scope_);
+        }
+    }
+    return GetResult(env, callback, name, execute);
+}
+
+napi_value FontManagerAddon::InstallScopeFont(napi_env env, napi_callback_info info)
+{
+    auto execute = [](napi_env env, void* data) {
+        auto *callback = static_cast<FontNapiCallback*>(data);
+        if (callback == nullptr || callback->value_.empty()) {
+            if (callback) callback->SetErrorMsg(GetScopeFontErrMsg(ERR_INVALID_PARAM), ERR_INVALID_PARAM);
+            return;
+        }
+        int32_t outValue = 0;
+        int32_t ret = FontManagerKits::GetInstance().InstallScopeFont(
+            callback->value_, callback->scope_, outValue);
+        if (ret != ERR_OK) {
+            callback->SetErrorMsg(GetScopeFontErrMsg(ret), ret);
+        } else if (outValue != ERR_OK) {
+            callback->SetErrorMsg(GetScopeFontErrMsg(outValue), outValue);
+        }
+    };
+    return ProcessScopeFont(env, info, "InstallScopeFont", execute, true);
+}
+
+napi_value FontManagerAddon::UninstallScopeFont(napi_env env, napi_callback_info info)
+{
+    auto execute = [](napi_env env, void* data) {
+        auto *callback = static_cast<FontNapiCallback*>(data);
+        if (callback == nullptr || callback->value_.empty()) {
+            if (callback) callback->SetErrorMsg(GetScopeFontErrMsg(ERR_INVALID_PARAM), ERR_INVALID_PARAM);
+            return;
+        }
+        int32_t outValue = 0;
+        int32_t ret = FontManagerKits::GetInstance().UninstallScopeFont(callback->value_, outValue);
+        if (ret != ERR_OK) {
+            callback->SetErrorMsg(GetScopeFontErrMsg(ret), ret);
+        } else if (outValue != ERR_OK) {
+            callback->SetErrorMsg(GetScopeFontErrMsg(outValue), outValue);
+        }
+    };
+    return ProcessScopeFont(env, info, "UninstallScopeFont", execute, false);
+}
+
+napi_value FontManagerAddon::ProcessScopeFontQuery(napi_env env, napi_callback_info info,
+    const std::string &name, napi_async_execute_callback execute)
+{
+    size_t argc = ARGS_SIZE_ONE;
+    napi_value argv[ARGS_SIZE_ONE] = {nullptr};
+    napi_value thisVar = nullptr;
+    void *data = nullptr;
+    napi_get_cb_info(env, info, &argc, argv, &thisVar, &data);
+    std::unique_ptr<FontNapiCallback> callback = std::make_unique<FontNapiCallback>();
+    callback->isQuery_ = true;
+    callback->value_ = GetResNameOrPath(env, argc, argv);
+    if (callback->value_.empty() && argc > 0) {
+        callback->SetErrorMsg(GetScopeFontErrMsg(ERR_INVALID_PARAM), ERR_INVALID_PARAM);
+    }
+    return GetResult(env, callback, name, execute);
+}
+
+napi_value FontManagerAddon::GetFontScope(napi_env env, napi_callback_info info)
+{
+    auto execute = [](napi_env env, void* data) {
+        auto *callback = static_cast<FontNapiCallback*>(data);
+        if (callback == nullptr || callback->value_.empty()) {
+            if (callback) callback->SetErrorMsg(GetScopeFontErrMsg(ERR_INVALID_PARAM), ERR_INVALID_PARAM);
+            return;
+        }
+        int32_t outValue = 0;
+        int32_t ret = FontManagerKits::GetInstance().GetFontScope(callback->value_, outValue);
+        if (ret != ERR_OK) {
+            callback->SetErrorMsg(GetScopeFontErrMsg(ret), ret);
+        } else {
+            callback->queryResult_ = outValue;
+        }
+    };
+    return ProcessScopeFontQuery(env, info, "GetFontScope", execute);
 }
 } // namespace FontManager
 } // namespace Global

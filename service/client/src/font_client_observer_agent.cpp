@@ -8,27 +8,24 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND KIND, either express or implied.
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 
-#include "font_manager_inner_api.h"
-#include "font_define.h"
-#include "font_manager_client.h"
-#include "singleton.h"
+#include "font_client_observer_agent.h"
+#include "font_hilog.h"
 
 namespace OHOS {
 namespace Global {
 namespace FontManager {
-int32_t FontManagerInnerApi::InstallFont(const std::string &fontPath, int32_t userId)
+ErrCode FontClientObserverAgent::OnServiceDied()
 {
-    return DelayedRefSingleton<FontManagerClient>::GetInstance().InstallFontWithUserId(fontPath, userId);
-}
-
-int32_t FontManagerInnerApi::UninstallFont(const std::string &fontName, int32_t userId)
-{
-    return DelayedRefSingleton<FontManagerClient>::GetInstance().UninstallFontWithUserId(fontName, userId);
+    FONT_LOGI("FontClientObserverAgent OnServiceDied");
+    if (callback_) {
+        callback_();
+    }
+    return ERR_OK;
 }
 } // namespace FontManager
 } // namespace Global
