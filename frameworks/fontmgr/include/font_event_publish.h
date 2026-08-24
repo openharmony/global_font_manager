@@ -31,6 +31,8 @@ enum FontEventType {
 class FontEventPublish {
 public:
     static bool PublishFontUpdate(const FontEventType eventType, const std::string &formatName, const int32_t &userId);
+    static bool PublishFontUpdate(const FontEventType eventType, const std::string &formatName,
+        const int32_t &userId, const std::string &bundleName);
 };
 } // namespace FontManager
 } // namespace Global

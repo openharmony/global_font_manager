@@ -27,6 +27,7 @@ namespace FontManager {
 static const std::string FONT_UPDATE_FOR_POLICY = "usual.event.FONT_UPDATE_FOR_POLICY";
 static const std::string FONT_EVENT_TYPE = "eventType";
 static const std::string FONT_EVENT_FONT_NAMES = "fontFullNames";
+static const std::string FONT_EVENT_BUNDLE_NAME = "bundleName";
 
 bool FontEventPublish::PublishFontUpdate(const FontEventType eventType, const std::string &fullName,
     const int32_t &userId)
@@ -38,6 +39,22 @@ bool FontEventPublish::PublishFontUpdate(const FontEventType eventType, const st
     updateWant.SetAction(FONT_UPDATE_FOR_POLICY);
     updateWant.SetParam(FONT_EVENT_TYPE, eventType);
     updateWant.SetParam(FONT_EVENT_FONT_NAMES, fullName);
+
+    OHOS::EventFwk::CommonEventData event(updateWant);
+    return OHOS::EventFwk::CommonEventManager::PublishCommonEventAsUser(event, publishInfo, userId);
+}
+
+bool FontEventPublish::PublishFontUpdate(const FontEventType eventType, const std::string &fullName,
+    const int32_t &userId, const std::string &bundleName)
+{
+    OHOS::EventFwk::CommonEventPublishInfo publishInfo;
+    publishInfo.SetOrdered(false);
+
+    OHOS::AAFwk::Want updateWant;
+    updateWant.SetAction(FONT_UPDATE_FOR_POLICY);
+    updateWant.SetParam(FONT_EVENT_TYPE, eventType);
+    updateWant.SetParam(FONT_EVENT_FONT_NAMES, fullName);
+    updateWant.SetParam(FONT_EVENT_BUNDLE_NAME, bundleName);
 
     OHOS::EventFwk::CommonEventData event(updateWant);
     return OHOS::EventFwk::CommonEventManager::PublishCommonEventAsUser(event, publishInfo, userId);
