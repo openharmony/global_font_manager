@@ -202,8 +202,7 @@ int32_t FontManager::InstallScopeFont(const ScopeFontInstallInfo &info)
     }
     HisyseventAdapter::GetInstance()->CollectUserDataSize(installPath);
     StorageManagerAdapter::GetInstance()->ReportFontBundleStats(info.userId, installPath);
-    FontEventPublish::PublishFontUpdate(FontEventType::INSTALL, GetFormatFullName(fullNames),
-        info.userId, info.bundleName);
+    FontEventPublish::PublishFontUpdate(FontEventType::INSTALL, GetFormatFullName(fullNames), info.userId);
     FONT_LOGI("InstallScopeFont success, srcPath:%{public}s, scope:%{public}d", info.srcPath.c_str(), info.scope);
     return ERR_OK;
 }
@@ -294,7 +293,7 @@ int32_t FontManager::UninstallScopeFont(const std::string &srcPath, const std::s
     HisyseventAdapter::GetInstance()->CollectUserDataSize(installPath);
     StorageManagerAdapter::GetInstance()->ReportFontBundleStats(userId, installPath);
     FontEventPublish::PublishFontUpdate(FontEventType::UNINSTALL,
-        GetFormatFullName(record->fullNames), userId, record->bundleName);
+        GetFormatFullName(record->fullNames), userId);
     FONT_LOGI("UninstallScopeFont success, srcPath=%{public}s", srcPath.c_str());
     return ERR_OK;
 }
@@ -320,7 +319,7 @@ int32_t FontManager::CleanupAppScopeFonts(const std::string &appIdentifier, int3
     std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX;
     auto& fontConfig = SafeGetOrCreateConfig(userId, installPath + FONT_CONFIG_FILE);
     auto records = fontConfig.GetFontRecordsByAppId(appIdentifier);
-    std::unordered_map<std::string, std::string> removedNamesByBundle;
+    std::string removedNames;
     for (const auto &record : records) {
         std::string realPath = SandBoxPathToRealPath(installPath, record.fontPath);
         if (FontManagerUtils::CheckPathExist(realPath)) {
@@ -331,16 +330,13 @@ int32_t FontManager::CleanupAppScopeFonts(const std::string &appIdentifier, int3
         fontConfig.DeleteScopeFontRecordByUrl(record.srcPath);
         std::string names = GetFormatFullName(record.fullNames);
         if (!names.empty()) {
-            std::string &bucket = removedNamesByBundle[record.bundleName];
-            bucket += bucket.empty() ? names : "," + names;
+            removedNames += removedNames.empty() ? names : "," + names;
         }
     }
     HisyseventAdapter::GetInstance()->CollectUserDataSize(installPath);
     if (!records.empty()) {
         StorageManagerAdapter::GetInstance()->ReportFontBundleStats(userId, installPath);
-        for (const auto &[bundle, names] : removedNamesByBundle) {
-            FontEventPublish::PublishFontUpdate(FontEventType::UNINSTALL, names, userId, bundle);
-        }
+        FontEventPublish::PublishFontUpdate(FontEventType::UNINSTALL, removedNames, userId);
     }
     std::string appDir = GetAppInstallPath(userId, appIdentifier);
     FontManagerUtils::DeleteDir(appDir, true);
@@ -354,7 +350,7 @@ int32_t FontManager::CleanupScopeFontsByUser(int32_t userId)
     std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX;
     auto& fontConfig = SafeGetOrCreateConfig(userId, installPath + FONT_CONFIG_FILE);
     auto scopeRecords = fontConfig.GetScopeFontRecords();
-    std::unordered_map<std::string, std::string> removedNamesByBundle;
+    std::string removedNames;
     for (const auto &record : scopeRecords) {
         std::string realPath = SandBoxPathToRealPath(installPath, record.fontPath);
         if (FontManagerUtils::CheckPathExist(realPath)) {
@@ -365,16 +361,13 @@ int32_t FontManager::CleanupScopeFontsByUser(int32_t userId)
         fontConfig.DeleteScopeFontRecordByUrl(record.srcPath);
         std::string names = GetFormatFullName(record.fullNames);
         if (!names.empty()) {
-            std::string &bucket = removedNamesByBundle[record.bundleName];
-            bucket += bucket.empty() ? names : "," + names;
+            removedNames += removedNames.empty() ? names : "," + names;
         }
     }
     HisyseventAdapter::GetInstance()->CollectUserDataSize(installPath);
     if (!scopeRecords.empty()) {
         StorageManagerAdapter::GetInstance()->ReportFontBundleStats(userId, installPath);
-        for (const auto &[bundle, names] : removedNamesByBundle) {
-            FontEventPublish::PublishFontUpdate(FontEventType::UNINSTALL, names, userId, bundle);
-        }
+        FontEventPublish::PublishFontUpdate(FontEventType::UNINSTALL, removedNames, userId);
     }
     FONT_LOGI("CleanupScopeFontsByUser done, userId=%{public}d, count=%{public}zu",
         userId, scopeRecords.size());
@@ -386,7 +379,7 @@ int32_t FontManager::CleanupAppScopeFontsByUser(int32_t userId)
     std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX;
     auto& fontConfig = SafeGetOrCreateConfig(userId, installPath + FONT_CONFIG_FILE);
     auto appRecords = fontConfig.GetAppScopeFontRecords();
-    std::unordered_map<std::string, std::string> removedNamesByBundle;
+    std::string removedNames;
     for (const auto &record : appRecords) {
         std::string realPath = SandBoxPathToRealPath(installPath, record.fontPath);
         if (FontManagerUtils::CheckPathExist(realPath)) {
@@ -397,16 +390,13 @@ int32_t FontManager::CleanupAppScopeFontsByUser(int32_t userId)
         fontConfig.DeleteScopeFontRecordByUrl(record.srcPath);
         std::string names = GetFormatFullName(record.fullNames);
         if (!names.empty()) {
-            std::string &bucket = removedNamesByBundle[record.bundleName];
-            bucket += bucket.empty() ? names : "," + names;
+            removedNames += removedNames.empty() ? names : "," + names;
         }
     }
     HisyseventAdapter::GetInstance()->CollectUserDataSize(installPath);
     if (!appRecords.empty()) {
         StorageManagerAdapter::GetInstance()->ReportFontBundleStats(userId, installPath);
-        for (const auto &[bundle, names] : removedNamesByBundle) {
-            FontEventPublish::PublishFontUpdate(FontEventType::UNINSTALL, names, userId, bundle);
-        }
+        FontEventPublish::PublishFontUpdate(FontEventType::UNINSTALL, removedNames, userId);
     }
     FONT_LOGI("CleanupAppScopeFontsByUser done, userId=%{public}d, count=%{public}zu",
         userId, appRecords.size());
