@@ -45,6 +45,7 @@ public:
     int32_t CleanupAppScopeFontsByUser(int32_t userId);
 
 private:
+    static int32_t GetMaxInstallNum();
     std::string GetFormatFullName(const std::vector<std::string> &fullNameVector);
     std::string CopyFileForInstall(const std::string &installPath, const std::string &fileName, const int32_t &fd);
     std::string SandBoxPathToRealPath(const std::string &installPath, const std::string &path);

@@ -265,7 +265,7 @@ File-scope constants in source files:
 
 | Constant | File | Value | Description |
 |----------|------|-------|-------------|
-| `MAX_INSTALL_NUM` | `font_manager.cpp` | `200` | Max installable fonts per user |
+| `MAX_INSTALL_NUM` | `font_manager.cpp` | `200` (default, via `const.fontmanager.maxinstallnum` param) | Max installable fonts per user |
 | `MAX_FONT_FILE_SIZE` | `font_manager_utils.cpp` | `1024*1024*1024` (1GB) | Max font file size |
 | `DELAY_MILLISECONDS_FOR_UNLOAD_SA` | `font_manager_server.cpp` | `10000` | 10s auto-unload delay |
 | `HEARTBEAT_INTERVAL` | `data_migration_manager.cpp` | `60` | Heartbeat seconds |
@@ -283,7 +283,7 @@ The core font management logic, built as a library consumed by the server.
 Core install/uninstall business logic. Singleton via `DelayedSingleton<FontManager>`.
 
 **User-level methods:**
-- `int32_t InstallFont(const int32_t &fd, const int32_t userId)` - Install font from fd. Validates path, checks duplicates (`ERR_INSTALLED_ALRADY`), enforces `MAX_INSTALL_NUM=200`, copies via temp dir + rename, inserts config record, reports to HiSysEvent/StorageManager, publishes `FontEventType::INSTALL` event.
+- `int32_t InstallFont(const int32_t &fd, const int32_t userId)` - Install font from fd. Validates path, checks duplicates (`ERR_INSTALLED_ALRADY`), enforces max install count (default 200, configurable via `const.fontmanager.maxinstallnum` param), copies via temp dir + rename, inserts config record, reports to HiSysEvent/StorageManager, publishes `FontEventType::INSTALL` event.
 - `int32_t UninstallFont(const std::string &fontFullName, const int32_t userId)` - Uninstall by full name.
 
 **Scope font methods:**
@@ -749,7 +749,7 @@ Exposed header: `service/inner_api/include/font_manager_inner_api.h` from target
 
 - **Supported formats**: TTF (1 fullname) and TTC (multiple fullnames) via `OHOS::Rosen::FontToolSet::GetInstance().GetFontFullName(fd)` from `graphic_2d:rosen_text`
 - **Max file size**: 1024 MB (1GB) - enforced in `GetFullNamesByFd` (fstat precheck before parsing) AND `CopyFileByFd` (fstat before sendfile). Double protection.
-- **Max install count**: 200 fonts per user (`MAX_INSTALL_NUM`)
+- **Max install count**: 200 fonts per user (default, configurable via `const.fontmanager.maxinstallnum` param)
 - **File copy**: `sendfile()` syscall with EINTR retry loop, `chmod 0644`
 - **Duplicate handling (user-level)**: If target file exists, prepend timestamp `YYYYMMDD-HHMMSS_` to filename
 - **Duplicate handling (scope)**: Same `srcPath` (URL) → `ERR_INSTALLED_ALRADY`. Same font name → `ERR_INSTALLED_ALRADY`.

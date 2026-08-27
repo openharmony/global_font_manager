@@ -28,6 +28,7 @@
 #include "font_config.h"
 #include "font_manager_utils.h"
 #include "font_define.h"
+#include "parameters.h"
 #include "directory_ex.h"
 #include "permission_common.h"
 
@@ -196,17 +197,26 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest005, TestSize.Level1)
 
 /**
  * @tc.name: FontManagerFuncTest006
- * @tc.desc: Test FontManager ERR_MAX_FILE_COUNT more than 200 case
+ * @tc.desc: Test FontManager ERR_MAX_FILE_COUNT at max count case
  * @tc.type: FUNC
  */
 HWTEST_F(FontManagerTest, FontManagerFuncTest006, TestSize.Level1)
 {
     int fd = open("/data/test/200install_fontconfig.json", O_RDONLY);
     EXPECT_EQ(FontManagerUtils::CopyFile(fd, FONT_CONFIG_FILE_TEST), true);
+    if (fd >= 0) {
+        close(fd);
+    }
     fd = open(FONT_PATH.c_str(), O_RDONLY);
     EXPECT_EQ(fd >= 0, true);
     int ret = manager_->InstallFont(fd, TEST_USERID);
-    EXPECT_EQ(ret, ERR_MAX_FILE_COUNT);
+    int32_t maxInstallNum = OHOS::system::GetIntParameter<int32_t>(MAX_INSTALL_NUM_PARAM_KEY,
+        DEFAULT_MAX_INSTALL_NUM);
+    if (maxInstallNum > DEFAULT_MAX_INSTALL_NUM) {
+        EXPECT_EQ(ret, ERR_OK);
+    } else {
+        EXPECT_EQ(ret, ERR_MAX_FILE_COUNT);
+    }
     if (fd >= 0) {
         close(fd);
     }

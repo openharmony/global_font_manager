@@ -24,17 +24,29 @@
 #include "hisysevent_adapter.h"
 #include "storage_manager_adapter.h"
 #include "font_define.h"
+#include "parameters.h"
 
 namespace OHOS {
 namespace Global {
 namespace FontManager {
-static constexpr int32_t MAX_INSTALL_NUM = 200;
 FontManager::FontManager()
 {
 }
 
 FontManager::~FontManager()
 {
+}
+
+int32_t FontManager::GetMaxInstallNum()
+{
+    int32_t maxInstallNum = OHOS::system::GetIntParameter<int32_t>(MAX_INSTALL_NUM_PARAM_KEY,
+        DEFAULT_MAX_INSTALL_NUM);
+    if (maxInstallNum < DEFAULT_MAX_INSTALL_NUM) {
+        FONT_LOGE("Invalid max install num %{public}d, fallback to default %{public}d",
+            maxInstallNum, DEFAULT_MAX_INSTALL_NUM);
+        return DEFAULT_MAX_INSTALL_NUM;
+    }
+    return maxInstallNum;
 }
 
 int32_t FontManager::InstallFont(const int32_t &fd, const int32_t userId)
@@ -61,8 +73,9 @@ int32_t FontManager::InstallFont(const int32_t &fd, const int32_t userId)
             return ERR_INSTALL_FAIL;
         }
     }
-    if (fontConfig.GetInstalledFontsNum() >= MAX_INSTALL_NUM) {
-        FONT_LOGE("FontManager: Max install count %{public}d reached", MAX_INSTALL_NUM);
+    int32_t maxInstallNum = GetMaxInstallNum();
+    if (fontConfig.GetInstalledFontsNum() >= maxInstallNum) {
+        FONT_LOGE("FontManager: Max install count %{public}d reached", maxInstallNum);
         return ERR_MAX_FILE_COUNT;
     }
     std::string fileName = FontManagerUtils::GetFileName(FontManagerUtils::GetFilePathByFd(fd));
@@ -215,7 +228,8 @@ int32_t FontManager::ValidateScopeFontForInstall(FontConfig& fontConfig, const s
         FONT_LOGE("InstallScopeFont: srcPath already installed");
         return ERR_INSTALLED_ALRADY;
     }
-    if (fontConfig.GetTotalInstalledFontsNum() >= MAX_INSTALL_NUM) {
+    int32_t maxInstallNum = GetMaxInstallNum();
+    if (fontConfig.GetTotalInstalledFontsNum() >= maxInstallNum) {
         FONT_LOGE("InstallScopeFont: max count reached");
         return ERR_MAX_FILE_COUNT;
     }
