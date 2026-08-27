@@ -66,6 +66,8 @@ inline const std::string INSTALL_PATH_SUFFIX = "/for-all-app/fonts/";
 inline const std::string FONT_CONFIG_FILE = "install_fontconfig.json";
 inline const std::string TEMP_FILE = "temp/";
 inline const std::string EXT_STORAGE_BUNDLE_PARAM_KEY = "const.fontmanager.extstoragebundle";
+inline const std::string MAX_INSTALL_NUM_PARAM_KEY = "const.fontmanager.maxinstallnum";
+inline constexpr int32_t DEFAULT_MAX_INSTALL_NUM = 200;
 
 // Scope font management constants
 inline const std::string APP_FONT_DIR_PREFIX = "app_";  // app-level font subdirectory prefix
