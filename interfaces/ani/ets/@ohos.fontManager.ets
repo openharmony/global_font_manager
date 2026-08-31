@@ -52,9 +52,9 @@ export default namespace fontManager {
 
   export native function dataMigration(callback: DataMigrationCallback): int;
 
-  export native function onFontObserver(observer: FontClientObserver): int;
+  export native function onFontObserver(observer: FontClientObserver): void;
 
-  export native function offFontObserver(observer: FontClientObserver): int;
+  export native function offFontObserver(observer: FontClientObserver): void;
 
   native function nativeInstallScopeFont(url: string, scope: int): int;
 
