@@ -168,48 +168,58 @@ private:
     ani_ref observerRef_;
 };
 
-ani_int FontManagerAni::OnFontObserver(ani_env* env, ani_object observer)
+void FontManagerAni::OnFontObserver(ani_env* env, ani_object observer)
 {
     if (observer == nullptr) {
         ThrowError(env, ERR_INVALID_PARAM);
-        return ERR_INVALID_PARAM;
+        return;
+    }
+    ani_ref onDiedRef;
+    env->Object_GetPropertyByName_Ref(static_cast<ani_object>(observer), "onServiceDied", &onDiedRef);
+    ani_boolean isUndefined = ANI_FALSE;
+    env->Reference_IsUndefined(onDiedRef, &isUndefined);
+    if (isUndefined) {
+        ThrowError(env, ERR_INVALID_PARAM);
+        return;
     }
     auto aniRef = std::make_shared<AniObserverRef>(env, observer);
     if (!aniRef->IsValid()) {
         ThrowError(env, ERR_SYSTEM_ERROR);
-        return ERR_SYSTEM_ERROR;
+        return;
     }
     auto agent = sptr<FontClientObserverAgent>::MakeSptr([aniRef]() {
         aniRef->CallOnServiceDied();
     });
     if (agent == nullptr) {
         ThrowError(env, ERR_SYSTEM_ERROR);
-        return ERR_SYSTEM_ERROR;
+        return;
     }
     int32_t ret = FontManagerKits::GetInstance().OnFontObserver(agent);
     if (ret != ERR_OK) {
         ThrowError(env, ret);
     }
-    return ret;
 }
 
-ani_int FontManagerAni::OffFontObserver(ani_env* env, ani_object observer)
+void FontManagerAni::OffFontObserver(ani_env* env, ani_object observer)
 {
     auto dummyAgent = sptr<FontClientObserverAgent>::MakeSptr([](){});
     if (dummyAgent == nullptr) {
         ThrowError(env, ERR_SYSTEM_ERROR);
-        return ERR_SYSTEM_ERROR;
+        return;
     }
     int32_t ret = FontManagerKits::GetInstance().OffFontObserver(dummyAgent);
     if (ret != ERR_OK) {
         ThrowError(env, ret);
     }
-    return ret;
 }
 
 ani_int FontManagerAni::InstallScopeFont(ani_env* env, ani_string ani_url, ani_int ani_scope)
 {
     std::string url = ANIStringToStdString(env, ani_url);
+    if (url.empty()) {
+        ThrowError(env, ERR_INVALID_PARAM);
+        return ERR_INVALID_PARAM;
+    }
     int32_t scope = ani_scope;
     int32_t outValue = 0;
     int32_t ret = FontManagerKits::GetInstance().InstallScopeFont(url, scope, outValue);
@@ -226,6 +236,10 @@ ani_int FontManagerAni::InstallScopeFont(ani_env* env, ani_string ani_url, ani_i
 ani_int FontManagerAni::UninstallScopeFont(ani_env* env, ani_string ani_url)
 {
     std::string url = ANIStringToStdString(env, ani_url);
+    if (url.empty()) {
+        ThrowError(env, ERR_INVALID_PARAM);
+        return ERR_INVALID_PARAM;
+    }
     int32_t outValue = 0;
     int32_t ret = FontManagerKits::GetInstance().UninstallScopeFont(url, outValue);
     if (ret != ERR_OK) {
@@ -241,6 +255,10 @@ ani_int FontManagerAni::UninstallScopeFont(ani_env* env, ani_string ani_url)
 ani_int FontManagerAni::GetFontScope(ani_env* env, ani_string ani_url)
 {
     std::string url = ANIStringToStdString(env, ani_url);
+    if (url.empty()) {
+        ThrowError(env, ERR_INVALID_PARAM);
+        return ERR_INVALID_PARAM;
+    }
     int32_t outValue = 0;
     int32_t ret = FontManagerKits::GetInstance().GetFontScope(url, outValue);
     if (ret != ERR_OK) {
