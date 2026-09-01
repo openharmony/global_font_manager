@@ -15,8 +15,8 @@ The `font_manager` component (`@ohos.fontManager`, version 5.0) is part of the O
 | Scope | Value | Lifecycle | Cleanup Trigger | Permission |
 |-------|-------|-----------|-----------------|------------|
 | User-level | -1 (default/legacy) | Persistent | Manual uninstall only | `ohos.permission.UPDATE_FONT` |
-| App-level | 0 (`FONT_SCOPE_APP`) | While app registered | App exit / SA restart / boot | `ohos.permission.UPDATE_SCOPE_FONT` |
-| Session-level | 1 (`FONT_SCOPE_SESSION`) | Current boot session | Boot only | `ohos.permission.UPDATE_SCOPE_FONT` |
+| App-level | 0 (`FONT_SCOPE_APP`) | While app registered | App exit / SA exit / account stopping / boot | `ohos.permission.UPDATE_SCOPE_FONT` |
+| Session-level | 1 (`FONT_SCOPE_SESSION`) | Current boot session | Account stopping / boot | `ohos.permission.UPDATE_SCOPE_FONT` |
 
 ## Build System
 
@@ -139,9 +139,10 @@ enum FontErrorCode {
     ERR_SYSTEM_ERROR = 31100110,
     ERR_DATA_MIGRATIONING = 31100111,
     // Scope font management (third-party app-level / session-level)
-    ERR_SCOPE_FONT_REPEATED_REGISTER = 31100501,
-    ERR_SCOPE_FONT_EXCEED_REGISTER_LIMIT = 31100502,
-    ERR_SCOPE_FONT_NOT_REGISTERED = 31100503,
+    ERR_SCOPE_FONT_NOT_FOUND = 31100112,
+    ERR_SCOPE_FONT_REPEATED_REGISTER = 31100113,
+    ERR_SCOPE_FONT_EXCEED_REGISTER_LIMIT = 31100114,
+    ERR_SCOPE_FONT_NOT_REGISTERED = 31100115,
 };
 ```
 
@@ -289,7 +290,7 @@ Core install/uninstall business logic. Singleton via `DelayedSingleton<FontManag
 **Scope font methods:**
 - `int32_t InstallScopeFont(const ScopeFontInstallInfo &info)` - Install app/session-level font. Upgrades config version, validates srcPath/name dedup, copies to `app_<tokenId>/` or `session_<tokenId>/` subdirectory.
 - `int32_t UninstallScopeFont(const std::string &srcPath, const std::string &bundleName, int32_t userId)` - Uninstall by srcPath (URL).
-- `int32_t GetFontScope(const std::string &srcPath, int32_t userId)` - Query scope by srcPath. Returns `FONT_SCOPE_NONE` (-1) if not found.
+- `int32_t GetFontScope(const std::string &srcPath, const std::string &bundleName, int32_t userId)` - Query scope by srcPath. Returns `ERR_SCOPE_FONT_NOT_FOUND` (31100112) if not found.
 - `int32_t CleanupAppScopeFonts(const std::string &appIdentifier, int32_t userId)` - Clean all app-level fonts for a specific app (called on app death/unregister).
 - `int32_t CleanupScopeFontsByUser(int32_t userId)` - Clean all scope fonts (app + session) for a user (boot/user stopping).
 - `int32_t CleanupAppScopeFontsByUser(int32_t userId)` - Clean only app-level (scope=0) fonts for a user (SA restart). Session-level fonts preserved.
@@ -639,10 +640,12 @@ Static methods (inner kits, exposed header):
 ### FontManagerAddon (`font_manager_addon.h/.cpp`)
 - Init: `FontManagerAddonInit()` binds `installFont`, `uninstallFont`, `dataMigration`, `onFontObserver`, `offFontObserver`, `installScopeFont`, `uninstallScopeFont`, `getFontScope`
 - User-level install/uninstall: Async work (`ProcessFontByValue`), Promise + callback
-- Scope font install/uninstall/getScope: Async work, Promise + callback
-- `OnFontObserver`/`OffFontObserver`: Synchronous, creates `FontClientObserverAgent`
+- Scope font install/uninstall: Async work, returns `Promise<void>` (resolve undefined on success, reject BusinessError on failure)
+- Scope font getScope: Async work, returns `Promise<FontScope>` (resolve FontScope on success, reject BusinessError on failure)
+- `OnFontObserver`/`OffFontObserver`: Synchronous, returns `void` (throws BusinessError on failure), creates `FontClientObserverAgent`
+- `FontScope` enum exposed as `FontScope.APP` (0) and `FontScope.SESSION` (1)
 
-Error message mapping includes all scope font error codes (31100501-31100503).
+Error message mapping includes all scope font error codes (31100112-31100115).
 
 ### JsDataMigrationListener (`js_data_migration_listener.h/.cpp`)
 Implements `IDataMigrationListener`. Dispatches events via `napi_send_event` (high priority).
@@ -653,13 +656,13 @@ Inherits `NoCopyable`. Holds `napi_ref` to JS function. Destructor deletes refer
 ## ANI Bindings (`interfaces/ani/`)
 
 ### ArkTS API (`ets/@ohos.fontManager.ets`)
-- `enum FontScope { app = 0, session = 1 }`
+- `enum FontScope { APP = 0, SESSION = 1 }`
 - `interface FontClientObserver { onServiceDied(): void }`
-- `function onFontObserver(observer: FontClientObserver): int`
-- `function offFontObserver(observer: FontClientObserver): int`
-- `function installScopeFont(url: string, scope: FontScope): Promise<int>`
-- `function uninstallScopeFont(url: string): Promise<int>`
-- `function getFontScope(url: string): Promise<FontScope | null>` (null if not installed)
+- `function onFontObserver(observer: FontClientObserver): void`
+- `function offFontObserver(observer: FontClientObserver): void`
+- `function installScopeFont(url: string, scope: FontScope): Promise<void>`
+- `function uninstallScopeFont(url: string): Promise<void>`
+- `function getFontScope(url: string): Promise<FontScope>`
 - User-level: `installFont`, `uninstallFont`, `dataMigration` (wrapped in `taskpool.execute`)
 
 ### FontManagerAni (`font_manager_ani.h/.cpp`)

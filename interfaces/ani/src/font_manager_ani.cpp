@@ -47,9 +47,9 @@ static const std::unordered_map<int, std::string> errorMsg = {
     {ERR_SYSTEM_ERROR, "Call failed due to system error."},
     {ERR_DATA_MIGRATIONING, "Data migration is in progress."},
     {ERR_SCOPE_FONT_NOT_FOUND, "The scope font is not found."},
-    {ERR_SCOPE_FONT_REPEATED_REGISTER, "Font observer already registered."},
-    {ERR_SCOPE_FONT_EXCEED_REGISTER_LIMIT, "Exceeded maximum number of font observers."},
-    {ERR_SCOPE_FONT_NOT_REGISTERED, "Font observer not registered."},
+    {ERR_SCOPE_FONT_REPEATED_REGISTER, "The font observer is already registered."},
+    {ERR_SCOPE_FONT_EXCEED_REGISTER_LIMIT, "The maximum number of font observers has been reached."},
+    {ERR_SCOPE_FONT_NOT_REGISTERED, "The font observer is not registered."},
 };
 
 ani_int FontManagerAni::InstallFont(ani_env* env, ani_string ani_path)
