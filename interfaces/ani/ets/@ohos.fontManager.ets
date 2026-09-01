@@ -90,7 +90,7 @@ export default namespace fontManager {
     return new Promise<void>((resolve, reject) => {
       taskpool.execute((): int => {
           return nativeInstallScopeFont(url, scope);
-      }).then(() => {
+      }).then((content: Any) => {
           resolve();
       }, (err: Error): void => {
           reject(err);
@@ -102,7 +102,7 @@ export default namespace fontManager {
     return new Promise<void>((resolve, reject) => {
       taskpool.execute((): int => {
           return nativeUninstallScopeFont(url);
-      }).then(() => {
+      }).then((content: Any) => {
           resolve();
       }, (err: Error): void => {
           reject(err);
