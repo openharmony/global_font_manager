@@ -668,7 +668,8 @@ Inherits `NoCopyable`. Holds `napi_ref` to JS function. Destructor deletes refer
 ### FontManagerAni (`font_manager_ani.h/.cpp`)
 - `OnFontObserver`/`OffFontObserver`: Creates `FontClientObserverAgent` with `AniObserverRef` helper
 - `AniObserverRef`: Cross-thread ANI callback via `ani_vm*` + global `ani_ref`, uses `Object_CallMethodByName_Void(obj, "onServiceDied", ":")`
-- `InstallScopeFont`/`UninstallScopeFont`/`GetFontScope`: Synchronous native functions
+- `InstallScopeFont`/`UninstallScopeFont`: Synchronous native functions returning `void` (throw BusinessError on error); wrapped in `taskpool.execute((): void => ...)` returning `Promise<void>`
+- `GetFontScope`: Synchronous native function returning `ani_int` (scope value); wrapped in `taskpool.execute((): int => ...)` returning `Promise<FontScope>`
 
 ## System Ability Configuration
 

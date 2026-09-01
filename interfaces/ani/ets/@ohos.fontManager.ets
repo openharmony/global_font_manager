@@ -56,9 +56,9 @@ export default namespace fontManager {
 
   export native function offFontObserver(observer: FontClientObserver): void;
 
-  native function nativeInstallScopeFont(url: string, scope: int): int;
+  native function nativeInstallScopeFont(url: string, scope: int): void;
 
-  native function nativeUninstallScopeFont(url: string): int;
+  native function nativeUninstallScopeFont(url: string): void;
 
   native function nativeGetFontScope(url: string): int;
 
@@ -88,9 +88,9 @@ export default namespace fontManager {
 
   export function installScopeFont(url: string, scope: FontScope): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      taskpool.execute((): int => {
-          return nativeInstallScopeFont(url, scope);
-      }).then((content: Any) => {
+      taskpool.execute((): void => {
+          nativeInstallScopeFont(url, scope);
+      }).then(() => {
           resolve();
       }, (err: Error): void => {
           reject(err);
@@ -100,9 +100,9 @@ export default namespace fontManager {
 
   export function uninstallScopeFont(url: string): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      taskpool.execute((): int => {
-          return nativeUninstallScopeFont(url);
-      }).then((content: Any) => {
+      taskpool.execute((): void => {
+          nativeUninstallScopeFont(url);
+      }).then(() => {
           resolve();
       }, (err: Error): void => {
           reject(err);

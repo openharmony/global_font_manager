@@ -213,43 +213,41 @@ void FontManagerAni::OffFontObserver(ani_env* env, ani_object observer)
     }
 }
 
-ani_int FontManagerAni::InstallScopeFont(ani_env* env, ani_string ani_url, ani_int ani_scope)
+void FontManagerAni::InstallScopeFont(ani_env* env, ani_string ani_url, ani_int ani_scope)
 {
     std::string url = ANIStringToStdString(env, ani_url);
     if (url.empty()) {
         ThrowError(env, ERR_INVALID_PARAM);
-        return ERR_INVALID_PARAM;
+        return;
     }
     int32_t scope = ani_scope;
     int32_t outValue = 0;
     int32_t ret = FontManagerKits::GetInstance().InstallScopeFont(url, scope, outValue);
     if (ret != ERR_OK) {
         ThrowError(env, ret);
-        return ret;
+        return;
     }
     if (outValue != ERR_OK) {
         ThrowError(env, outValue);
     }
-    return outValue;
 }
 
-ani_int FontManagerAni::UninstallScopeFont(ani_env* env, ani_string ani_url)
+void FontManagerAni::UninstallScopeFont(ani_env* env, ani_string ani_url)
 {
     std::string url = ANIStringToStdString(env, ani_url);
     if (url.empty()) {
         ThrowError(env, ERR_INVALID_PARAM);
-        return ERR_INVALID_PARAM;
+        return;
     }
     int32_t outValue = 0;
     int32_t ret = FontManagerKits::GetInstance().UninstallScopeFont(url, outValue);
     if (ret != ERR_OK) {
         ThrowError(env, ret);
-        return ret;
+        return;
     }
     if (outValue != ERR_OK) {
         ThrowError(env, outValue);
     }
-    return outValue;
 }
 
 ani_int FontManagerAni::GetFontScope(ani_env* env, ani_string ani_url)
