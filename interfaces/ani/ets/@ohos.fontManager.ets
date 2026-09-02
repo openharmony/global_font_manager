@@ -38,8 +38,8 @@ export default namespace fontManager {
   }
 
   export enum FontScope {
-    app = 0,
-    session = 1,
+    APP = 0,
+    SESSION = 1,
   }
 
   export interface FontClientObserver {
@@ -56,9 +56,9 @@ export default namespace fontManager {
 
   export native function offFontObserver(observer: FontClientObserver): void;
 
-  native function nativeInstallScopeFont(url: string, scope: int): int;
+  native function nativeInstallScopeFont(url: string, scope: int): void;
 
-  native function nativeUninstallScopeFont(url: string): int;
+  native function nativeUninstallScopeFont(url: string): void;
 
   native function nativeGetFontScope(url: string): int;
 
@@ -86,26 +86,26 @@ export default namespace fontManager {
     });
   };
 
-  export function installScopeFont(url: string, scope: FontScope): Promise<int> {
-    return new Promise<int>((resolve, reject) => {
-      taskpool.execute((): int => {
-          return nativeInstallScopeFont(url, scope);
+  export function installScopeFont(url: string, scope: FontScope): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      taskpool.execute((): void => {
+          nativeInstallScopeFont(url, scope);
       }).then((content: Any) => {
-          resolve(content as int);
+          resolve(undefined);
       }, (err: Error): void => {
-          reject(err);
+          reject(err as BusinessError);
       });
     });
   };
 
-  export function uninstallScopeFont(url: string): Promise<int> {
-    return new Promise<int>((resolve, reject) => {
-      taskpool.execute((): int => {
-          return nativeUninstallScopeFont(url);
+  export function uninstallScopeFont(url: string): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      taskpool.execute((): void => {
+          nativeUninstallScopeFont(url);
       }).then((content: Any) => {
-          resolve(content as int);
+          resolve(undefined);
       }, (err: Error): void => {
-          reject(err);
+          reject(err as BusinessError);
       });
     });
   };

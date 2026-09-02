@@ -50,9 +50,9 @@ static const std::unordered_map<uint32_t, std::string> g_ScopeFontErrMsgMap = {
     {ERR_SYSTEM_ERROR, "Call failed due to system error."},
     {ERR_DATA_MIGRATIONING, "Data migration is in progress."},
     {ERR_SCOPE_FONT_NOT_FOUND, "The scope font is not found."},
-    {ERR_SCOPE_FONT_REPEATED_REGISTER, "Font observer already registered."},
-    {ERR_SCOPE_FONT_EXCEED_REGISTER_LIMIT, "Exceeded maximum number of font observers."},
-    {ERR_SCOPE_FONT_NOT_REGISTERED, "Font observer not registered."}
+    {ERR_SCOPE_FONT_REPEATED_REGISTER, "The font observer is already registered."},
+    {ERR_SCOPE_FONT_EXCEED_REGISTER_LIMIT, "The maximum number of font observers has been reached."},
+    {ERR_SCOPE_FONT_NOT_REGISTERED, "The font observer is not registered."}
 };
 static constexpr int32_t ARRAY_SUBCRIPTOR_ZERO = 0;
 static constexpr int32_t ARGS_ZERO = 0;
@@ -122,6 +122,8 @@ void FontManagerAddon::Complete(napi_env env, napi_status status, void* data)
     napi_value finalResult = nullptr;
     if (fontNapiCallback->isQuery_ && fontNapiCallback->success_) {
         napi_create_int32(env, fontNapiCallback->queryResult_, &finalResult);
+    } else if (fontNapiCallback->isVoidResult_ && fontNapiCallback->success_) {
+        napi_get_undefined(env, &finalResult);
     } else {
         napi_status ret = napi_create_int32(env, fontNapiCallback->errCode_, &finalResult);
         if (ret != napi_ok) {
@@ -397,8 +399,8 @@ napi_value FontManagerAddon::CreateFontScopeEnum(napi_env env)
     napi_value sessionVal = nullptr;
     napi_create_int32(env, FONT_SCOPE_APP, &appVal);
     napi_create_int32(env, FONT_SCOPE_SESSION, &sessionVal);
-    napi_set_named_property(env, result, "app", appVal);
-    napi_set_named_property(env, result, "session", sessionVal);
+    napi_set_named_property(env, result, "APP", appVal);
+    napi_set_named_property(env, result, "SESSION", sessionVal);
     return result;
 }
 
@@ -482,6 +484,7 @@ napi_value FontManagerAddon::ProcessScopeFont(napi_env env, napi_callback_info i
     void *data = nullptr;
     napi_get_cb_info(env, info, &argc, argv, &thisVar, &data);
     std::unique_ptr<FontNapiCallback> callback = std::make_unique<FontNapiCallback>();
+    callback->isVoidResult_ = true;
     callback->value_ = GetResNameOrPath(env, 1, argv);
     if (callback->value_.empty() && argc > 0) {
         callback->SetErrorMsg(GetScopeFontErrMsg(ERR_INVALID_PARAM), ERR_INVALID_PARAM);

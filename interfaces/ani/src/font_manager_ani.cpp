@@ -47,9 +47,9 @@ static const std::unordered_map<int, std::string> errorMsg = {
     {ERR_SYSTEM_ERROR, "Call failed due to system error."},
     {ERR_DATA_MIGRATIONING, "Data migration is in progress."},
     {ERR_SCOPE_FONT_NOT_FOUND, "The scope font is not found."},
-    {ERR_SCOPE_FONT_REPEATED_REGISTER, "Font observer already registered."},
-    {ERR_SCOPE_FONT_EXCEED_REGISTER_LIMIT, "Exceeded maximum number of font observers."},
-    {ERR_SCOPE_FONT_NOT_REGISTERED, "Font observer not registered."},
+    {ERR_SCOPE_FONT_REPEATED_REGISTER, "The font observer is already registered."},
+    {ERR_SCOPE_FONT_EXCEED_REGISTER_LIMIT, "The maximum number of font observers has been reached."},
+    {ERR_SCOPE_FONT_NOT_REGISTERED, "The font observer is not registered."},
 };
 
 ani_int FontManagerAni::InstallFont(ani_env* env, ani_string ani_path)
@@ -213,43 +213,41 @@ void FontManagerAni::OffFontObserver(ani_env* env, ani_object observer)
     }
 }
 
-ani_int FontManagerAni::InstallScopeFont(ani_env* env, ani_string ani_url, ani_int ani_scope)
+void FontManagerAni::InstallScopeFont(ani_env* env, ani_string ani_url, ani_int ani_scope)
 {
     std::string url = ANIStringToStdString(env, ani_url);
     if (url.empty()) {
         ThrowError(env, ERR_INVALID_PARAM);
-        return ERR_INVALID_PARAM;
+        return;
     }
     int32_t scope = ani_scope;
     int32_t outValue = 0;
     int32_t ret = FontManagerKits::GetInstance().InstallScopeFont(url, scope, outValue);
     if (ret != ERR_OK) {
         ThrowError(env, ret);
-        return ret;
+        return;
     }
     if (outValue != ERR_OK) {
         ThrowError(env, outValue);
     }
-    return outValue;
 }
 
-ani_int FontManagerAni::UninstallScopeFont(ani_env* env, ani_string ani_url)
+void FontManagerAni::UninstallScopeFont(ani_env* env, ani_string ani_url)
 {
     std::string url = ANIStringToStdString(env, ani_url);
     if (url.empty()) {
         ThrowError(env, ERR_INVALID_PARAM);
-        return ERR_INVALID_PARAM;
+        return;
     }
     int32_t outValue = 0;
     int32_t ret = FontManagerKits::GetInstance().UninstallScopeFont(url, outValue);
     if (ret != ERR_OK) {
         ThrowError(env, ret);
-        return ret;
+        return;
     }
     if (outValue != ERR_OK) {
         ThrowError(env, outValue);
     }
-    return outValue;
 }
 
 ani_int FontManagerAni::GetFontScope(ani_env* env, ani_string ani_url)

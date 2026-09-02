@@ -28,8 +28,8 @@ public:
     static ani_int DataMigration(ani_env* env, ani_object callback);
     static void OnFontObserver(ani_env* env, ani_object observer);
     static void OffFontObserver(ani_env* env, ani_object observer);
-    static ani_int InstallScopeFont(ani_env* env, ani_string url, ani_int scope);
-    static ani_int UninstallScopeFont(ani_env* env, ani_string url);
+    static void InstallScopeFont(ani_env* env, ani_string url, ani_int scope);
+    static void UninstallScopeFont(ani_env* env, ani_string url);
     static ani_int GetFontScope(ani_env* env, ani_string url);
     static ani_status Init(ani_env* env);
 
