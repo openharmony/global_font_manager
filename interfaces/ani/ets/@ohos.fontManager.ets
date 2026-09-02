@@ -87,14 +87,26 @@ export default namespace fontManager {
   };
 
   export function installScopeFont(url: string, scope: FontScope): Promise<void> {
-    return taskpool.execute((): void => {
-        nativeInstallScopeFont(url, scope);
+    return new Promise<void>((resolve, reject) => {
+      taskpool.execute((): void => {
+          nativeInstallScopeFont(url, scope);
+      }).then((content: Any) => {
+          resolve(undefined);
+      }, (err: Error): void => {
+          reject(err as BusinessError);
+      });
     });
   };
 
   export function uninstallScopeFont(url: string): Promise<void> {
-    return taskpool.execute((): void => {
-        nativeUninstallScopeFont(url);
+    return new Promise<void>((resolve, reject) => {
+      taskpool.execute((): void => {
+          nativeUninstallScopeFont(url);
+      }).then((content: Any) => {
+          resolve(undefined);
+      }, (err: Error): void => {
+          reject(err as BusinessError);
+      });
     });
   };
 
