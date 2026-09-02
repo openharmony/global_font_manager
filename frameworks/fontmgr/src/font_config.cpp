@@ -134,6 +134,53 @@ bool FontConfig::InsertFontRecord(const std::string &fontPath, const std::vector
     return WriteToFile(fileData);
 }
 
+int32_t FontConfig::InsertFontRecordIfUnderLimit(const std::string &fontPath,
+    const std::vector<std::string> &fullNames, int32_t maxCount)
+{
+    std::lock_guard<std::mutex> lock(configLock_);
+    cJSON *jsonValue = cJSON_Parse(CheckConfigFile(ConfigPath_).c_str());
+    if (jsonValue == nullptr) {
+        FONT_LOGE("InsertFontRecordIfUnderLimit parse config failed");
+        return ERR_INSTALL_FAIL;
+    }
+    cJSON *fontList = cJSON_GetObjectItem(jsonValue, "fontlist");
+    if (!cJSON_IsArray(fontList)) {
+        FONT_LOGE("InsertFontRecordIfUnderLimit: fontlist invalid");
+        cJSON_Delete(jsonValue);
+        return ERR_INSTALL_FAIL;
+    }
+    int arrSize = cJSON_GetArraySize(fontList);
+    for (int i = 0; i < arrSize; i++) {
+        cJSON *item = cJSON_GetArrayItem(fontList, i);
+        cJSON *pathVal = cJSON_GetObjectItem(item, FONT_PATH);
+        if (pathVal != nullptr && cJSON_IsString(pathVal) && fontPath == pathVal->valuestring) {
+            cJSON_Delete(jsonValue);
+            return ERR_OK;
+        }
+    }
+    if (arrSize >= maxCount) {
+        FONT_LOGE("InsertFontRecordIfUnderLimit: max count %{public}d reached", maxCount);
+        cJSON_Delete(jsonValue);
+        return ERR_MAX_FILE_COUNT;
+    }
+    cJSON *insertValue = ConstructCJSON(fontPath, fullNames);
+    if (insertValue == nullptr) {
+        cJSON_Delete(jsonValue);
+        return ERR_INSTALL_FAIL;
+    }
+    if (!cJSON_AddItemToArray(fontList, insertValue)) {
+        cJSON_Delete(insertValue);
+        cJSON_Delete(jsonValue);
+        return ERR_INSTALL_FAIL;
+    }
+    char *fileData = cJSON_Print(jsonValue);
+    cJSON_Delete(jsonValue);
+    if (!WriteToFile(fileData)) {
+        return ERR_INSTALL_FAIL;
+    }
+    return ERR_OK;
+}
+
 bool FontConfig::DeleteFontRecord(const std::string &fontPath)
 {
     std::lock_guard<std::mutex> lock(configLock_);
