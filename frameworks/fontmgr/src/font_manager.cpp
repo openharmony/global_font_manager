@@ -104,15 +104,15 @@ int32_t FontManager::InstallFont(const int32_t &fd, const int32_t userId)
 
 std::string FontManager::GetFormatFullName(const std::vector<std::string> &fullNameVector)
 {
-    std::string FormatFullName;
+    std::string formatFullName;
     std::string split = ",";
     for (const auto &name : fullNameVector) {
-        FormatFullName += name + split;
+        formatFullName += name + split;
     }
-    if (FormatFullName.size() >= split.size()) {
-        return FormatFullName.substr(0, FormatFullName.size() - split.size());
+    if (formatFullName.size() >= split.size()) {
+        return formatFullName.substr(0, formatFullName.size() - split.size());
     }
-    return FormatFullName;
+    return formatFullName;
 }
 
 std::string FontManager::CopyFileForInstall(const std::string &installPath, const std::string &fileName,
