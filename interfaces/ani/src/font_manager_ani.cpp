@@ -200,14 +200,9 @@ void FontManagerAni::OnFontObserver(ani_env* env, ani_object observer)
     }
 }
 
-void FontManagerAni::OffFontObserver(ani_env* env, ani_object observer)
+void FontManagerAni::OffFontObserver(ani_env* env)
 {
-    auto dummyAgent = sptr<FontClientObserverAgent>::MakeSptr([](){});
-    if (dummyAgent == nullptr) {
-        ThrowError(env, ERR_SYSTEM_ERROR);
-        return;
-    }
-    int32_t ret = FontManagerKits::GetInstance().OffFontObserver(dummyAgent);
+    int32_t ret = FontManagerKits::GetInstance().OffFontObserver();
     if (ret != ERR_OK) {
         ThrowError(env, ret);
     }

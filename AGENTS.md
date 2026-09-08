@@ -476,7 +476,7 @@ interface IFontService {
     void UninstallFontWithUserId([in] String fontName, [in] int userId);
 
     void OnFontObserver([in] IFontClientObserver observer);
-    void OffFontObserver([in] IFontClientObserver observer);
+    void OffFontObserver();
     void InstallScopeFont([in] FileDescriptor fd, [in] int scope, [in] String srcPath, [out] int outValue);
     void UninstallScopeFont([in] String srcPath, [out] int outValue);
     void GetFontScope([in] String srcPath, [out] int outValue);
@@ -607,7 +607,7 @@ Methods:
 - `int32_t InstallFont/UninstallFont/DataMigration` - User-level operations
 - `int32_t InstallFontWithUserId/UninstallFontWithUserId` - With explicit userId
 - `int32_t OnFontObserver(const sptr<IFontClientObserver>& observer)` - Remove old death recipient → add new → IPC
-- `int32_t OffFontObserver(const sptr<IFontClientObserver>& observer)` - IPC first → then remove death recipient
+- `int32_t OffFontObserver()` - IPC first → then remove death recipient
 - `int32_t InstallScopeFont/UninstallScopeFont/GetFontScope` - Scope font operations
 
 #### FontServiceLoadManager (`font_service_load_manager.h/.cpp`)
@@ -642,7 +642,8 @@ Static methods (inner kits, exposed header):
 - User-level install/uninstall: Async work (`ProcessFontByValue`), Promise + callback
 - Scope font install/uninstall: Async work, returns `Promise<void>` (resolve undefined on success, reject BusinessError on failure)
 - Scope font getScope: Async work, returns `Promise<FontScope>` (resolve FontScope on success, reject BusinessError on failure)
-- `OnFontObserver`/`OffFontObserver`: Synchronous, returns `void` (throws BusinessError on failure), creates `FontClientObserverAgent`
+- `OnFontObserver`: Synchronous, returns `void` (throws BusinessError on failure), creates `FontClientObserverAgent`
+- `OffFontObserver`: Synchronous, no parameter; calls IPC directly
 - `FontScope` enum exposed as `FontScope.APP` (0) and `FontScope.SESSION` (1)
 
 Error message mapping includes all scope font error codes (31100112-31100115).
@@ -659,14 +660,15 @@ Inherits `NoCopyable`. Holds `napi_ref` to JS function. Destructor deletes refer
 - `enum FontScope { APP = 0, SESSION = 1 }`
 - `interface FontClientObserver { onServiceDied(): void }`
 - `function onFontObserver(observer: FontClientObserver): void`
-- `function offFontObserver(observer: FontClientObserver): void`
+- `function offFontObserver(): void`
 - `function installScopeFont(url: string, scope: FontScope): Promise<void>`
 - `function uninstallScopeFont(url: string): Promise<void>`
 - `function getFontScope(url: string): Promise<FontScope>`
 - User-level: `installFont`, `uninstallFont`, `dataMigration` (wrapped in `taskpool.execute`)
 
 ### FontManagerAni (`font_manager_ani.h/.cpp`)
-- `OnFontObserver`/`OffFontObserver`: Creates `FontClientObserverAgent` with `AniObserverRef` helper
+- `OnFontObserver`: Creates `FontClientObserverAgent` with `AniObserverRef` helper
+- `OffFontObserver`: No parameter; calls IPC directly
 - `AniObserverRef`: Cross-thread ANI callback via `ani_vm*` + global `ani_ref`, uses `Object_CallMethodByName_Void(obj, "onServiceDied", ":")`
 - `InstallScopeFont`/`UninstallScopeFont`: Synchronous native functions returning `void` (throw BusinessError on error); wrapped in `taskpool.execute((): void => ...)` returning `Promise<void>`
 - `GetFontScope`: Synchronous native function returning `ani_int` (scope value); wrapped in `taskpool.execute((): int => ...)` returning `Promise<FontScope>`

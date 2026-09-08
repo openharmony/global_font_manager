@@ -54,7 +54,7 @@ export default namespace fontManager {
 
   export native function onFontObserver(observer: FontClientObserver): void;
 
-  export native function offFontObserver(observer: FontClientObserver): void;
+  export native function offFontObserver(): void;
 
   native function nativeInstallScopeFont(url: string, scope: int): void;
 
