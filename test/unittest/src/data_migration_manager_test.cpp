@@ -387,6 +387,37 @@ HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest022, TestSize.Lev
     uint64_t size = adapter->GetFontFolderSize(INSTALL_PATH_TEST);
     EXPECT_GT(size, 0);
 }
+
+/**
+ * @tc.name: DataMigrationManagerFuncTest023
+ * @tc.desc: Test DataMigration reentrance guard skips concurrent call
+ * @tc.type: FUNC
+ */
+HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest023, TestSize.Level1)
+{
+    sptr<IDataMigrationCallback> cb = new (std::nothrow) TestCallback();
+    ASSERT_TRUE(cb != nullptr);
+    manager_->isDataMigrationing_.store(true);
+    manager_->DataMigration(cb);
+    EXPECT_TRUE(manager_->isDataMigrationing_.load());
+    manager_->isDataMigrationing_.store(false);
+}
+
+/**
+ * @tc.name: DataMigrationManagerFuncTest024
+ * @tc.desc: Test RefreshEventData keeps callback_ valid (local sptr copy)
+ * @tc.type: FUNC
+ */
+HWTEST_F(DataMigrationManagerTest, DataMigrationManagerFuncTest024, TestSize.Level1)
+{
+    sptr<IDataMigrationCallback> cb = new (std::nothrow) TestCallback();
+    ASSERT_TRUE(cb != nullptr);
+    manager_->callback_ = cb;
+    EventData eventData = {.event = EventType::HEART_BEAT};
+    manager_->RefreshEventData(eventData);
+    EXPECT_EQ(manager_->callback_, cb);
+    manager_->callback_ = nullptr;
+}
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS
