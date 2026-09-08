@@ -49,6 +49,8 @@ public:
     };
     ~FontConfig() = default;
     bool InsertFontRecord(const std::string &fontPath, const std::vector<std::string> &fullNames);
+    int32_t InsertFontRecordIfUnderLimit(const std::string &fontPath, const std::vector<std::string> &fullNames,
+        int32_t maxCount);
     bool DeleteFontRecord(const std::string &fontPath);
     int GetInstalledFontsNum();
     std::string GetFontFileByName(const std::string &fullName);

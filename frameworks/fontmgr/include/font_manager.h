@@ -49,6 +49,7 @@ private:
     std::string GetFormatFullName(const std::vector<std::string> &fullNameVector);
     std::string CopyFileForInstall(const std::string &installPath, const std::string &fileName, const int32_t &fd);
     std::string SandBoxPathToRealPath(const std::string &installPath, const std::string &path);
+    std::string ValidateAndResolveRealPath(const std::string &installPath, const std::string &path);
     FontConfig& SafeGetOrCreateConfig(int32_t userId, const std::string& configPath);
     std::string GetAppInstallPath(int32_t userId, const std::string &appIdentifier);
     int32_t ValidateScopeFontForInstall(FontConfig& fontConfig, const std::string &srcPath,
