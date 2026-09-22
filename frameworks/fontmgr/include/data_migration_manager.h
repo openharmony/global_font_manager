@@ -18,6 +18,7 @@
 
 #include <atomic>
 #include <string>
+#include <thread>
 
 #include "singleton.h"
 #include "idata_migration_callback.h"
@@ -50,6 +51,7 @@ private:
     std::atomic<bool> isDataMigrationing_ {false};
     sptr<IDataMigrationCallback> callback_ = nullptr;
     std::vector<int32_t> userIds_;
+    std::thread heartBeatThread_;
 };
 } // namespace FontManager
 } // namespace Global

@@ -43,12 +43,19 @@ DataMigrationManager::DataMigrationManager()
 
 DataMigrationManager::~DataMigrationManager()
 {
+    if (heartBeatThread_.joinable()) {
+        heartBeatThread_.join();
+    }
 }
 
 void DataMigrationManager::DataMigration(const sptr<IDataMigrationCallback>& callback)
 {
+    bool expected = false;
+    if (!isDataMigrationing_.compare_exchange_strong(expected, true)) {
+        FONT_LOGW("DataMigration is already in progress, skip concurrent call");
+        return;
+    }
     callback_ = callback;
-    isDataMigrationing_ = true;
     int32_t ret = DataMigrationInner();
     if (ret != ERR_OK) {
         FONT_LOGE("FontManager DataMigration err.ErrCode:%{public}d", ret);
@@ -65,6 +72,9 @@ void DataMigrationManager::DataMigration(const sptr<IDataMigrationCallback>& cal
     ret = HisyseventAdapter::GetInstance()->CollectDataMigrationState(userIds_, ret);
     if (ret != ERR_OK) {
         FONT_LOGE("FontManager CollectDataMigrationState err.ErrCode:%{public}d", ret);
+    }
+    if (heartBeatThread_.joinable()) {
+        heartBeatThread_.join();
     }
     callback_ = nullptr;
 }
@@ -186,17 +196,19 @@ int32_t DataMigrationManager::CopyFileForDataMigration(const std::string &srcPat
 void DataMigrationManager::StartHeartBeatTask()
 {
     std::weak_ptr<DataMigrationManager> weakPtr = shared_from_this();
-    std::thread([weakPtr]() {
+    heartBeatThread_ = std::thread([weakPtr]() {
         FONT_LOGI("DataMigrationManager HeartBeat thread started.");
         auto self = weakPtr.lock();
         while (self && self->isDataMigrationing_.load()) {
             FONT_LOGI("DataMigrationManager HeartBeat....");
             self->EventDataHeartBeat();
-            std::this_thread::sleep_for(std::chrono::seconds(HEARTBEAT_INTERVAL));
+            for (uint32_t i = 0; i < HEARTBEAT_INTERVAL && self->isDataMigrationing_.load(); ++i) {
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            }
             self = weakPtr.lock();
         }
         FONT_LOGI("DataMigrationManager HeartBeat thread stopped.");
-    }).detach();
+    });
 }
 
 bool DataMigrationManager::IsShouldUpdateProgress(uint32_t i, uint32_t totalCount)
@@ -269,8 +281,9 @@ bool DataMigrationManager::InitDataMigrationTempDir()
 
 void DataMigrationManager::RefreshEventData(const EventData& eventData)
 {
-    if (callback_ && callback_->AsObject() != nullptr) {
-        callback_->Handle(std::move(eventData));
+    sptr<IDataMigrationCallback> callback = callback_;
+    if (callback && callback->AsObject() != nullptr) {
+        callback->Handle(std::move(eventData));
     }
 }
 } // namespace FontManager

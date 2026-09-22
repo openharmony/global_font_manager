@@ -1048,6 +1048,74 @@ HWTEST_F(FontConfigTest, FontConfigFuncTest058, TestSize.Level1)
     FontManagerUtils::RemoveFile(realFontPath);
 }
 
+/**
+ * @tc.name: FontConfigFuncTest059
+ * @tc.desc: Test InsertFontRecordIfUnderLimit success under limit
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest059, TestSize.Level1)
+{
+    std::string fontFullPath = INSTALL_PATH_TEST + "LimitFont.ttf";
+    std::vector<std::string> fullNames{"LimitFont"};
+    EXPECT_EQ(this->config_.InsertFontRecordIfUnderLimit(fontFullPath, fullNames, 10), ERR_OK);
+    EXPECT_EQ(this->config_.GetInstalledFontsNum(), 1);
+}
+
+/**
+ * @tc.name: FontConfigFuncTest060
+ * @tc.desc: Test InsertFontRecordIfUnderLimit idempotent on duplicate path
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest060, TestSize.Level1)
+{
+    std::string fontFullPath = INSTALL_PATH_TEST + "DupLimit.ttf";
+    std::vector<std::string> fullNames{"DupLimitFont"};
+    EXPECT_EQ(this->config_.InsertFontRecordIfUnderLimit(fontFullPath, fullNames, 10), ERR_OK);
+    EXPECT_EQ(this->config_.InsertFontRecordIfUnderLimit(fontFullPath, fullNames, 10), ERR_OK);
+    EXPECT_EQ(this->config_.GetInstalledFontsNum(), 1);
+}
+
+/**
+ * @tc.name: FontConfigFuncTest061
+ * @tc.desc: Test InsertFontRecordIfUnderLimit returns ERR_MAX_FILE_COUNT at limit
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest061, TestSize.Level1)
+{
+    ASSERT_EQ(this->config_.InsertFontRecordIfUnderLimit(
+        INSTALL_PATH_TEST + "Max1.ttf", {"MaxFont1"}, 2), ERR_OK);
+    ASSERT_EQ(this->config_.InsertFontRecordIfUnderLimit(
+        INSTALL_PATH_TEST + "Max2.ttf", {"MaxFont2"}, 2), ERR_OK);
+    EXPECT_EQ(this->config_.InsertFontRecordIfUnderLimit(
+        INSTALL_PATH_TEST + "Max3.ttf", {"MaxFont3"}, 2), ERR_MAX_FILE_COUNT);
+    EXPECT_EQ(this->config_.GetInstalledFontsNum(), 2);
+}
+
+/**
+ * @tc.name: FontConfigFuncTest062
+ * @tc.desc: Test InsertFontRecordIfUnderLimit with missing config file
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest062, TestSize.Level1)
+{
+    FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
+    EXPECT_EQ(this->config_.InsertFontRecordIfUnderLimit(
+        "/data/test/font.ttf", {"TestFont"}, 10), ERR_INSTALL_FAIL);
+}
+
+/**
+ * @tc.name: FontConfigFuncTest063
+ * @tc.desc: Test InsertFontRecordIfUnderLimit with fontlist not array
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontConfigTest, FontConfigFuncTest063, TestSize.Level1)
+{
+    FontManagerUtils::CreateFileWithPermission(FONT_CONFIG_FILE_TEST, R"({"fontlist":"notarray"})");
+    EXPECT_EQ(this->config_.InsertFontRecordIfUnderLimit(
+        "/data/test/font.ttf", {"TestFont"}, 10), ERR_INSTALL_FAIL);
+    FontManagerUtils::RemoveFile(FONT_CONFIG_FILE_TEST);
+}
+
 }  // namespace FontManager
 }  // namespace Global
 }  // namespace OHOS

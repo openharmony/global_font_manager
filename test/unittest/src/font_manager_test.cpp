@@ -1307,6 +1307,130 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest058, TestSize.Level1)
     int ret = manager_->InstallScopeFont(info);
     EXPECT_EQ(ret, ERR_FILE_VERIFY_FAIL);
 }
+
+/**
+ * @tc.name: FontManagerFuncTest059
+ * @tc.desc: Test ValidateAndResolveRealPath with valid path
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest059, TestSize.Level1)
+{
+    std::string installPath = INSTALL_PATH_PREFIX + std::to_string(TEST_USERID) + INSTALL_PATH_SUFFIX;
+    std::string path = std::string(INSTALL_PATH_APP) + "ValidFont.ttf";
+    std::string result = manager_->ValidateAndResolveRealPath(installPath, path);
+    EXPECT_FALSE(result.empty());
+    EXPECT_EQ(result, installPath + "ValidFont.ttf");
+}
+
+/**
+ * @tc.name: FontManagerFuncTest060
+ * @tc.desc: Test ValidateAndResolveRealPath rejects ".." traversal
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest060, TestSize.Level1)
+{
+    std::string installPath = INSTALL_PATH_PREFIX + std::to_string(TEST_USERID) + INSTALL_PATH_SUFFIX;
+    std::string path = std::string(INSTALL_PATH_APP) + "..";
+    std::string result = manager_->ValidateAndResolveRealPath(installPath, path);
+    EXPECT_TRUE(result.empty());
+}
+
+/**
+ * @tc.name: FontManagerFuncTest061
+ * @tc.desc: Test ValidateAndResolveRealPath rejects "." traversal
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest061, TestSize.Level1)
+{
+    std::string installPath = INSTALL_PATH_PREFIX + std::to_string(TEST_USERID) + INSTALL_PATH_SUFFIX;
+    std::string path = std::string(INSTALL_PATH_APP) + ".";
+    std::string result = manager_->ValidateAndResolveRealPath(installPath, path);
+    EXPECT_TRUE(result.empty());
+}
+
+/**
+ * @tc.name: FontManagerFuncTest062
+ * @tc.desc: Test ValidateAndResolveRealPath rejects empty path
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest062, TestSize.Level1)
+{
+    std::string installPath = INSTALL_PATH_PREFIX + std::to_string(TEST_USERID) + INSTALL_PATH_SUFFIX;
+    std::string result = manager_->ValidateAndResolveRealPath(installPath, "");
+    EXPECT_TRUE(result.empty());
+}
+
+/**
+ * @tc.name: FontManagerFuncTest063
+ * @tc.desc: Test ValidateAndResolveRealPath rejects sibling dir escape (fonts_evil)
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest063, TestSize.Level1)
+{
+    std::string installPath = INSTALL_PATH_PREFIX + std::to_string(TEST_USERID) + INSTALL_PATH_SUFFIX;
+    std::string path = std::string(INSTALL_PATH_APP) + "../fonts_evil/payload.ttf";
+    std::string result = manager_->ValidateAndResolveRealPath(installPath, path);
+    EXPECT_TRUE(result.empty());
+}
+
+/**
+ * @tc.name: FontManagerFuncTest064
+ * @tc.desc: Test CopyFileForInstall produces unique destPath with thread tag
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest064, TestSize.Level1)
+{
+    ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
+    int fd1 = open(FONT_PATH.c_str(), O_RDONLY);
+    ASSERT_GE(fd1, 0);
+    std::string destPath1 = manager_->CopyFileForInstall(INSTALL_PATH_TEST, "UniqueA.ttf", fd1);
+    EXPECT_FALSE(destPath1.empty());
+    EXPECT_NE(destPath1.find("UniqueA.ttf"), std::string::npos);
+    EXPECT_NE(destPath1.find("_"), std::string::npos);
+    close(fd1);
+
+    int fd2 = open(FONT_PATH.c_str(), O_RDONLY);
+    ASSERT_GE(fd2, 0);
+    std::string destPath2 = manager_->CopyFileForInstall(INSTALL_PATH_TEST, "UniqueB.ttf", fd2);
+    EXPECT_FALSE(destPath2.empty());
+    EXPECT_NE(destPath2.find("UniqueB.ttf"), std::string::npos);
+    EXPECT_NE(destPath1, destPath2);
+    close(fd2);
+
+    FontManagerUtils::RemoveFile(destPath1);
+    FontManagerUtils::RemoveFile(destPath2);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest065
+ * @tc.desc: Test InstallFont rolls back copied file on max count failure
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest065, TestSize.Level1)
+{
+    int fd = open("/data/test/200install_fontconfig.json", O_RDONLY);
+    EXPECT_EQ(FontManagerUtils::CopyFile(fd, FONT_CONFIG_FILE_TEST), true);
+    if (fd >= 0) {
+        close(fd);
+    }
+    fd = open(FONT_PATH.c_str(), O_RDONLY);
+    ASSERT_GE(fd, 0);
+    int32_t maxInstallNum = OHOS::system::GetIntParameter<int32_t>(MAX_INSTALL_NUM_PARAM_KEY,
+        DEFAULT_MAX_INSTALL_NUM);
+    int ret = manager_->InstallFont(fd, TEST_USERID);
+    if (fd >= 0) {
+        close(fd);
+    }
+    if (maxInstallNum > DEFAULT_MAX_INSTALL_NUM) {
+        EXPECT_EQ(ret, ERR_OK);
+    } else {
+        EXPECT_EQ(ret, ERR_MAX_FILE_COUNT);
+    }
+    std::string tempDir = INSTALL_PATH_TEST + TEMP_FILE;
+    std::vector<std::string> tempFiles;
+    OHOS::GetDirFiles(tempDir, tempFiles);
+    EXPECT_EQ(tempFiles.size(), 0u);
+}
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS
