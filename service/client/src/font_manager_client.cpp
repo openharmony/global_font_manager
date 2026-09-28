@@ -197,14 +197,14 @@ int32_t FontManagerClient::OnFontObserver(const sptr<IFontClientObserver>& obser
     return ret;
 }
 
-int32_t FontManagerClient::OffFontObserver(const sptr<IFontClientObserver>& observer)
+int32_t FontManagerClient::OffFontObserver()
 {
     sptr<IFontService> service = FontServiceLoadManager::GetInstance()->GetFontServiceAbility(FONT_SA_ID);
     if (service == nullptr) {
         FONT_LOGE("OffFontObserver: Service is null");
         return ERR_SYSTEM_ERROR;
     }
-    int32_t ret = service->OffFontObserver(observer);
+    int32_t ret = service->OffFontObserver();
     {
         std::lock_guard<std::mutex> lock(observerLock_);
         if (saBinder_ != nullptr && saDeathRecipient_ != nullptr) {

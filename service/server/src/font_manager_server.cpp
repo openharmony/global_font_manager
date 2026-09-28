@@ -400,7 +400,7 @@ void FontManagerServer::OnFontObserverInner(const sptr<IFontClientObserver>& obs
         observer->AsObject(), bundleName, userId, tokenId);
 }
 
-int32_t FontManagerServer::OffFontObserver(const sptr<IFontClientObserver>& observer)
+int32_t FontManagerServer::OffFontObserver()
 {
     CallingCountGuard guard(this, true);
     int32_t ret = ERR_OK;

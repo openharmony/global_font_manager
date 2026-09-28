@@ -453,21 +453,7 @@ napi_value FontManagerAddon::OnFontObserver(napi_env env, napi_callback_info inf
 
 napi_value FontManagerAddon::OffFontObserver(napi_env env, napi_callback_info info)
 {
-    size_t argc = ARGS_SIZE_ONE;
-    napi_value argv[ARGS_SIZE_ONE] = {nullptr};
-    napi_value thisVar = nullptr;
-    void *data = nullptr;
-    napi_get_cb_info(env, info, &argc, argv, &thisVar, &data);
-    if (argc != ARGS_SIZE_ONE) {
-        napi_throw(env, CreateJsError(env, ERR_INVALID_PARAM, GetScopeFontErrMsg(ERR_INVALID_PARAM)));
-        return CreateJsUndefined(env);
-    }
-    auto dummyAgent = sptr<FontClientObserverAgent>::MakeSptr([]() {});
-    if (dummyAgent == nullptr) {
-        napi_throw(env, CreateJsError(env, ERR_SYSTEM_ERROR, GetScopeFontErrMsg(ERR_SYSTEM_ERROR)));
-        return CreateJsUndefined(env);
-    }
-    int32_t ret = FontManagerKits::GetInstance().OffFontObserver(dummyAgent);
+    int32_t ret = FontManagerKits::GetInstance().OffFontObserver();
     if (ret != ERR_OK) {
         napi_throw(env, CreateJsError(env, ret, GetScopeFontErrMsg(ret)));
         return CreateJsUndefined(env);

@@ -500,7 +500,7 @@ interface IFontService {
     void UninstallFontWithUserId([in] String fontName, [in] int userId);
 
     void OnFontObserver([in] IFontClientObserver observer);
-    void OffFontObserver([in] IFontClientObserver observer);
+    void OffFontObserver();
     void InstallScopeFont([in] FileDescriptor fd, [in] int scope, [in] String srcPath, [out] int outValue);
     void UninstallScopeFont([in] String srcPath, [out] int outValue);
     void GetFontScope([in] String srcPath, [out] int outValue);
@@ -683,7 +683,7 @@ int32_t InstallScopeFont(...) {
 - `enum FontScope { APP = 0, SESSION = 1 }`
 - `interface FontClientObserver { onServiceDied(): void }`
 - `function onFontObserver(observer: FontClientObserver): void`
-- `function offFontObserver(observer: FontClientObserver): void`
+- `function offFontObserver(): void`
 - `function installScopeFont(url: string, scope: FontScope): Promise<void>`
 - `function uninstallScopeFont(url: string): Promise<void>`
 - `function getFontScope(url: string): Promise<FontScope>`

@@ -26,7 +26,7 @@ interface OHOS.Global.FontManager.IFontService {
     void UninstallFontWithUserId([in] String fontName, [in] int userId);
 
     void OnFontObserver([in] IFontClientObserver observer);
-    void OffFontObserver([in] IFontClientObserver observer);
+    void OffFontObserver();
     void InstallScopeFont([in] FileDescriptor fd, [in] int scope, [in] String srcPath, [out] int outValue);
     void UninstallScopeFont([in] String srcPath, [out] int outValue);
     void GetFontScope([in] String srcPath, [out] int outValue);
