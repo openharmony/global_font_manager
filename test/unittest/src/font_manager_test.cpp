@@ -18,8 +18,10 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <chrono>
 #include <filesystem>
 #include <iostream>
+#include <thread>
 #include <dirent.h>
 #include <unistd.h>
 
@@ -433,7 +435,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest013, TestSize.Level1)
 
 /**
  * @tc.name: FontManagerFuncTest014
- * @tc.desc: Test CopyFileForInstall when target file already exists (Rename logic)
+ * @tc.desc: Test InstallFont when target file already exists (Rename logic)
  * @tc.type: FUNC
  */
 HWTEST_F(FontManagerTest, FontManagerFuncTest014, TestSize.Level1)
@@ -792,7 +794,11 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest035, TestSize.Level1)
     int fd = open(FONT_PATH.c_str(), O_RDONLY);
     ASSERT_GE(fd, 0);
     std::string fileName = "TestFont_Sans.ttf";
-    std::string destPath = manager_->CopyFileForInstall(INSTALL_PATH_TEST, fileName, fd);
+    std::string tempPath;
+    int32_t tempFd = FontManagerUtils::CreatePrivateTempCopy(fd, TEMP_PATH_TEST, tempPath);
+    ASSERT_GE(tempFd, 0);
+    close(tempFd);
+    std::string destPath = manager_->CommitTempFile(tempPath, INSTALL_PATH_TEST, fileName);
     EXPECT_FALSE(destPath.empty());
     if (fd >= 0) {
         close(fd);
@@ -805,9 +811,9 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest036, TestSize.Level1)
     ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
     int fd = open("/data/test/nonexistent_12345.ttf", O_RDONLY);
     ASSERT_LT(fd, 0);
-    std::string fileName = "TestFont_Sans.ttf";
-    std::string destPath = manager_->CopyFileForInstall(INSTALL_PATH_TEST, fileName, fd);
-    EXPECT_TRUE(destPath.empty());
+    std::string tempPath;
+    EXPECT_LT(FontManagerUtils::CreatePrivateTempCopy(fd, TEMP_PATH_TEST, tempPath), 0);
+    EXPECT_TRUE(tempPath.empty());
 }
 
 HWTEST_F(FontManagerTest, FontManagerFuncTest037, TestSize.Level1)
@@ -1389,7 +1395,7 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest063, TestSize.Level1)
 
 /**
  * @tc.name: FontManagerFuncTest064
- * @tc.desc: Test CopyFileForInstall produces unique destPath with thread tag
+ * @tc.desc: Test CommitTempFile produces unique destPath with thread tag
  * @tc.type: FUNC
  */
 HWTEST_F(FontManagerTest, FontManagerFuncTest064, TestSize.Level1)
@@ -1397,7 +1403,11 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest064, TestSize.Level1)
     ASSERT_EQ(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST), true);
     int fd1 = open(FONT_PATH.c_str(), O_RDONLY);
     ASSERT_GE(fd1, 0);
-    std::string destPath1 = manager_->CopyFileForInstall(INSTALL_PATH_TEST, "UniqueA.ttf", fd1);
+    std::string tempPath1;
+    int32_t tempFd1 = FontManagerUtils::CreatePrivateTempCopy(fd1, TEMP_PATH_TEST, tempPath1);
+    ASSERT_GE(tempFd1, 0);
+    close(tempFd1);
+    std::string destPath1 = manager_->CommitTempFile(tempPath1, INSTALL_PATH_TEST, "UniqueA.ttf");
     EXPECT_FALSE(destPath1.empty());
     EXPECT_NE(destPath1.find("UniqueA.ttf"), std::string::npos);
     EXPECT_NE(destPath1.find("_"), std::string::npos);
@@ -1405,7 +1415,11 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest064, TestSize.Level1)
 
     int fd2 = open(FONT_PATH.c_str(), O_RDONLY);
     ASSERT_GE(fd2, 0);
-    std::string destPath2 = manager_->CopyFileForInstall(INSTALL_PATH_TEST, "UniqueB.ttf", fd2);
+    std::string tempPath2;
+    int32_t tempFd2 = FontManagerUtils::CreatePrivateTempCopy(fd2, TEMP_PATH_TEST, tempPath2);
+    ASSERT_GE(tempFd2, 0);
+    close(tempFd2);
+    std::string destPath2 = manager_->CommitTempFile(tempPath2, INSTALL_PATH_TEST, "UniqueB.ttf");
     EXPECT_FALSE(destPath2.empty());
     EXPECT_NE(destPath2.find("UniqueB.ttf"), std::string::npos);
     EXPECT_NE(destPath1, destPath2);
@@ -1690,14 +1704,15 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest074, TestSize.Level1)
 
 /**
  * @tc.name: FontManagerFuncTest076
- * @tc.desc: Test CopyFileForInstall with invalid fd
+ * @tc.desc: Test CreatePrivateTempCopy with invalid fd
  * @tc.type: FUNC
  */
 HWTEST_F(FontManagerTest, FontManagerFuncTest076, TestSize.Level1)
 {
     FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST);
-    std::string destPath = manager_->CopyFileForInstall(INSTALL_PATH_TEST, "bad.ttf", -1);
-    EXPECT_TRUE(destPath.empty());
+    std::string tempPath;
+    EXPECT_LT(FontManagerUtils::CreatePrivateTempCopy(-1, TEMP_PATH_TEST, tempPath), 0);
+    EXPECT_TRUE(tempPath.empty());
 }
 
 /**
@@ -1861,6 +1876,72 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest084, TestSize.Level1)
     std::string path = "/some/other/path/font.ttf";
     std::string result = manager_->SandBoxPathToRealPath(installPath, path);
     EXPECT_EQ(result, installPath + "font.ttf");
+}
+
+/**
+ * @tc.name: FontManagerFuncTest085
+ * @tc.desc: InstallFont must not crash when the caller truncates the fd during install
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest085, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    ASSERT_GE(fd, 0);
+    std::thread truncator([fd]() {
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        (void)ftruncate(fd, 1024);
+    });
+    int32_t ret = manager_->InstallFont(fd, TEST_USERID);
+    truncator.join();
+    close(fd);
+    // The snapshot may win (OK) or be cut short (copy/verify failure).
+    EXPECT_TRUE(ret == ERR_OK || ret == ERR_COPY_FAIL || ret == ERR_FILE_VERIFY_FAIL);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest086
+ * @tc.desc: A font that fails verification must not leave temp files behind
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest086, TestSize.Level1)
+{
+    int fd = open("/data/test/errorTTF.ttf", O_RDONLY);
+    ASSERT_GE(fd, 0);
+    int32_t ret = manager_->InstallFont(fd, TEST_USERID);
+    close(fd);
+    EXPECT_EQ(ret, ERR_FILE_VERIFY_FAIL);
+
+    int32_t tempCount = 0;
+    for (const auto &entry : std::filesystem::directory_iterator(TEMP_PATH_TEST)) {
+        (void)entry;
+        tempCount++;
+    }
+    EXPECT_EQ(tempCount, 0);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest087
+ * @tc.desc: Duplicate install must reject early and clean up its temp copy
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest087, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    ASSERT_GE(fd, 0);
+    EXPECT_EQ(manager_->InstallFont(fd, TEST_USERID), ERR_OK);
+    close(fd);
+
+    fd = open(FONT_PATH.c_str(), O_RDONLY);
+    ASSERT_GE(fd, 0);
+    EXPECT_EQ(manager_->InstallFont(fd, TEST_USERID), ERR_INSTALLED_ALRADY);
+    close(fd);
+
+    int32_t tempCount = 0;
+    for (const auto &entry : std::filesystem::directory_iterator(TEMP_PATH_TEST)) {
+        (void)entry;
+        tempCount++;
+    }
+    EXPECT_EQ(tempCount, 0);
 }
 } // namespace FontManager
 } // namespace Global

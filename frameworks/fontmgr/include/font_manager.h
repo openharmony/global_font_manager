@@ -48,15 +48,28 @@ public:
 private:
     static int32_t GetMaxInstallNum();
     std::string GetFormatFullName(const std::vector<std::string> &fullNameVector);
-    std::string CopyFileForInstall(const std::string &installPath, const std::string &fileName, const int32_t &fd);
+    std::string CommitTempFile(const std::string &tempPath, const std::string &installPath,
+        const std::string &fileName);
     std::string SandBoxPathToRealPath(const std::string &installPath, const std::string &path);
     std::string ValidateAndResolveRealPath(const std::string &installPath, const std::string &path);
     FontConfig& SafeGetOrCreateConfig(int32_t userId, const std::string& configPath);
     std::string GetAppInstallPath(int32_t userId, const std::string &appIdentifier);
-    int32_t ValidateScopeFontForInstall(FontConfig& fontConfig, const std::string &srcPath,
-        const int32_t fd, std::vector<std::string>& fullNames);
-    int32_t CopyAndInsertScopeFont(const ScopeFontInstallInfo &info,
-        FontConfig& fontConfig, const std::vector<std::string>& fullNames);
+    int32_t ValidateScopeFontForInstall(FontConfig& fontConfig, const std::string &srcPath);
+    int32_t PrepareScopeFontInstall(const ScopeFontInstallInfo &info, FontConfig& fontConfig,
+        std::string &fileName, std::string &appDir);
+    int32_t CheckAndRemoveDuplicateFonts(FontConfig& fontConfig, const std::string &installPath,
+        const std::vector<std::string> &fullNames);
+    int32_t InsertUserFontRecord(FontConfig& fontConfig, const std::string &destPath,
+        const std::vector<std::string> &fullNames, int32_t maxInstallNum);
+    void ReportFontInstalled(int32_t userId, const std::string &installPath, const std::string &fileName,
+        const std::vector<std::string> &fullNames);
+    int32_t CheckScopeFontNameConflicts(FontConfig& fontConfig, const std::vector<std::string> &fullNames);
+    int32_t RecheckScopeFontUnderLock(FontConfig& fontConfig, const std::string &srcPath,
+        const std::vector<std::string> &fullNames);
+    int32_t InsertScopeFontRecord(const ScopeFontInstallInfo &info, FontConfig& fontConfig,
+        const std::string &destPath, const std::vector<std::string> &fullNames);
+    void ReportScopeFontInstalled(const ScopeFontInstallInfo &info, const std::string &installPath,
+        const std::vector<std::string> &fullNames);
     std::unordered_map<int32_t, FontConfig> configMap_;
     std::mutex mapLock_;
 };

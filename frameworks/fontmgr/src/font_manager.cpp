@@ -32,6 +32,43 @@
 namespace OHOS {
 namespace Global {
 namespace FontManager {
+namespace {
+// Removes the private temp copy unless it has been renamed into place.
+class TempFontGuard {
+public:
+    TempFontGuard(const std::string &path, int32_t fd) : path_(path), fd_(fd) {}
+    ~TempFontGuard()
+    {
+        if (fd_ >= 0) {
+            (void)close(fd_);
+        }
+        if (!committed_ && !path_.empty()) {
+            (void)FontManagerUtils::RemoveFile(path_);
+        }
+    }
+    TempFontGuard(const TempFontGuard &) = delete;
+    TempFontGuard &operator=(const TempFontGuard &) = delete;
+
+    void MarkCommitted()
+    {
+        committed_ = true;
+    }
+private:
+    std::string path_;
+    int32_t fd_ = -1;
+    bool committed_ = false;
+};
+
+std::string GetSafeFileName(const std::string &fdPath)
+{
+    std::string fileName = FontManagerUtils::GetFileName(fdPath);
+    if (fileName.empty() || fileName == "." || fileName == "..") {
+        return "font.ttf";
+    }
+    return fileName;
+}
+} // namespace
+
 FontManager::FontManager()
 {
 }
@@ -58,12 +95,55 @@ int32_t FontManager::InstallFont(const int32_t &fd, const int32_t userId)
     if (!(FontManagerUtils::CheckAndInitInstallPath(installPath))) {
         return ERR_FILE_NOT_EXISTS;
     }
-    auto& fontConfig = SafeGetOrCreateConfig(userId, installPath + FONT_CONFIG_FILE);
-    std::vector<std::string> fullNameVector = FontManagerUtils::GetFullNamesByFd(fd);
-    if (fullNameVector.size() == 0) {
+    if (!FontManagerUtils::IsValidFontFd(fd)) {
         return ERR_FILE_VERIFY_FAIL;
     }
-    for (const auto &fullName : fullNameVector) {
+    auto& fontConfig = SafeGetOrCreateConfig(userId, installPath + FONT_CONFIG_FILE);
+    std::string fileName = GetSafeFileName(FontManagerUtils::GetFilePathByFd(fd));
+
+    // Snapshot the caller-supplied fd first. The parser mmaps the file, so it
+    // must never see an inode the caller can still truncate or rewrite.
+    std::string tempPath;
+    int32_t tempFd = FontManagerUtils::CreatePrivateTempCopy(fd, installPath + TEMP_FILE, tempPath);
+    if (tempFd < 0) {
+        return ERR_COPY_FAIL;
+    }
+    TempFontGuard tempGuard(tempPath, tempFd);
+    std::vector<std::string> fullNameVector = FontManagerUtils::GetFullNamesByPrivateFd(tempFd);
+    if (fullNameVector.empty()) {
+        return ERR_FILE_VERIFY_FAIL;
+    }
+
+    std::string destPath;
+    {
+        std::lock_guard<std::mutex> installLock(fontConfig.GetInstallLock());
+        int32_t ret = CheckAndRemoveDuplicateFonts(fontConfig, installPath, fullNameVector);
+        if (ret != ERR_OK) {
+            return ret;
+        }
+        int32_t maxInstallNum = GetMaxInstallNum();
+        if (fontConfig.GetInstalledFontsNum() >= maxInstallNum) {
+            FONT_LOGE("FontManager: Max install count %{public}d reached", maxInstallNum);
+            return ERR_MAX_FILE_COUNT;
+        }
+        destPath = CommitTempFile(tempPath, installPath, fileName);
+        if (destPath.empty()) {
+            return ERR_COPY_FAIL;
+        }
+        tempGuard.MarkCommitted();
+        ret = InsertUserFontRecord(fontConfig, destPath, fullNameVector, maxInstallNum);
+        if (ret != ERR_OK) {
+            return ret;
+        }
+    }
+    ReportFontInstalled(userId, installPath, FontManagerUtils::GetFileName(destPath), fullNameVector);
+    return ERR_OK;
+}
+
+int32_t FontManager::CheckAndRemoveDuplicateFonts(FontConfig& fontConfig, const std::string &installPath,
+    const std::vector<std::string> &fullNames)
+{
+    for (const auto &fullName : fullNames) {
         std::string findPath = fontConfig.GetFontFileByName(fullName);
         if (findPath.empty()) {
             continue;
@@ -76,30 +156,30 @@ int32_t FontManager::InstallFont(const int32_t &fd, const int32_t userId)
             return ERR_INSTALL_FAIL;
         }
     }
-    int32_t maxInstallNum = GetMaxInstallNum();
-    if (fontConfig.GetInstalledFontsNum() >= maxInstallNum) {
-        FONT_LOGE("FontManager: Max install count %{public}d reached", maxInstallNum);
-        return ERR_MAX_FILE_COUNT;
-    }
-    std::string fileName = FontManagerUtils::GetFileName(FontManagerUtils::GetFilePathByFd(fd));
-    std::string destPath = CopyFileForInstall(installPath, fileName, fd);
-    if (destPath.empty()) {
-        return ERR_COPY_FAIL;
-    }
+    return ERR_OK;
+}
+
+int32_t FontManager::InsertUserFontRecord(FontConfig& fontConfig, const std::string &destPath,
+    const std::vector<std::string> &fullNames, int32_t maxInstallNum)
+{
     std::string realFileName = FontManagerUtils::GetFileName(destPath);
-    int32_t insertRet = fontConfig.InsertFontRecordIfUnderLimit(INSTALL_PATH_APP + realFileName,
-        fullNameVector, maxInstallNum);
-    if (insertRet != ERR_OK) {
-        FontManagerUtils::DeleteDir(destPath, true);
+    int32_t ret = fontConfig.InsertFontRecordIfUnderLimit(INSTALL_PATH_APP + realFileName,
+        fullNames, maxInstallNum);
+    if (ret != ERR_OK) {
+        FontManagerUtils::RemoveFile(destPath);
         FONT_LOGE("install failed: max count reached or config update fail, fileName = %{public}s",
             realFileName.c_str());
-        return insertRet;
     }
+    return ret;
+}
+
+void FontManager::ReportFontInstalled(int32_t userId, const std::string &installPath,
+    const std::string &fileName, const std::vector<std::string> &fullNames)
+{
     HisyseventAdapter::GetInstance()->CollectUserDataSize(installPath);
     StorageManagerAdapter::GetInstance()->ReportFontBundleStats(userId, installPath);
-    FontEventPublish::PublishFontUpdate(FontEventType::INSTALL, GetFormatFullName(fullNameVector), userId);
-    FONT_LOGI("Install font success, fileName:%{public}s, userId:%{public}d", realFileName.c_str(), userId);
-    return ERR_OK;
+    FontEventPublish::PublishFontUpdate(FontEventType::INSTALL, GetFormatFullName(fullNames), userId);
+    FONT_LOGI("Install font success, fileName:%{public}s, userId:%{public}d", fileName.c_str(), userId);
 }
 
 std::string FontManager::GetFormatFullName(const std::vector<std::string> &fullNameVector)
@@ -115,21 +195,15 @@ std::string FontManager::GetFormatFullName(const std::vector<std::string> &fullN
     return formatFullName;
 }
 
-std::string FontManager::CopyFileForInstall(const std::string &installPath, const std::string &fileName,
-    const int32_t &fd)
+std::string FontManager::CommitTempFile(const std::string &tempPath, const std::string &installPath,
+    const std::string &fileName)
 {
     std::string timeTag = FontManagerUtils::GetFileTime();
     std::string threadTag = std::to_string(std::hash<std::thread::id>{}(std::this_thread::get_id()));
-    std::string tempPath = installPath + TEMP_FILE + timeTag + "_" + threadTag + "_" + fileName;
-    if (!FontManagerUtils::CopyFile(fd, tempPath)) {
-        FONT_LOGE("copy file %{public}s error", tempPath.c_str());
-        return "";
-    }
     std::string split = "_";
     std::string destPath = installPath + timeTag + split + threadTag + split + fileName;
     if (!FontManagerUtils::RenameFile(tempPath, destPath)) {
         FONT_LOGE("rename file %{public}s error", fileName.c_str());
-        FontManagerUtils::RemoveFile(tempPath);
         return "";
     }
     return destPath;
@@ -237,28 +311,119 @@ int32_t FontManager::InstallScopeFont(const ScopeFontInstallInfo &info)
         return ERR_SYSTEM_ERROR;
     }
     auto& fontConfig = SafeGetOrCreateConfig(info.userId, installPath + FONT_CONFIG_FILE);
+    std::string fileName;
+    std::string appDir;
+    int32_t ret = PrepareScopeFontInstall(info, fontConfig, fileName, appDir);
+    if (ret != ERR_OK) {
+        return ret;
+    }
+
+    // Snapshot the caller-supplied fd before parsing; see InstallFont.
+    std::string tempPath;
+    int32_t tempFd = FontManagerUtils::CreatePrivateTempCopy(info.fd, appDir + TEMP_FILE, tempPath);
+    if (tempFd < 0) {
+        return ERR_COPY_FAIL;
+    }
+    TempFontGuard tempGuard(tempPath, tempFd);
+    std::vector<std::string> fullNames = FontManagerUtils::GetFullNamesByPrivateFd(tempFd);
+    if (fullNames.empty()) {
+        return ERR_FILE_VERIFY_FAIL;
+    }
+
+    {
+        std::lock_guard<std::mutex> installLock(fontConfig.GetInstallLock());
+        // Re-check under the install lock: the pre-check above ran without it.
+        ret = RecheckScopeFontUnderLock(fontConfig, info.srcPath, fullNames);
+        if (ret != ERR_OK) {
+            return ret;
+        }
+        std::string destPath = CommitTempFile(tempPath, appDir, fileName);
+        if (destPath.empty()) {
+            return ERR_COPY_FAIL;
+        }
+        tempGuard.MarkCommitted();
+        ret = InsertScopeFontRecord(info, fontConfig, destPath, fullNames);
+        if (ret != ERR_OK) {
+            return ret;
+        }
+    }
+    ReportScopeFontInstalled(info, installPath, fullNames);
+    return ERR_OK;
+}
+
+int32_t FontManager::PrepareScopeFontInstall(const ScopeFontInstallInfo &info, FontConfig& fontConfig,
+    std::string &fileName, std::string &appDir)
+{
     if (!fontConfig.CheckAndUpdateFontRecord()) {
         FONT_LOGE("CheckAndUpdateFontRecord fail");
         return ERR_SYSTEM_ERROR;
     }
-    std::vector<std::string> fullNames;
-    int32_t ret = ValidateScopeFontForInstall(fontConfig, info.srcPath, info.fd, fullNames);
+    int32_t ret = ValidateScopeFontForInstall(fontConfig, info.srcPath);
     if (ret != ERR_OK) {
         return ret;
     }
-    ret = CopyAndInsertScopeFont(info, fontConfig, fullNames);
+    if (!FontManagerUtils::IsValidFontFd(info.fd)) {
+        return ERR_FILE_VERIFY_FAIL;
+    }
+    fileName = GetSafeFileName(FontManagerUtils::GetFilePathByFd(info.fd));
+    appDir = GetAppInstallPath(info.userId, info.appIdentifier);
+    if (!FontManagerUtils::CheckAndInitScopeFontPath(appDir)) {
+        FONT_LOGE("InstallScopeFont: init app dir failed");
+        return ERR_SYSTEM_ERROR;
+    }
+    return ERR_OK;
+}
+
+int32_t FontManager::CheckScopeFontNameConflicts(FontConfig& fontConfig,
+    const std::vector<std::string> &fullNames)
+{
+    for (const auto &name : fullNames) {
+        if (fontConfig.GetFontRecordByName(name).has_value()) {
+            FONT_LOGE("InstallScopeFont: font name already exists");
+            return ERR_INSTALLED_ALRADY;
+        }
+    }
+    return ERR_OK;
+}
+
+int32_t FontManager::RecheckScopeFontUnderLock(FontConfig& fontConfig, const std::string &srcPath,
+    const std::vector<std::string> &fullNames)
+{
+    int32_t ret = ValidateScopeFontForInstall(fontConfig, srcPath);
     if (ret != ERR_OK) {
         return ret;
     }
+    return CheckScopeFontNameConflicts(fontConfig, fullNames);
+}
+
+int32_t FontManager::InsertScopeFontRecord(const ScopeFontInstallInfo &info, FontConfig& fontConfig,
+    const std::string &destPath, const std::vector<std::string> &fullNames)
+{
+    FontRecordInfo record;
+    record.fontPath = INSTALL_PATH_APP + info.appIdentifier + "/" + FontManagerUtils::GetFileName(destPath);
+    record.fullNames = fullNames;
+    record.scope = info.scope;
+    record.srcPath = info.srcPath;
+    record.appIdentifier = info.appIdentifier;
+    record.bundleName = info.bundleName;
+    if (!fontConfig.InsertScopeFontRecord(record)) {
+        FontManagerUtils::RemoveFile(destPath);
+        FONT_LOGE("InstallScopeFont: insert record failed");
+        return ERR_SYSTEM_ERROR;
+    }
+    return ERR_OK;
+}
+
+void FontManager::ReportScopeFontInstalled(const ScopeFontInstallInfo &info, const std::string &installPath,
+    const std::vector<std::string> &fullNames)
+{
     HisyseventAdapter::GetInstance()->CollectUserDataSize(installPath);
     StorageManagerAdapter::GetInstance()->ReportFontBundleStats(info.userId, installPath);
     FontEventPublish::PublishFontUpdate(FontEventType::INSTALL, GetFormatFullName(fullNames), info.userId);
     FONT_LOGI("InstallScopeFont success, srcPath:%{public}s, scope:%{public}d", info.srcPath.c_str(), info.scope);
-    return ERR_OK;
 }
 
-int32_t FontManager::ValidateScopeFontForInstall(FontConfig& fontConfig, const std::string &srcPath,
-    const int32_t fd, std::vector<std::string>& fullNames)
+int32_t FontManager::ValidateScopeFontForInstall(FontConfig& fontConfig, const std::string &srcPath)
 {
     auto record = fontConfig.GetFontRecordByUrl(srcPath);
     if (record.has_value()) {
@@ -269,45 +434,6 @@ int32_t FontManager::ValidateScopeFontForInstall(FontConfig& fontConfig, const s
     if (fontConfig.GetTotalInstalledFontsNum() >= maxInstallNum) {
         FONT_LOGE("InstallScopeFont: max count reached");
         return ERR_MAX_FILE_COUNT;
-    }
-    fullNames = FontManagerUtils::GetFullNamesByFd(fd);
-    if (fullNames.empty()) {
-        return ERR_FILE_VERIFY_FAIL;
-    }
-    for (const auto &name : fullNames) {
-        auto existing = fontConfig.GetFontRecordByName(name);
-        if (existing.has_value()) {
-            FONT_LOGE("InstallScopeFont: font name already exists");
-            return ERR_INSTALLED_ALRADY;
-        }
-    }
-    return ERR_OK;
-}
-
-int32_t FontManager::CopyAndInsertScopeFont(const ScopeFontInstallInfo &info,
-    FontConfig& fontConfig, const std::vector<std::string>& fullNames)
-{
-    std::string appDir = GetAppInstallPath(info.userId, info.appIdentifier);
-    if (!FontManagerUtils::CheckAndInitScopeFontPath(appDir)) {
-        FONT_LOGE("InstallScopeFont: init app dir failed");
-        return ERR_SYSTEM_ERROR;
-    }
-    std::string fileName = FontManagerUtils::GetFileName(FontManagerUtils::GetFilePathByFd(info.fd));
-    std::string destPath = CopyFileForInstall(appDir, fileName, info.fd);
-    if (destPath.empty()) {
-        return ERR_COPY_FAIL;
-    }
-    FontRecordInfo record;
-    record.fontPath = INSTALL_PATH_APP + info.appIdentifier + "/" + FontManagerUtils::GetFileName(destPath);
-    record.fullNames = fullNames;
-    record.scope = info.scope;
-    record.srcPath = info.srcPath;
-    record.appIdentifier = info.appIdentifier;
-    record.bundleName = info.bundleName;
-    if (!fontConfig.InsertScopeFontRecord(record)) {
-        FontManagerUtils::DeleteDir(destPath, true);
-        FONT_LOGE("InstallScopeFont: insert record failed");
-        return ERR_SYSTEM_ERROR;
     }
     return ERR_OK;
 }

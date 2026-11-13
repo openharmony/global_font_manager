@@ -14,8 +14,10 @@
  */
 
 #include <gtest/gtest.h>
+#include <cerrno>
 #include <fcntl.h>
 #include <string>
+#include <unistd.h>
 
 #include "font_manager_utils.h"
 #include "font_define.h"
@@ -444,22 +446,28 @@ HWTEST_F(FontManagerUtilsTest, CopyFileTest003, TestSize.Level1)
 }
 
 /**
- * @tc.name: GetFullNamesByFdTest001
- * @tc.desc: Test GetFullNamesByFd with valid and invalid fd
+ * @tc.name: IsValidFontFdTest001
+ * @tc.desc: Test IsValidFontFd with regular, empty, directory and invalid fds
  * @tc.type: FUNC
  */
-HWTEST_F(FontManagerUtilsTest, GetFullNamesByFdTest001, TestSize.Level1)
+HWTEST_F(FontManagerUtilsTest, IsValidFontFdTest001, TestSize.Level1)
 {
     int fd = open(FONT_PATH.c_str(), O_RDONLY);
-    EXPECT_GE(fd, 0);
-    std::vector<std::string> names = FontManagerUtils::GetFullNamesByFd(fd);
-    EXPECT_FALSE(names.empty());
-    if (fd >= 0) {
-        close(fd);
-    }
-    // Invalid fd should return empty vector
-    std::vector<std::string> invalidNames = FontManagerUtils::GetFullNamesByFd(-1);
-    EXPECT_TRUE(invalidNames.empty());
+    ASSERT_GE(fd, 0);
+    EXPECT_TRUE(FontManagerUtils::IsValidFontFd(fd));
+    close(fd);
+
+    EXPECT_FALSE(FontManagerUtils::IsValidFontFd(-1));
+
+    int emptyFd = open("/data/test/emptyTTF.ttf", O_RDONLY);
+    ASSERT_GE(emptyFd, 0);
+    EXPECT_FALSE(FontManagerUtils::IsValidFontFd(emptyFd));
+    close(emptyFd);
+
+    int dirFd = open("/data/test", O_RDONLY | O_DIRECTORY);
+    ASSERT_GE(dirFd, 0);
+    EXPECT_FALSE(FontManagerUtils::IsValidFontFd(dirFd));
+    close(dirFd);
 }
 
 /**
@@ -554,6 +562,66 @@ HWTEST_F(FontManagerUtilsTest, CreateDirWithPermissionTest002, TestSize.Level1)
     EXPECT_TRUE(FontManagerUtils::CreateDirWithPermission(dir));
     EXPECT_TRUE(FontManagerUtils::CheckPathExist(dir));
     FontManagerUtils::DeleteDir(dir, true);
+}
+
+/**
+ * @tc.name: GetFullNamesByPrivateFdTest001
+ * @tc.desc: A private temp copy stays parseable after the caller truncates the source fd.
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerUtilsTest, GetFullNamesByPrivateFdTest001, TestSize.Level1)
+{
+    ASSERT_TRUE(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST));
+    int srcFd = open(FONT_PATH.c_str(), O_RDONLY);
+    ASSERT_GE(srcFd, 0);
+    std::string tempPath;
+    int32_t tempFd = FontManagerUtils::CreatePrivateTempCopy(srcFd, TEMP_PATH_TEST, tempPath);
+    ASSERT_GE(tempFd, 0);
+    EXPECT_FALSE(tempPath.empty());
+
+    std::vector<std::string> names = FontManagerUtils::GetFullNamesByPrivateFd(tempFd);
+    EXPECT_FALSE(names.empty());
+
+    // The caller still owns its fd and can truncate it; the snapshot must survive.
+    ASSERT_GE(ftruncate(srcFd, 0), 0);
+    std::vector<std::string> namesAfterTruncate = FontManagerUtils::GetFullNamesByPrivateFd(tempFd);
+    EXPECT_EQ(names, namesAfterTruncate);
+
+    close(tempFd);
+    close(srcFd);
+    FontManagerUtils::RemoveFile(tempPath);
+
+    EXPECT_TRUE(FontManagerUtils::GetFullNamesByPrivateFd(-1).empty());
+}
+
+/**
+ * @tc.name: CreatePrivateTempCopyTest001
+ * @tc.desc: Invalid and non-regular fds must not leave temp files behind.
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerUtilsTest, CreatePrivateTempCopyTest001, TestSize.Level1)
+{
+    ASSERT_TRUE(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST));
+    std::string tempPath;
+    EXPECT_LT(FontManagerUtils::CreatePrivateTempCopy(-1, TEMP_PATH_TEST, tempPath), 0);
+    EXPECT_TRUE(tempPath.empty());
+
+    int dirFd = open("/data/test", O_RDONLY | O_DIRECTORY);
+    ASSERT_GE(dirFd, 0);
+    EXPECT_LT(FontManagerUtils::CreatePrivateTempCopy(dirFd, TEMP_PATH_TEST, tempPath), 0);
+    close(dirFd);
+    EXPECT_TRUE(tempPath.empty());
+}
+
+/**
+ * @tc.name: GetFullNamesByPathNormalTest
+ * @tc.desc: Regression: GetFullNamesByPath still returns full names.
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerUtilsTest, GetFullNamesByPathNormalTest, TestSize.Level1)
+{
+    std::vector<std::string> byPath = FontManagerUtils::GetFullNamesByPath(FONT_PATH);
+    EXPECT_FALSE(byPath.empty());
 }
 
 } // namespace FontManager

@@ -66,6 +66,11 @@ public:
     std::vector<FontRecordInfo> GetAppScopeFontRecords();
     bool CheckAndUpdateFontRecord();
     int GetTotalInstalledFontsNum();
+    // Serializes validate -> commit -> insert for one user's font installs.
+    std::mutex &GetInstallLock()
+    {
+        return installLock_;
+    }
 private:
     char *GetFileData(const std::string &filePath, long &size);
     std::string CheckConfigFile(const std::string &fontPath);
@@ -77,6 +82,7 @@ private:
 private:
     std::string ConfigPath_;
     std::mutex configLock_;
+    std::mutex installLock_;
 };
 } // namespace FontManager
 } // namespace Global
