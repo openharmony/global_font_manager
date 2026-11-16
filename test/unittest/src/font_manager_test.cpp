@@ -18,9 +18,11 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <filesystem>
 #include <iostream>
+#include <mutex>
 #include <thread>
 #include <dirent.h>
 #include <unistd.h>
@@ -1942,6 +1944,33 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest087, TestSize.Level1)
         tempCount++;
     }
     EXPECT_EQ(tempCount, 0);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest088
+ * @tc.desc: CleanupAppScopeFonts must wait for the per-user install lock
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest088, TestSize.Level1)
+{
+    auto& fontConfig = manager_->SafeGetOrCreateConfig(TEST_USERID, FONT_CONFIG_FILE_TEST);
+    std::unique_lock<std::mutex> installLock(fontConfig.GetInstallLock());
+    std::atomic<bool> started {false};
+    std::atomic<bool> finished {false};
+    auto manager = manager_;
+    std::thread worker([manager, &started, &finished]() {
+        started = true;
+        (void)manager->CleanupAppScopeFonts("app_5001", TEST_USERID);
+        finished = true;
+    });
+    while (!started.load()) {
+        std::this_thread::yield();
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    EXPECT_FALSE(finished.load());
+    installLock.unlock();
+    worker.join();
+    EXPECT_TRUE(finished.load());
 }
 } // namespace FontManager
 } // namespace Global
