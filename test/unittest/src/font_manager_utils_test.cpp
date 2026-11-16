@@ -572,7 +572,14 @@ HWTEST_F(FontManagerUtilsTest, CreateDirWithPermissionTest002, TestSize.Level1)
 HWTEST_F(FontManagerUtilsTest, GetFullNamesByPrivateFdTest001, TestSize.Level1)
 {
     ASSERT_TRUE(FontManagerUtils::CheckAndInitInstallPath(INSTALL_PATH_TEST));
-    int srcFd = open(FONT_PATH.c_str(), O_RDONLY);
+    int sourceFd = open(FONT_PATH.c_str(), O_RDONLY);
+    ASSERT_GE(sourceFd, 0);
+    std::string sourceCopyPath = TEMP_PATH_TEST + "snapshot_source.ttf";
+    bool copied = FontManagerUtils::CopyFile(sourceFd, sourceCopyPath);
+    close(sourceFd);
+    ASSERT_TRUE(copied);
+
+    int srcFd = open(sourceCopyPath.c_str(), O_RDWR);
     ASSERT_GE(srcFd, 0);
     std::string tempPath;
     int32_t tempFd = FontManagerUtils::CreatePrivateTempCopy(srcFd, TEMP_PATH_TEST, tempPath);
@@ -582,7 +589,7 @@ HWTEST_F(FontManagerUtilsTest, GetFullNamesByPrivateFdTest001, TestSize.Level1)
     std::vector<std::string> names = FontManagerUtils::GetFullNamesByPrivateFd(tempFd);
     EXPECT_FALSE(names.empty());
 
-    // The caller still owns its fd and can truncate it; the snapshot must survive.
+    // Truncate the caller-owned copy; the private snapshot must survive.
     ASSERT_GE(ftruncate(srcFd, 0), 0);
     std::vector<std::string> namesAfterTruncate = FontManagerUtils::GetFullNamesByPrivateFd(tempFd);
     EXPECT_EQ(names, namesAfterTruncate);
@@ -590,6 +597,7 @@ HWTEST_F(FontManagerUtilsTest, GetFullNamesByPrivateFdTest001, TestSize.Level1)
     close(tempFd);
     close(srcFd);
     FontManagerUtils::RemoveFile(tempPath);
+    FontManagerUtils::RemoveFile(sourceCopyPath);
 
     EXPECT_TRUE(FontManagerUtils::GetFullNamesByPrivateFd(-1).empty());
 }
