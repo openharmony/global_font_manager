@@ -1887,15 +1887,27 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest084, TestSize.Level1)
  */
 HWTEST_F(FontManagerTest, FontManagerFuncTest085, TestSize.Level1)
 {
-    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    // ftruncate needs a writable fd and must not corrupt the shared /data/test font.
+    std::string sourceCopyPath = TEMP_PATH_TEST + "truncate_source.ttf";
+    int sourceFd = open(FONT_PATH.c_str(), O_RDONLY);
+    ASSERT_GE(sourceFd, 0);
+    bool copied = FontManagerUtils::CopyFile(sourceFd, sourceCopyPath);
+    close(sourceFd);
+    ASSERT_TRUE(copied);
+
+    int fd = open(sourceCopyPath.c_str(), O_RDWR);
     ASSERT_GE(fd, 0);
-    std::thread truncator([fd]() {
+    std::atomic<bool> truncated {false};
+    std::thread truncator([fd, &truncated]() {
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
-        (void)ftruncate(fd, 1024);
+        truncated = (ftruncate(fd, 1024) == 0);
     });
     int32_t ret = manager_->InstallFont(fd, TEST_USERID);
     truncator.join();
     close(fd);
+    FontManagerUtils::RemoveFile(sourceCopyPath);
+
+    EXPECT_TRUE(truncated.load());
     // The snapshot may win (OK) or be cut short (copy/verify failure).
     EXPECT_TRUE(ret == ERR_OK || ret == ERR_COPY_FAIL || ret == ERR_FILE_VERIFY_FAIL);
 }
@@ -1955,18 +1967,25 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest088, TestSize.Level1)
 {
     auto& fontConfig = manager_->SafeGetOrCreateConfig(TEST_USERID, FONT_CONFIG_FILE_TEST);
     std::unique_lock<std::mutex> installLock(fontConfig.GetInstallLock());
-    std::atomic<bool> started {false};
+    std::atomic<bool> observedLocked {false};
     std::atomic<bool> finished {false};
     auto manager = manager_;
-    std::thread worker([manager, &started, &finished]() {
-        started = true;
+    std::thread worker([manager, &fontConfig, &observedLocked, &finished]() {
+        // Spin until the main thread is observed holding the same lock.
+        while (!observedLocked.load()) {
+            if (!fontConfig.GetInstallLock().try_lock()) {
+                observedLocked = true;
+            } else {
+                fontConfig.GetInstallLock().unlock();
+                std::this_thread::yield();
+            }
+        }
         (void)manager->CleanupAppScopeFonts("app_5001", TEST_USERID);
         finished = true;
     });
-    while (!started.load()) {
+    while (!observedLocked.load()) {
         std::this_thread::yield();
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
     EXPECT_FALSE(finished.load());
     installLock.unlock();
     worker.join();

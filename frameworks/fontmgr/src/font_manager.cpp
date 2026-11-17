@@ -43,7 +43,9 @@ public:
             (void)close(fd_);
         }
         if (!committed_ && !path_.empty()) {
-            (void)FontManagerUtils::RemoveFile(path_);
+            if (!FontManagerUtils::RemoveFile(path_)) {
+                FONT_LOGW("TempFontGuard: failed to remove temp file %{public}s", path_.c_str());
+            }
         }
     }
     TempFontGuard(const TempFontGuard &) = delete;
