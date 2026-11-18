@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2024-2026 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,6 +16,7 @@
 #ifndef FONT_MANAGER_UTILS_H
 #define FONT_MANAGER_UTILS_H
 
+#include <cstdint>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -43,7 +44,11 @@ public:
     static void CleanupScopeFontDirs();
     static void CleanupAllScopeFontDirs();
     static void CleanupAppScopeFontDirs();
-    static std::vector<std::string> GetFullNamesByFd(const int32_t &fd);
+    static bool IsValidFontFd(const int32_t &fd);
+    static int32_t CreatePrivateTempCopy(int32_t sourceFd, const std::string &tempDir, std::string &tempPath);
+    // The parser mmaps the fd, so the inode must be owned by font_manager and
+    // must not be writable by any other process. Never pass a caller-supplied fd.
+    static std::vector<std::string> GetFullNamesByPrivateFd(int32_t fd);
     static std::vector<std::string> GetFullNamesByPath(const std::string &path);
     static std::string MakeAppIdentifier(int32_t scope, int32_t tokenId);
 private:

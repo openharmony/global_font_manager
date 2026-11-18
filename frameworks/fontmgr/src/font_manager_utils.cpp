@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2024-2026 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,11 +17,13 @@
 
 #include <fcntl.h>
 #include <fstream>
+#include <cstdlib>
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/sendfile.h>
 #include <cerrno>
+#include <cstdint>
 
 #include "font_hilog.h"
 #include "font_define.h"
@@ -37,6 +39,7 @@ namespace FontManager {
 static constexpr uint32_t TIME_STRING_LENGTH = 20;
 static constexpr uint32_t BEGIN_YEAR = 1900;
 static constexpr size_t MAX_FONT_FILE_SIZE = 1024 * 1024 * 1024; // 1024MB
+static constexpr mode_t FONT_FILE_PERMISSION = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 
 bool FontManagerUtils::CheckAndInitInstallPath(const std::string &installPath)
 {
@@ -310,14 +313,13 @@ std::string FontManagerUtils::GetFileDirectory(const std::string &path)
 
 bool FontManagerUtils::CopyFile(int32_t sourceFd, const std::string& path)
 {
-    constexpr int32_t filePermission = 0644;
     int32_t targetFd = -1;
     bool ret = false;
     FILE* targetFile = fopen(path.c_str(), "wb");
     if (targetFile) {
         targetFd = fileno(targetFile);
         if (targetFd >= 0) {
-            fchmod(targetFd, filePermission);
+            fchmod(targetFd, FONT_FILE_PERMISSION);
             ret = CopyFileByFd(sourceFd, targetFd);
         }
         (void)fclose(targetFile);
@@ -447,46 +449,83 @@ bool FontManagerUtils::RemoveAll(const std::filesystem::path &path)
     return true;
 }
 
-std::vector<std::string> FontManagerUtils::GetFullNamesByFd(const int32_t &fd)
+bool FontManagerUtils::IsValidFontFd(const int32_t &fd)
+{
+    if (fd < 0) {
+        FONT_LOGE("IsValidFontFd: invalid fd");
+        return false;
+    }
+    struct stat st;
+    if (fstat(fd, &st) < 0) {
+        FONT_LOGE("IsValidFontFd: fstat failed, errno: %{public}d", errno);
+        return false;
+    }
+    if (!S_ISREG(st.st_mode)) {
+        FONT_LOGE("IsValidFontFd: fd is not a regular file");
+        return false;
+    }
+    if (st.st_size <= 0 || static_cast<size_t>(st.st_size) > MAX_FONT_FILE_SIZE) {
+        FONT_LOGE("IsValidFontFd: invalid size: %{public}lld", static_cast<long long>(st.st_size));
+        return false;
+    }
+    return true;
+}
+
+int32_t FontManagerUtils::CreatePrivateTempCopy(int32_t sourceFd, const std::string &tempDir,
+    std::string &tempPath)
+{
+    tempPath.clear();
+    if (!IsValidFontFd(sourceFd)) {
+        return -1;
+    }
+    std::string tempTemplate = tempDir + "font_XXXXXX";
+    std::vector<char> pathBuffer(tempTemplate.begin(), tempTemplate.end());
+    pathBuffer.push_back('\0');
+    int32_t tempFd = mkstemp(pathBuffer.data());
+    if (tempFd < 0) {
+        FONT_LOGE("CreatePrivateTempCopy: mkstemp failed, errno: %{public}d", errno);
+        return -1;
+    }
+    tempPath = pathBuffer.data();
+    (void)fcntl(tempFd, F_SETFD, FD_CLOEXEC);
+    (void)fchmod(tempFd, FONT_FILE_PERMISSION);
+    if (!CopyFileByFd(sourceFd, tempFd)) {
+        FONT_LOGE("CreatePrivateTempCopy: copy failed, tempPath: %{public}s", tempPath.c_str());
+        (void)close(tempFd);
+        RemoveFile(tempPath);
+        tempPath.clear();
+        return -1;
+    }
+    return tempFd;
+}
+
+std::vector<std::string> FontManagerUtils::GetFullNamesByPrivateFd(int32_t fd)
 {
     std::vector<std::string> fullNames;
-    struct stat sourceStat;
-    if (fstat(fd, &sourceStat) < 0) {
-        FONT_LOGE("GetFullNamesByFd: fstat failed, errno: %{public}d", errno);
+    if (!IsValidFontFd(fd)) {
         return fullNames;
     }
-    if (sourceStat.st_size < 0 || static_cast<size_t>(sourceStat.st_size) > MAX_FONT_FILE_SIZE) {
-        FONT_LOGE("GetFullNamesByFd: file too large, size: %{public}lld", static_cast<long long>(sourceStat.st_size));
+    if (lseek(fd, 0, SEEK_SET) < 0) {
+        FONT_LOGE("GetFullNamesByPrivateFd: lseek failed, errno: %{public}d", errno);
         return fullNames;
     }
-    auto& fontToolSet = OHOS::Rosen::FontToolSet::GetInstance();
+    auto &fontToolSet = OHOS::Rosen::FontToolSet::GetInstance();
     fullNames = fontToolSet.GetFontFullName(fd);
     if (fullNames.empty()) {
-        FONT_LOGE("GetFullNamesByFd FullNameList is empty.");
+        FONT_LOGE("GetFullNamesByPrivateFd: FullNameList is empty");
     }
     return fullNames;
 }
 
 std::vector<std::string> FontManagerUtils::GetFullNamesByPath(const std::string &path)
 {
-    std::vector<std::string> fullNames;
-    FILE* fp = fopen(path.c_str(), "rb");
-    if (!fp) {
-        FONT_LOGE("GetFullNamesByPath open font file failed");
-        return fullNames;
-    }
-    int fd = fileno(fp);
+    int32_t fd = open(path.c_str(), O_RDONLY | O_CLOEXEC);
     if (fd < 0) {
-        FONT_LOGE("open font file failed, errno: %{public}d", errno);
-        (void)fclose(fp);
-        return fullNames;
+        FONT_LOGE("GetFullNamesByPath open font file failed, errno: %{public}d", errno);
+        return {};
     }
-    auto& fontToolSet = OHOS::Rosen::FontToolSet::GetInstance();
-    fullNames = fontToolSet.GetFontFullName(fd);
-    if (fullNames.empty()) {
-        FONT_LOGE("GetFullNamesByPath FullNameList is empty.path:%{public}s", path.c_str());
-    }
-    (void)fclose(fp);
+    std::vector<std::string> fullNames = GetFullNamesByPrivateFd(fd);
+    (void)close(fd);
     return fullNames;
 }
 

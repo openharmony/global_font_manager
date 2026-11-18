@@ -331,7 +331,7 @@ struct ScopeFontInstallInfo {
 };
 ```
 
-私有辅助方法：`GetFormatFullName`、`CopyFileForInstall`、`SandBoxPathToRealPath`、`SafeGetOrCreateConfig`（线程安全 map 访问）、`GetAppInstallPath`、`ValidateScopeFontForInstall`、`CopyAndInsertScopeFont`。
+私有辅助方法：`GetFormatFullName`、`CommitTempFile`、`SandBoxPathToRealPath`、`SafeGetOrCreateConfig`（线程安全 map 访问）、`GetAppInstallPath`、`ValidateScopeFontForInstall`。
 
 #### FontConfig（`font_config.h/.cpp`）
 管理 JSON 配置文件（`install_fontconfig.json`）。禁用拷贝（`DISALLOW_COPY`），启用移动。单一 `configLock_` 互斥锁；内部辅助方法（`WriteToFile`、`GetFileData`、`CheckConfigFile`）不加锁（由调用方持有锁）。
@@ -410,10 +410,14 @@ struct FontRecordInfo {
 - `static void CleanupScopeFontDirs()` - 清理临时 + 移除空的 `app_*/`/`session_*/` 目录（SA 退出）
 - `static void CleanupAllScopeFontDirs()` - 强制删除所有 `app_*/` + `session_*/` 目录（开机）
 - `static void CleanupAppScopeFontDirs()` - 强制删除所有 `app_*/` 目录（SA 重启）
-- `static std::vector<std::string> GetFullNamesByFd(const int32_t &fd)` - `fstat` 预检 1GB + `FontToolSet::GetFontFullName(fd)`（TTF/TTC）
-- `static std::vector<std::string> GetFullNamesByPath(const std::string &path)` - 打开文件、获取 fd、调用上面的方法
+- `static bool IsValidFontFd(const int32_t &fd)` - `fstat` 校验常规文件、`0 < size ≤ MAX_FONT_FILE_SIZE`
+- `static int32_t CreatePrivateTempCopy(int32_t sourceFd, const std::string &tempDir, std::string &tempPath)` - `mkstemp` 创建 SA 私有临时文件，`sendfile` 拷贝源 fd 后返回可读写的 temp fd；失败时清理临时文件
+- `static std::vector<std::string> GetFullNamesByPrivateFd(int32_t fd)` - 解析 **SA 私有 inode**（临时副本或安装目录文件），TTF/TTC；禁止传调用方 fd
+- `static std::vector<std::string> GetFullNamesByPath(const std::string &path)` - 打开安装目录内的文件并调用上面的方法
 
-**1GB 大小检查**：在 `GetFullNamesByFd`（通过 `fstat` 在解析前预检）和 `CopyFileByFd`（通过 `fstat` 在 sendfile 前预检）中均执行。双重保护。
+**安全不变式**：`FontToolSet::GetFontFullName` 内部对 fd 执行 `mmap`；调用方仍可写的 inode 在解析期间被 `ftruncate` 会触发 `SIGBUS`。因此安装流程必须先把调用方 fd 拷贝到 `temp/` 下的私有文件，再解析该副本，最后 `rename` 到最终路径。
+
+**1GB 大小检查**：在 `IsValidFontFd`（解析/拷贝前通过 `fstat` 预检）和 `CopyFileByFd`（通过 `fstat` 在 sendfile 前预检）中均执行。双重保护。
 
 #### FontClientRegistry（`font_client_registry.h/.cpp`）
 客户端注册表。通过 `DelayedSingleton<FontClientRegistry>` 实现单例。通过死亡通知管理应用级字体生命周期。
@@ -775,7 +779,7 @@ int32_t InstallScopeFont(...) {
 ## 字体格式处理
 
 - **支持格式**：TTF（1 个全名）和 TTC（多个全名），通过 `OHOS::Rosen::FontToolSet::GetInstance().GetFontFullName(fd)`（来自 `graphic_2d:rosen_text`）
-- **最大文件大小**：1024 MB（1GB）——在 `GetFullNamesByFd`（解析前 fstat 预检）和 `CopyFileByFd`（sendfile 前 fstat 预检）中均执行。双重保护。
+- **最大文件大小**：1024 MB（1GB）——在 `IsValidFontFd`（解析/拷贝前 fstat 预检）和 `CopyFileByFd`（sendfile 前 fstat 预检）中均执行。双重保护。
 - **最大安装数**：每用户 200 个字体（默认，通过 `const.fontmanager.maxinstallnum` 参数配置）
 - **文件拷贝**：`sendfile()` 系统调用带 EINTR 重试循环、`chmod 0644`
 - **重复处理（用户级）**：如果目标文件已存在，在文件名前添加时间戳 `YYYYMMDD-HHMMSS_`
@@ -903,9 +907,10 @@ if (fd >= 0) {
 ### 字体名提取
 
 ```cpp
-// 从字体文件提取全名（TTF: 1 个, TTC: 多个）
-std::vector<std::string> fullNames = FontManagerUtils::GetFullNamesByFd(fd);
-// 解析前通过 fstat 预检 1GB
+// 先拷贝到 SA 私有临时文件，再解析副本（禁止直接解析调用方 fd）
+std::string tempPath;
+int32_t tempFd = FontManagerUtils::CreatePrivateTempCopy(fd, installPath + TEMP_FILE, tempPath);
+std::vector<std::string> fullNames = FontManagerUtils::GetFullNamesByPrivateFd(tempFd);
 ```
 
 ### 配置文件操作
@@ -972,6 +977,7 @@ FontConfig& config = SafeGetOrCreateConfig(userId, configPath);
 - **禁止**绕过 `isDataMigrationing_` 原子标志——它防止并发数据迁移。
 - **禁止**使用 `std::recursive_mutex`——代码库使用非递归 `std::mutex`；内部辅助方法不得锁定与调用方相同的互斥锁（见线程安全）。
 - **禁止**遗漏服务端 IPC 方法中的 Outer/Inner 模式——每个方法必须调度/取消调度 SA 卸载任务。
+- **禁止**把调用方传入的 fd 直接交给 `FontToolSet::GetFontFullName`（内部 `mmap` 调用方可写的 inode，可被 `ftruncate` 触发 `SIGBUS`）——必须先 `CreatePrivateTempCopy` 再解析副本。
 
 ### 需确认
 
