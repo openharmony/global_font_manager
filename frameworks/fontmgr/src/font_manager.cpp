@@ -213,44 +213,74 @@ std::string FontManager::CommitTempFile(const std::string &tempPath, const std::
 
 int32_t FontManager::UninstallFont(const std::string &fontFullName, const int32_t userId)
 {
+    return UninstallFontInternal(fontFullName, userId, false);
+}
+
+int32_t FontManager::UninstallFontByFullName(const std::string &fontFullName, const int32_t userId)
+{
+    return UninstallFontInternal(fontFullName, userId, true);
+}
+
+int32_t FontManager::UninstallFontInternal(const std::string &fontFullName, int32_t userId, bool allowScope)
+{
+    if (userId < 0) {
+        FONT_LOGE("UninstallFontInternal: invalid userId=%{public}d", userId);
+        return ERR_INVALID_PARAM;
+    }
     std::string installPath = INSTALL_PATH_PREFIX + std::to_string(userId) + INSTALL_PATH_SUFFIX;
     if (fontFullName.empty()) {
-        FONT_LOGE("FontManager::UninstallFont, fontName is empty");
+        FONT_LOGE("UninstallFontInternal, fontName is empty");
         return ERR_UNINSTALL_FILE_NOT_EXISTS;
     }
     auto& fontConfig = SafeGetOrCreateConfig(userId, installPath + FONT_CONFIG_FILE);
+    std::string removedFullNames = fontFullName;
     {
         std::lock_guard<std::mutex> installLock(fontConfig.GetInstallLock());
-        auto record = fontConfig.GetFontRecordByName(fontFullName);
-        if (!record.has_value() || record->fontPath.empty()) {
-            FONT_LOGE("Can't find fontFullName = %{public}s", fontFullName.c_str());
-            return ERR_UNINSTALL_FILE_NOT_EXISTS;
-        }
-        if (record->scope >= 0) {
-            FONT_LOGE("UninstallFont: font is scope font, cannot uninstall via user-level API, name=%{public}s",
-                fontFullName.c_str());
-            return ERR_UNINSTALL_FILE_NOT_EXISTS;
-        }
-        std::string path = record->fontPath;
-        std::string realPath = ValidateAndResolveRealPath(installPath, path);
-        if (realPath.empty()) {
-            FONT_LOGE("UninstallFont: invalid font path in config, path = %{public}s", path.c_str());
-            return ERR_UNINSTALL_FILE_NOT_EXISTS;
-        }
-        if (FontManagerUtils::CheckPathExist(realPath)) {
-            if (!FontManagerUtils::RemoveFile(realPath)) {
-                return ERR_UNINSTALL_REMOVE_FAIL;
-            }
-        }
-        if (!fontConfig.DeleteFontRecord(path)) {
-            FONT_LOGE("update install_fontconfig fail, path = %{public}s", path.c_str());
-            return ERR_UNINSTALL_FAIL;
+        int32_t ret = RemoveFontRecord(installPath, fontConfig, fontFullName, allowScope, removedFullNames);
+        if (ret != ERR_OK) {
+            return ret;
         }
     }
     HisyseventAdapter::GetInstance()->CollectUserDataSize(installPath);
     StorageManagerAdapter::GetInstance()->ReportFontBundleStats(userId, installPath);
-    FontEventPublish::PublishFontUpdate(FontEventType::UNINSTALL, fontFullName, userId);
-    FONT_LOGI("Uninstall font success, fontFullName:%{public}s, userId:%{public}d", fontFullName.c_str(), userId);
+    FontEventPublish::PublishFontUpdate(FontEventType::UNINSTALL, removedFullNames, userId);
+    FONT_LOGI("Uninstall font success, fontFullName:%{public}s, userId:%{public}d",
+        fontFullName.c_str(), userId);
+    return ERR_OK;
+}
+
+int32_t FontManager::RemoveFontRecord(const std::string &installPath, FontConfig& fontConfig,
+    const std::string &fontFullName, bool allowScope, std::string &removedFullNames)
+{
+    auto record = fontConfig.GetFontRecordByName(fontFullName);
+    if (!record.has_value() || record->fontPath.empty()) {
+        FONT_LOGE("Can't find fontFullName = %{public}s", fontFullName.c_str());
+        return ERR_UNINSTALL_FILE_NOT_EXISTS;
+    }
+    if (!allowScope && record->scope >= 0) {
+        FONT_LOGE("UninstallFont: font is scope font, cannot uninstall via user-level API, name=%{public}s",
+            fontFullName.c_str());
+        return ERR_UNINSTALL_FILE_NOT_EXISTS;
+    }
+    const std::string &path = record->fontPath;
+    std::string realPath = ValidateAndResolveRealPath(installPath, path);
+    if (realPath.empty()) {
+        FONT_LOGE("UninstallFontInternal: invalid font path in config, path = %{public}s", path.c_str());
+        return ERR_UNINSTALL_FILE_NOT_EXISTS;
+    }
+    if (FontManagerUtils::CheckPathExist(realPath) && !FontManagerUtils::RemoveFile(realPath)) {
+        return ERR_UNINSTALL_REMOVE_FAIL;
+    }
+    if (!fontConfig.DeleteFontRecord(path)) {
+        FONT_LOGE("update install_fontconfig fail, path = %{public}s", path.c_str());
+        return ERR_UNINSTALL_FAIL;
+    }
+    if (allowScope) {
+        std::string recordNames = GetFormatFullName(record->fullNames);
+        if (!recordNames.empty()) {
+            removedFullNames = recordNames;
+        }
+    }
     return ERR_OK;
 }
 

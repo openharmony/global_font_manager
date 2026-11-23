@@ -17,6 +17,7 @@
 #include <fcntl.h>
 #include <string>
 #include <climits>
+#include <unistd.h>
 
 #include "font_manager_client.h"
 #include "font_service_load_manager.h"
@@ -199,6 +200,49 @@ HWTEST_F(FontManagerClientTest, UninstallFontWithUserIdTest001, TestSize.Level1)
     auto client = DelayedSingleton<FontManagerClient>::GetInstance();
     int32_t ret = client->UninstallFontWithUserId("TestFont", TEST_USERID);
     // Returns ERR_UNINSTALL_FAIL on service null, or IPC result
+    EXPECT_NE(ret, ERR_OK);
+}
+
+HWTEST_F(FontManagerClientTest, InstallFontByFdTest001, TestSize.Level1)
+{
+    auto client = DelayedSingleton<FontManagerClient>::GetInstance();
+    int32_t ret = client->InstallFontByFd(-1, TEST_USERID);
+    EXPECT_EQ(ret, ERR_INVALID_PARAM);
+}
+
+HWTEST_F(FontManagerClientTest, InstallFontByFdTest002, TestSize.Level1)
+{
+    auto client = DelayedSingleton<FontManagerClient>::GetInstance();
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    ASSERT_GE(fd, 0);
+    int32_t ret = client->InstallFontByFd(fd, -1);
+    close(fd);
+    EXPECT_EQ(ret, ERR_INVALID_PARAM);
+}
+
+HWTEST_F(FontManagerClientTest, InstallFontByFdTest003, TestSize.Level1)
+{
+    auto client = DelayedSingleton<FontManagerClient>::GetInstance();
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    ASSERT_GE(fd, 0);
+    int32_t ret = client->InstallFontByFd(fd, TEST_USERID);
+    close(fd);
+    // The IPC path is reached; result depends on SA availability and permissions.
+    EXPECT_TRUE(ret == ERR_OK || ret == ERR_NO_PERMISSION || ret == ERR_INSTALL_FAIL);
+}
+
+HWTEST_F(FontManagerClientTest, UninstallFontByFullNameTest001, TestSize.Level1)
+{
+    auto client = DelayedSingleton<FontManagerClient>::GetInstance();
+    int32_t ret = client->UninstallFontByFullName("TestFont", -1);
+    EXPECT_EQ(ret, ERR_INVALID_PARAM);
+}
+
+HWTEST_F(FontManagerClientTest, UninstallFontByFullNameTest002, TestSize.Level1)
+{
+    auto client = DelayedSingleton<FontManagerClient>::GetInstance();
+    int32_t ret = client->UninstallFontByFullName("NonExistentFont12345", TEST_USERID);
+    // Returns ERR_UNINSTALL_FAIL on service null, permission error, or not-found.
     EXPECT_NE(ret, ERR_OK);
 }
 

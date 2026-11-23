@@ -331,6 +331,26 @@ int32_t FontManagerServer::UninstallFontWithUserId(const std::string &fontName, 
     return ret;
 }
 
+int32_t FontManagerServer::UninstallFontByFullName(const std::string &fontName, int32_t userId)
+{
+    CallingCountGuard guard(this, false);
+    int32_t ret = CheckPermission();
+    if (ret != ERR_OK) {
+        FONT_LOGE("UninstallFontByFullName: check UPDATE_FONT failed, ret: %{public}d", ret);
+        return ret;
+    }
+    ret = CheckScopeFontPermission();
+    if (ret != ERR_OK) {
+        FONT_LOGE("UninstallFontByFullName: check UPDATE_SCOPE_FONT failed, ret: %{public}d", ret);
+        return ret;
+    }
+    if (userId < 0) {
+        FONT_LOGE("UninstallFontByFullName: invalid userId=%{public}d", userId);
+        return ERR_INVALID_PARAM;
+    }
+    return FontManager::GetInstance()->UninstallFontByFullName(fontName, userId);
+}
+
 // ===== Scope font methods =====
 
 int32_t FontManagerServer::CheckScopeFontPermission()

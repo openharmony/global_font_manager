@@ -35,6 +35,7 @@ class FontManager : public DelayedSingleton<FontManager> {
 public:
     int32_t InstallFont(const int32_t &fd, const int32_t userId);
     int32_t UninstallFont(const std::string &fontFullName, const int32_t userId);
+    int32_t UninstallFontByFullName(const std::string &fontFullName, const int32_t userId);
 
     int32_t InstallScopeFont(const ScopeFontInstallInfo &info);
     int32_t UninstallScopeFont(const std::string &srcPath, const std::string &bundleName,
@@ -52,6 +53,9 @@ private:
         const std::string &fileName);
     std::string SandBoxPathToRealPath(const std::string &installPath, const std::string &path);
     std::string ValidateAndResolveRealPath(const std::string &installPath, const std::string &path);
+    int32_t UninstallFontInternal(const std::string &fontFullName, int32_t userId, bool allowScope);
+    int32_t RemoveFontRecord(const std::string &installPath, FontConfig& fontConfig,
+        const std::string &fontFullName, bool allowScope, std::string &removedFullNames);
     FontConfig& SafeGetOrCreateConfig(int32_t userId, const std::string& configPath);
     std::string GetAppInstallPath(int32_t userId, const std::string &appIdentifier);
     int32_t ValidateScopeFontForInstall(FontConfig& fontConfig, const std::string &srcPath);
