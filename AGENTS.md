@@ -658,10 +658,10 @@ int32_t InstallScopeFont(...) {
 
 #### FontManagerInnerApi（`font_manager_inner_api.h/.cpp`）
 静态方法（内部 kits，暴露头文件）：
-- `static int32_t InstallFont(const std::string &fontPath, int32_t userId)`
-- `static int32_t UninstallFont(const std::string &fontName, int32_t userId)`
-- `static int32_t InstallScopeFont(const std::string &fontPath, int32_t scope, int32_t userId)`
-- `static int32_t UninstallScopeFont(const std::string &srcPath, int32_t userId)`
+- `static int32_t InstallFont(const std::string &fontPath, int32_t userId)` - 用户级安装
+- `static int32_t UninstallFont(const std::string &fontName, int32_t userId)` - 仅用户级卸载
+- `static int32_t InstallFontByFd(int32_t fd, int32_t userId)` - 用户级 fd 安装；fd 由调用方持有，接口不 close
+- `static int32_t UninstallFontByFullName(const std::string &fontFullName, int32_t userId)` - 按全名单字体卸载，支持用户级/应用级/会话级；服务端要求 `UPDATE_FONT` + `UPDATE_SCOPE_FONT`
 
 ## NAPI 绑定（`interfaces/js/kits/`）
 
@@ -765,7 +765,7 @@ int32_t InstallScopeFont(...) {
 暴露头文件：`service/inner_api/include/font_manager_inner_api.h`，来自目标 `//base/global/font_manager/service:font_manager_client`。
 
 ### 符号映射
-- `service/font_manager_client.map` - 导出 `FontManagerKits::GetInstance()`、`FontManagerInnerApi::InstallFont`/`UninstallFont`（仅用户级；作用域字体内部 API 方法未导出）、`FontServiceLoadManager` 符号（版本 1.0）
+- `service/font_manager_client.map` - 导出 `FontManagerKits::GetInstance()`、`FontManagerInnerApi::InstallFont`/`UninstallFont`/`InstallFontByFd`/`UninstallFontByFullName`、`FontServiceLoadManager` 符号（版本 1.0）
 - `interfaces/ani/fontManager_ani.map` - 仅导出 `ANI_Constructor`
 
 ### 构建特性

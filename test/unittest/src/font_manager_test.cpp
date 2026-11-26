@@ -1991,6 +1991,175 @@ HWTEST_F(FontManagerTest, FontManagerFuncTest088, TestSize.Level1)
     worker.join();
     EXPECT_TRUE(finished.load());
 }
+
+/**
+ * @tc.name: FontManagerFuncTest089
+ * @tc.desc: Test UninstallFontByFullName removes a user-level font
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest089, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    ASSERT_GE(fd, 0);
+    EXPECT_EQ(manager_->InstallFont(fd, TEST_USERID), ERR_OK);
+    close(fd);
+
+    auto& fontConfig = manager_->SafeGetOrCreateConfig(TEST_USERID, FONT_CONFIG_FILE_TEST);
+    ASSERT_TRUE(fontConfig.GetFontRecordByName(FONT_FULL_NAME).has_value());
+    EXPECT_EQ(manager_->UninstallFontByFullName(FONT_FULL_NAME, TEST_USERID), ERR_OK);
+    EXPECT_FALSE(fontConfig.GetFontRecordByName(FONT_FULL_NAME).has_value());
+    EXPECT_EQ(fontConfig.GetTotalInstalledFontsNum(), 0);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest090
+ * @tc.desc: Test UninstallFontByFullName removes an app-level scope font
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest090, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    ASSERT_GE(fd, 0);
+    ScopeFontInstallInfo info;
+    info.fd = fd;
+    info.scope = FONT_SCOPE_APP;
+    info.srcPath = "file://test/uninstall_by_fullname_app.ttf";
+    info.bundleName = "com.example.app";
+    info.appIdentifier = "app_5001";
+    info.userId = TEST_USERID;
+    ASSERT_EQ(manager_->InstallScopeFont(info), ERR_OK);
+    close(fd);
+
+    auto& fontConfig = manager_->SafeGetOrCreateConfig(TEST_USERID, FONT_CONFIG_FILE_TEST);
+    auto record = fontConfig.GetFontRecordByUrl(info.srcPath);
+    ASSERT_TRUE(record.has_value());
+    std::string realPath = INSTALL_PATH_TEST + "app_5001/" +
+        FontManagerUtils::GetFileName(record->fontPath);
+    ASSERT_TRUE(FontManagerUtils::CheckPathExist(realPath));
+
+    EXPECT_EQ(manager_->UninstallFontByFullName(FONT_FULL_NAME, TEST_USERID), ERR_OK);
+    EXPECT_FALSE(FontManagerUtils::CheckPathExist(realPath));
+    EXPECT_FALSE(fontConfig.GetFontRecordByUrl(info.srcPath).has_value());
+    EXPECT_EQ(manager_->GetFontScope(info.srcPath, info.bundleName, TEST_TOKEN_ID, TEST_USERID),
+        ERR_SCOPE_FONT_NOT_FOUND);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest091
+ * @tc.desc: Test UninstallFontByFullName removes a session-level scope font
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest091, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    ASSERT_GE(fd, 0);
+    ScopeFontInstallInfo info;
+    info.fd = fd;
+    info.scope = FONT_SCOPE_SESSION;
+    info.srcPath = "file://test/uninstall_by_fullname_session.ttf";
+    info.bundleName = "com.example.session";
+    info.appIdentifier = "session_5001";
+    info.userId = TEST_USERID;
+    ASSERT_EQ(manager_->InstallScopeFont(info), ERR_OK);
+    close(fd);
+
+    auto& fontConfig = manager_->SafeGetOrCreateConfig(TEST_USERID, FONT_CONFIG_FILE_TEST);
+    auto record = fontConfig.GetFontRecordByUrl(info.srcPath);
+    ASSERT_TRUE(record.has_value());
+    std::string realPath = INSTALL_PATH_TEST + "session_5001/" +
+        FontManagerUtils::GetFileName(record->fontPath);
+    ASSERT_TRUE(FontManagerUtils::CheckPathExist(realPath));
+
+    EXPECT_EQ(manager_->UninstallFontByFullName(FONT_FULL_NAME, TEST_USERID), ERR_OK);
+    EXPECT_FALSE(FontManagerUtils::CheckPathExist(realPath));
+    EXPECT_FALSE(fontConfig.GetFontRecordByUrl(info.srcPath).has_value());
+}
+
+/**
+ * @tc.name: FontManagerFuncTest092
+ * @tc.desc: Test UninstallFontByFullName with invalid parameters
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest092, TestSize.Level1)
+{
+    EXPECT_EQ(manager_->UninstallFontByFullName("NonExistentFont12345", TEST_USERID),
+        ERR_UNINSTALL_FILE_NOT_EXISTS);
+    EXPECT_EQ(manager_->UninstallFontByFullName("", TEST_USERID), ERR_UNINSTALL_FILE_NOT_EXISTS);
+    EXPECT_EQ(manager_->UninstallFontByFullName(FONT_FULL_NAME, -1), ERR_INVALID_PARAM);
+}
+
+/**
+ * @tc.name: FontManagerFuncTest093
+ * @tc.desc: Test UninstallFontByFullName removes a TTC scope record by one of its names
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest093, TestSize.Level1)
+{
+    int fd = open(TTC_FONT_PATH.c_str(), O_RDONLY);
+    ASSERT_GE(fd, 0);
+    ScopeFontInstallInfo info;
+    info.fd = fd;
+    info.scope = FONT_SCOPE_APP;
+    info.srcPath = "file://test/uninstall_by_fullname_ttc.ttf";
+    info.bundleName = "com.example.ttc";
+    info.appIdentifier = "app_5001";
+    info.userId = TEST_USERID;
+    ASSERT_EQ(manager_->InstallScopeFont(info), ERR_OK);
+    close(fd);
+
+    auto& fontConfig = manager_->SafeGetOrCreateConfig(TEST_USERID, FONT_CONFIG_FILE_TEST);
+    auto record = fontConfig.GetFontRecordByUrl(info.srcPath);
+    ASSERT_TRUE(record.has_value());
+    ASSERT_GT(record->fullNames.size(), 1u);
+    std::string realPath = INSTALL_PATH_TEST + "app_5001/" +
+        FontManagerUtils::GetFileName(record->fontPath);
+    ASSERT_TRUE(FontManagerUtils::CheckPathExist(realPath));
+
+    EXPECT_EQ(manager_->UninstallFontByFullName(TTC_FONT_FULL_NAME[0], TEST_USERID), ERR_OK);
+    EXPECT_FALSE(FontManagerUtils::CheckPathExist(realPath));
+    EXPECT_FALSE(fontConfig.GetFontRecordByUrl(info.srcPath).has_value());
+}
+
+/**
+ * @tc.name: FontManagerFuncTest094
+ * @tc.desc: Test UninstallFontByFullName removes the record when the font file is missing
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest094, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    ASSERT_GE(fd, 0);
+    ASSERT_EQ(manager_->InstallFont(fd, TEST_USERID), ERR_OK);
+    close(fd);
+
+    auto& fontConfig = manager_->SafeGetOrCreateConfig(TEST_USERID, FONT_CONFIG_FILE_TEST);
+    auto record = fontConfig.GetFontRecordByName(FONT_FULL_NAME);
+    ASSERT_TRUE(record.has_value());
+    std::string realPath = INSTALL_PATH_TEST + FontManagerUtils::GetFileName(record->fontPath);
+    ASSERT_TRUE(FontManagerUtils::RemoveFile(realPath));
+
+    EXPECT_EQ(manager_->UninstallFontByFullName(FONT_FULL_NAME, TEST_USERID), ERR_OK);
+    EXPECT_FALSE(fontConfig.GetFontRecordByName(FONT_FULL_NAME).has_value());
+}
+
+/**
+ * @tc.name: FontManagerFuncTest095
+ * @tc.desc: Test UninstallFontByFullName keeps a record whose path escapes the install dir
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerTest, FontManagerFuncTest095, TestSize.Level1)
+{
+    std::string configWithBadPath = R"({"fontlist": [{"fontfullpath": ")" +
+        INSTALL_PATH_APP + R"(../../etc/passwd", "fullname": [")" + FONT_FULL_NAME +
+        R"("], "scope": 0, "appIdentifier": "app_5001"}], "version": "7.0"})";
+    FontManagerUtils::CreateFileWithPermission(FONT_CONFIG_FILE_TEST, configWithBadPath);
+    manager_->configMap_.clear();
+
+    EXPECT_EQ(manager_->UninstallFontByFullName(FONT_FULL_NAME, TEST_USERID),
+        ERR_UNINSTALL_FILE_NOT_EXISTS);
+    auto& fontConfig = manager_->SafeGetOrCreateConfig(TEST_USERID, FONT_CONFIG_FILE_TEST);
+    EXPECT_TRUE(fontConfig.GetFontRecordByName(FONT_FULL_NAME).has_value());
+}
 } // namespace FontManager
 } // namespace Global
 } // namespace OHOS

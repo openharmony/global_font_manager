@@ -48,6 +48,8 @@ public:
     int32_t DataMigration(std::shared_ptr<IDataMigrationListener> listener) override;
     int32_t InstallFontWithUserId(const std::string &fontPath, int32_t userId);
     int32_t UninstallFontWithUserId(const std::string &fontName, int32_t userId);
+    int32_t InstallFontByFd(int32_t fd, int32_t userId);
+    int32_t UninstallFontByFullName(const std::string &fontFullName, int32_t userId);
 
     int32_t OnFontObserver(const sptr<IFontClientObserver>& observer) override;
     int32_t OffFontObserver() override;

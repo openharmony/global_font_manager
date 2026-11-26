@@ -14,7 +14,9 @@
  */
 
 #include <gtest/gtest.h>
+#include <fcntl.h>
 #include <string>
+#include <unistd.h>
 
 #include "font_manager_inner_api.h"
 #include "font_manager_utils.h"
@@ -129,6 +131,78 @@ HWTEST_F(FontManagerInnerApiTest, InnerApiInstallFontTest005, TestSize.Level1)
 {
     int32_t ret = FontManagerInnerApi::InstallFont("/data/test/", TEST_USERID);
     // Directory path: PathToRealPath succeeds, fopen on directory may fail -> ERR_FILE_NOT_EXISTS
+    EXPECT_NE(ret, ERR_OK);
+}
+
+/**
+ * @tc.name: InnerApiInstallFontByFdTest001
+ * @tc.desc: Test InstallFontByFd with invalid fd
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerInnerApiTest, InnerApiInstallFontByFdTest001, TestSize.Level1)
+{
+    int32_t ret = FontManagerInnerApi::InstallFontByFd(-1, TEST_USERID);
+    EXPECT_EQ(ret, ERR_INVALID_PARAM);
+}
+
+/**
+ * @tc.name: InnerApiInstallFontByFdTest002
+ * @tc.desc: Test InstallFontByFd with invalid userId
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerInnerApiTest, InnerApiInstallFontByFdTest002, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    ASSERT_GE(fd, 0);
+    int32_t ret = FontManagerInnerApi::InstallFontByFd(fd, -1);
+    close(fd);
+    EXPECT_EQ(ret, ERR_INVALID_PARAM);
+}
+
+/**
+ * @tc.name: InnerApiInstallFontByFdTest003
+ * @tc.desc: Test InstallFontByFd reaches IPC with valid parameters
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerInnerApiTest, InnerApiInstallFontByFdTest003, TestSize.Level1)
+{
+    int fd = open(FONT_PATH.c_str(), O_RDONLY);
+    ASSERT_GE(fd, 0);
+    int32_t ret = FontManagerInnerApi::InstallFontByFd(fd, TEST_USERID);
+    close(fd);
+    EXPECT_TRUE(ret == ERR_OK || ret == ERR_NO_PERMISSION || ret == ERR_INSTALL_FAIL);
+}
+
+/**
+ * @tc.name: InnerApiUninstallFontByFullNameTest001
+ * @tc.desc: Test UninstallFontByFullName with empty font name
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerInnerApiTest, InnerApiUninstallFontByFullNameTest001, TestSize.Level1)
+{
+    int32_t ret = FontManagerInnerApi::UninstallFontByFullName("", TEST_USERID);
+    EXPECT_NE(ret, ERR_OK);
+}
+
+/**
+ * @tc.name: InnerApiUninstallFontByFullNameTest002
+ * @tc.desc: Test UninstallFontByFullName with invalid userId
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerInnerApiTest, InnerApiUninstallFontByFullNameTest002, TestSize.Level1)
+{
+    int32_t ret = FontManagerInnerApi::UninstallFontByFullName("TestFont", -1);
+    EXPECT_EQ(ret, ERR_INVALID_PARAM);
+}
+
+/**
+ * @tc.name: InnerApiUninstallFontByFullNameTest003
+ * @tc.desc: Test UninstallFontByFullName with a non-existent font name
+ * @tc.type: FUNC
+ */
+HWTEST_F(FontManagerInnerApiTest, InnerApiUninstallFontByFullNameTest003, TestSize.Level1)
+{
+    int32_t ret = FontManagerInnerApi::UninstallFontByFullName("NonExistentFont99999", TEST_USERID);
     EXPECT_NE(ret, ERR_OK);
 }
 } // namespace FontManager

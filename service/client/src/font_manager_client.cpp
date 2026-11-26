@@ -167,6 +167,35 @@ int32_t FontManagerClient::UninstallFontWithUserId(const std::string &fontName, 
     return ret;
 }
 
+int32_t FontManagerClient::InstallFontByFd(int32_t fd, int32_t userId)
+{
+    if (fd < 0 || userId < 0) {
+        FONT_LOGE("InstallFontByFd: invalid fd=%{public}d or userId=%{public}d", fd, userId);
+        return ERR_INVALID_PARAM;
+    }
+    sptr<IFontService> service = FontServiceLoadManager::GetInstance()->GetFontServiceAbility(FONT_SA_ID);
+    if (service == nullptr) {
+        FONT_LOGE("InstallFontByFd: Service is null");
+        return ERR_INSTALL_FAIL;
+    }
+    // The caller keeps ownership of fd; the service snapshots it during the call.
+    return service->InstallFontWithUserId(fd, userId);
+}
+
+int32_t FontManagerClient::UninstallFontByFullName(const std::string &fontFullName, int32_t userId)
+{
+    if (userId < 0) {
+        FONT_LOGE("UninstallFontByFullName: invalid userId=%{public}d", userId);
+        return ERR_INVALID_PARAM;
+    }
+    sptr<IFontService> service = FontServiceLoadManager::GetInstance()->GetFontServiceAbility(FONT_SA_ID);
+    if (service == nullptr) {
+        FONT_LOGE("UninstallFontByFullName: Service is null");
+        return ERR_UNINSTALL_FAIL;
+    }
+    return service->UninstallFontByFullName(fontFullName, userId);
+}
+
 int32_t FontManagerClient::OnFontObserver(const sptr<IFontClientObserver>& observer)
 {
     sptr<IFontService> service = FontServiceLoadManager::GetInstance()->GetFontServiceAbility(FONT_SA_ID);

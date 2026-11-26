@@ -30,4 +30,5 @@ interface OHOS.Global.FontManager.IFontService {
     void InstallScopeFont([in] FileDescriptor fd, [in] int scope, [in] String srcPath, [out] int outValue);
     void UninstallScopeFont([in] String srcPath, [out] int outValue);
     void GetFontScope([in] String srcPath, [out] int outValue);
+    void UninstallFontByFullName([in] String fontName, [in] int userId);
 }

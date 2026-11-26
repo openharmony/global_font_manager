@@ -25,6 +25,14 @@ class FontManagerInnerApi {
 public:
     static int32_t InstallFont(const std::string &fontPath, int32_t userId);
     static int32_t UninstallFont(const std::string &fontName, int32_t userId);
+
+    // Installs a user-level font from a caller-owned fd. The fd is not closed by this API
+    // and must stay open with stable content for the duration of the call.
+    static int32_t InstallFontByFd(int32_t fd, int32_t userId);
+
+    // Uninstalls a single font by full name. Unlike UninstallFont, this API also handles
+    // app-level and session-level records in the user's install_fontconfig.json.
+    static int32_t UninstallFontByFullName(const std::string &fontFullName, int32_t userId);
 };
 } // namespace FontManager
 } // namespace Global
